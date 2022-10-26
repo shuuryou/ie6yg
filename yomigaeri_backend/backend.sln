@@ -1,0 +1,25 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 16
+VisualStudioVersion = 16.0.32929.386
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "IE6 Yomigaeri Backend", "YOMIGAERIBE.csproj", "{BDE3F443-CC00-4B96-9E30-89580386A1D2}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|x86 = Debug|x86
+		Release|x86 = Release|x86
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{BDE3F443-CC00-4B96-9E30-89580386A1D2}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{BDE3F443-CC00-4B96-9E30-89580386A1D2}.Debug|x86.Build.0 = Debug|Any CPU
+		{BDE3F443-CC00-4B96-9E30-89580386A1D2}.Release|x86.ActiveCfg = Release|Any CPU
+		{BDE3F443-CC00-4B96-9E30-89580386A1D2}.Release|x86.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {4106AA6E-371F-4FC8-88EF-DF8C1886508B}
+	EndGlobalSection
+EndGlobal
