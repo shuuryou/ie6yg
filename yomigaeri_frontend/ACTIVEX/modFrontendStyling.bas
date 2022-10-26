@@ -1,0 +1,224 @@
+Attribute VB_Name = "modFrontendStyling"
+Option Explicit
+
+Private Declare Function SystemParametersInfo Lib "user32.dll" Alias "SystemParametersInfoA" (ByVal uAction As Long, ByVal uParam As Long, ByRef lpvParam As Any, ByVal fuWinIni As Long) As Long
+Private Declare Function GetDeviceCaps Lib "gdi32.dll" (ByVal hdc As Long, ByVal nIndex As Long) As Long
+Private Declare Function GetSysColor Lib "user32.dll" (ByVal nIndex As Long) As Long
+
+Private Const LOGPIXELSX As Long = 88
+Private Const LOGPIXELSY As Long = 90
+
+Private Const COLOR_SCROLLBAR As Long = 0
+Private Const COLOR_BACKGROUND As Long = 1
+Private Const COLOR_ACTIVECAPTION As Long = 2
+Private Const COLOR_INACTIVECAPTION As Long = 3
+Private Const COLOR_MENU As Long = 4
+Private Const COLOR_WINDOW As Long = 5
+Private Const COLOR_WINDOWFRAME As Long = 6
+Private Const COLOR_MENUTEXT As Long = 7
+Private Const COLOR_WINDOWTEXT As Long = 8
+Private Const COLOR_CAPTIONTEXT As Long = 9
+Private Const COLOR_ACTIVEBORDER As Long = 10
+Private Const COLOR_INACTIVEBORDER As Long = 11
+Private Const COLOR_APPWORKSPACE As Long = 12
+Private Const COLOR_HIGHLIGHT As Long = 13
+Private Const COLOR_HIGHLIGHTTEXT As Long = 14
+Private Const COLOR_BTNFACE As Long = 15
+Private Const COLOR_BTNSHADOW As Long = 16
+Private Const COLOR_GRAYTEXT As Long = 17
+Private Const COLOR_BTNTEXT As Long = 18
+Private Const COLOR_INACTIVECAPTIONTEXT As Long = 19
+Private Const COLOR_BTNHIGHLIGHT As Long = 20
+Private Const COLOR_2NDACTIVECAPTION As Long = 27
+Private Const COLOR_2NDINACTIVECAPTION As Long = 28
+
+Private Const SPI_GETNONCLIENTMETRICS As Integer = 41
+Private Const LF_FACESIZE As Integer = 32
+
+Private Type LOGFONT
+    lfHeight As Long
+    lfWidth As Long
+    lfEscapement As Long
+    lfOrientation As Long
+    lfWeight As Long
+    lfItalic As Byte
+    lfUnderline As Byte
+    lfStrikeOut As Byte
+    lfCharSet As Byte
+    lfOutPrecision As Byte
+    lfClipPrecision As Byte
+    lfQuality As Byte
+    lfPitchAndFamily As Byte
+    lfFaceName(1 To LF_FACESIZE) As Byte
+End Type
+
+Private Type NONCLIENTMETRICS
+    cbSize As Long
+    iBorderWidth As Long
+    iScrollWidth As Long
+    iScrollHeight As Long
+    iCaptionWidth As Long
+    iCaptionHeight As Long
+    lfCaptionFont As LOGFONT
+    iSMCaptionWidth As Long
+    iSMCaptionHeight As Long
+    lfSMCaptionFont As LOGFONT
+    iMenuWidth As Long
+    iMenuHeight As Long
+    lfMenuFont As LOGFONT
+    lfStatusFont As LOGFONT
+    lfMessageFont As LOGFONT
+End Type
+
+Private Function LongToRGBHex(ByVal lLong As Long) As String
+
+  ' by Donald, donald@xbeat.net, 20010910
+
+  Dim bRed As Long
+  Dim bGreen As Long
+  Dim bBlue As Long
+  ' mask out highest byte
+
+    lLong = lLong And &HFFFFFF
+    ' extract color bytes
+    bRed = lLong And &HFF
+    bGreen = (lLong \ &H100) And &HFF
+    bBlue = (lLong \ &H10000) And &HFF
+    ' reverse bytes
+    lLong = bRed * &H10000 + bGreen * &H100 + bBlue
+    ' to hex, left-padd zeroes
+    ' the string op is the bottleneck of this procedure, and since in real
+    ' world most colors have a red-part >= 16, it's a good idea to check if
+    ' we really need the string op
+    If bRed < &H10 Then
+        LongToRGBHex = Right$("00000" & Hex$(lLong), 6)
+      Else 'NOT BRED...
+        LongToRGBHex = Hex$(lLong)
+    End If
+
+End Function
+
+Public Function MakeStyling(ByRef hdc As Long) As String
+
+  Dim lngRet As Long
+  Dim sctNCM As NONCLIENTMETRICS
+  Dim strFont As String
+  Dim strResponse As String
+
+    sctNCM.cbSize = Len(sctNCM)
+
+    lngRet = SystemParametersInfo(SPI_GETNONCLIENTMETRICS, 0, sctNCM, 0)
+
+    If lngRet = 0 Then
+        MakeStyling = "ERROR"
+        Exit Function '---> Bottom
+    End If
+
+    strFont = StrConv(sctNCM.lfMessageFont.lfFaceName, vbUnicode)
+    strFont = Left$(strFont, InStr(strFont, Chr$(0)) - 1)
+
+    ' Str$ in the font size is important to account for locales that
+    ' do not use a period as the decimal separator.
+
+    strResponse = strFont & vbTab & _
+                  Str$(-(sctNCM.lfMessageFont.lfHeight * (72 / GetDeviceCaps(hdc, LOGPIXELSY)))) & vbTab & _
+                  LongToRGBHex(GetSysColor(COLOR_SCROLLBAR)) & vbTab & _
+                  LongToRGBHex(GetSysColor(COLOR_BACKGROUND)) & vbTab & _
+                  LongToRGBHex(GetSysColor(COLOR_ACTIVECAPTION)) & vbTab & _
+                  LongToRGBHex(GetSysColor(COLOR_INACTIVECAPTION)) & vbTab & _
+                  LongToRGBHex(GetSysColor(COLOR_MENU)) & vbTab & _
+                  LongToRGBHex(GetSysColor(COLOR_WINDOW)) & vbTab & _
+                  LongToRGBHex(GetSysColor(COLOR_WINDOWFRAME)) & vbTab & _
+                  LongToRGBHex(GetSysColor(COLOR_MENUTEXT)) & vbTab & _
+                  LongToRGBHex(GetSysColor(COLOR_WINDOWTEXT)) & vbTab & _
+                  LongToRGBHex(GetSysColor(COLOR_CAPTIONTEXT)) & vbTab & _
+                  LongToRGBHex(GetSysColor(COLOR_ACTIVEBORDER)) & vbTab & _
+                  LongToRGBHex(GetSysColor(COLOR_INACTIVEBORDER)) & vbTab & _
+                  LongToRGBHex(GetSysColor(COLOR_APPWORKSPACE)) & vbTab & _
+                  LongToRGBHex(GetSysColor(COLOR_HIGHLIGHT)) & vbTab & _
+                  LongToRGBHex(GetSysColor(COLOR_HIGHLIGHTTEXT)) & vbTab & _
+                  LongToRGBHex(GetSysColor(COLOR_BTNFACE)) & vbTab & _
+                  LongToRGBHex(GetSysColor(COLOR_BTNSHADOW)) & vbTab & _
+                  LongToRGBHex(GetSysColor(COLOR_GRAYTEXT)) & vbTab & _
+                  LongToRGBHex(GetSysColor(COLOR_BTNTEXT)) & vbTab & _
+                  LongToRGBHex(GetSysColor(COLOR_INACTIVECAPTIONTEXT)) & vbTab & _
+                  LongToRGBHex(GetSysColor(COLOR_BTNHIGHLIGHT)) & vbTab & _
+                  LongToRGBHex(GetSysColor(COLOR_2NDACTIVECAPTION)) & vbTab & _
+                  LongToRGBHex(GetSysColor(COLOR_2NDINACTIVECAPTION))
+
+    MakeStyling = strResponse
+
+End Function
+
+Public Function GetUserCursors()
+    Dim Registry As New CRegistry
+    
+    ' What's a Dictionary<string, string>?
+    ' Yes, yes, I know scrrun.dll has one, but I'm not going to drag in
+    ' another dependency for this one function.
+        Dim strAppStarting As String, strArrow As String, strCrosshair As String
+    Dim strIBeam As String, strNo As String, strSizeAll As String
+    Dim strSizeNESW As String, strSizeNS As String, strSizeNWSE As String
+    Dim strSizeWE As String, strWait As String
+    
+    With Registry
+        .ClassKey = HKEY_CURRENT_USER
+        .SectionKey = "Control Panel\Cursors"
+        .ValueType = REG_SZ
+        
+        .ValueKey = "AppStarting"
+        strAppStarting = .Value
+        
+        .ValueKey = "Arrow"
+        strArrow = .Value
+        
+        .ValueKey = "Crosshair"
+        strCrosshair = .Value
+        
+        .ValueKey = "Arrow"
+        strArrow = .Value
+        
+        .ValueKey = "IBeam"
+        strIBeam = .Value
+        
+        .ValueKey = "No"
+        strNo = .Value
+        
+        .ValueKey = "SizeAll"
+        strSizeAll = .Value
+        
+        .ValueKey = "SizeNESW"
+        strSizeNESW = .Value
+        
+        .ValueKey = "SizeNS"
+        strSizeNS = .Value
+        
+        .ValueKey = "SizeNWSE"
+        strSizeNWSE = .Value
+        
+        .ValueKey = "SizeWE"
+        strSizeWE = .Value
+        
+        .ValueKey = "Wait"
+        strWait = .Value
+    End With
+
+    Set Registry = Nothing
+
+    GetUserCursors = _
+        "AppStarting=" & TrimNull(strAppStarting) & vbTab & _
+        "Arrow=" & TrimNull(strArrow) & vbTab & _
+        "Crosshair=" & TrimNull(strCrosshair) & vbTab & _
+        "IBeam=" & TrimNull(strIBeam) & vbTab & _
+        "No=" & TrimNull(strNo) & vbTab & _
+        "SizeAll=" & TrimNull(strSizeAll) & vbTab & _
+        "SizeNESW=" & TrimNull(strSizeNESW) & vbTab & _
+        "SizeNS=" & TrimNull(strSizeNS) & vbTab & _
+        "SizeNWSE=" & TrimNull(strSizeNWSE) & vbTab & _
+        "SizeWE=" & TrimNull(strSizeWE) & vbTab & _
+        "Wait=" & TrimNull(strWait)
+    
+End Function
+
+':) Ulli's VB Code Formatter V2.24.17 (2022-Oct-25 21:21)  Decl: 70  Code: 83  Total: 153 Lines
+':) CommentOnly: 12 (7.8%)  Commented: 1 (0.7%)  Filled: 131 (85.6%)  Empty: 22 (14.4%)  Max Logic Depth: 2
