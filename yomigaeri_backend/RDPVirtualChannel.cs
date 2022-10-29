@@ -91,7 +91,7 @@ namespace yomigaeri_backend
 			Logging.WriteLineToLog("RDPVirtualChannel CLOSE: END");
 		}
 
-		public static string ReadChannelUntilResponse(int timeout = 3)
+		public static string ReadChannelUntilResponse(int timeout = 5)
 		{
 			// Not proud of this, but it will have to do until something better
 			// comes along.
@@ -99,12 +99,10 @@ namespace yomigaeri_backend
 			DateTime start = DateTime.Now;
 
 			again:
-			string ret = ReadChannel();
+			string ret = ReadChannel(false);
 
 			if (ret.Length == 0)
 			{
-				Thread.Sleep(500);
-				
 				if (timeout != Timeout.Infinite && (DateTime.Now - start).TotalSeconds > timeout)
 					throw new TimeoutException();
 
@@ -114,7 +112,7 @@ namespace yomigaeri_backend
 			return ret;
 		}
 
-		public static string ReadChannel()
+		public static string ReadChannel(bool noDelay = false)
 		{
 			Logging.WriteLineToLog("RDPVirtualChannel READ: ENTRY");
 
@@ -123,7 +121,8 @@ namespace yomigaeri_backend
 
 			byte[] buffer = new byte[CHANNEL_CHUNK_LENGTH];
 
-			bool ok = WTSVirtualChannelRead(s_hChannel, 1000, buffer, CHANNEL_CHUNK_LENGTH, out uint bytesRead);
+			bool ok = WTSVirtualChannelRead(s_hChannel, noDelay ? 0U : 1000U,
+				buffer, CHANNEL_CHUNK_LENGTH, out uint bytesRead);
 
 			if (!ok)
 				throw new Win32Exception();

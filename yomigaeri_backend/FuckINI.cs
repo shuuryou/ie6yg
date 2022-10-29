@@ -7,7 +7,7 @@ namespace yomigaeri_backend
     // There is not a single INI parser in C# out there that is not
     // totally over-engineered. I just want to load a few key-value
     // pairs that are organized in sections.
-    // So here is my own light-weight C# INI parser. (Version 1.2)
+    // So here is my own light-weight C# INI parser. (Version 1.2a)
     internal sealed class FuckINI
     {
         private readonly Dictionary<string, Dictionary<string, string>> m_Sections;
@@ -48,10 +48,19 @@ namespace yomigaeri_backend
                         string key = line.Substring(0, idx).ToUpperInvariant();
                         string value = line.Substring(idx + 1);
 
-                        // Inline comments
-                        idx = value.IndexOf(';');
-                        if (idx != -1)
-                            value = value.Substring(0, idx);
+						int offsetComment = 0;
+
+						// Do not check for comments inside quoted value
+						if (value[0] == '"')
+							offsetComment = value.IndexOf('"', 1);
+
+						// Inline comments
+						if (offsetComment + 1 < value.Length)
+						{
+							idx = value.IndexOf(';', offsetComment + 1);
+							if (idx != -1)
+								value = value.Substring(0, idx);
+						}
 
                         key = key.Trim();
                         value = value.Trim();
@@ -68,7 +77,7 @@ namespace yomigaeri_backend
                 }
         }
 
-        public string Get(string section, string key)
+        public string Get(string section, string key, string defaultIfMissing = null)
         {
             if (section == null)
                 throw new ArgumentNullException("section");
@@ -83,10 +92,10 @@ namespace yomigaeri_backend
             key = key.ToUpperInvariant();
 
             if (!m_Sections.ContainsKey(section))
-                return null;
+                return defaultIfMissing;
 
             if (!m_Sections[section].ContainsKey(key))
-                return null;
+                return defaultIfMissing;
 
             return m_Sections[section][key];
         }

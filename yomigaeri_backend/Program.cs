@@ -3,6 +3,7 @@ using CefSharp.WinForms;
 using Microsoft.Win32;
 using System;
 using System.ComponentModel;
+using System.Drawing;
 using System.Globalization;
 using System.IO;
 using System.Windows.Forms;
@@ -12,15 +13,14 @@ namespace yomigaeri_backend
 	public static class Program
 	{
 		internal static FuckINI Settings { get; private set; }
-
 		internal static ChromiumWebBrowser WebBrowser { get; private set; }
 
 		[STAThread]
-        public static int Main(string[] args)
-        {
-            Application.SetCompatibleTextRenderingDefault(true);
+		public static int Main(string[] args)
+		{
+			Application.SetCompatibleTextRenderingDefault(true);
 
-			SystemEvents.SessionSwitch += SystemEvents_SessionSwitch;
+			Application.ApplicationExit += Application_ApplicationExit;
 
 			#region Open Logger
 			try
@@ -192,6 +192,42 @@ namespace yomigaeri_backend
 			}
 			#endregion
 
+			string frontendLanguageList = string.Empty;
+
+			#region Request and Accept-Language List from Frontend
+			{
+				Logging.WriteLineToLog("Request browser language list from frontend.");
+
+				RDPVirtualChannel.WriteChannel("LANGLST");
+
+				string response = null;
+
+				try
+				{
+					response = RDPVirtualChannel.ReadChannelUntilResponse();
+				}
+				catch (TimeoutException)
+				{
+					Logging.WriteLineToLog("Time out getting browser language list from frontend.");
+				}
+
+				if (response == null)
+					goto skipLanguageList;
+
+				Logging.WriteLineToLog("Frontend browser language list response is: \"{0}\".", response);
+
+				if (response == "<EMPTY>")
+					goto skipLanguageList;
+
+				Logging.WriteLineToLog("Store frontend browser language list for CEF settings.");
+
+				frontendLanguageList = response;
+
+			skipLanguageList:
+				;
+			}
+			#endregion
+
 			#region Initialize AdBlock
 			AdBlock.Initialize();
 
@@ -201,26 +237,52 @@ namespace yomigaeri_backend
 
 			#region Initialize Chromium
 			{
-	
+				CefSettings cefSettings = new CefSettings();
+
+				if (!string.IsNullOrEmpty(frontendLanguageList))
+					cefSettings.AcceptLanguageList = frontendLanguageList;
+
+				cefSettings.BackgroundColor = Cef.ColorSetARGB(0, SystemColors.Window.R,
+					SystemColors.Window.G, SystemColors.Window.B);
+
+				cefSettings.CachePath =
+					Environment.ExpandEnvironmentVariables(Settings.Get("CEF", "CachePath", string.Empty));
+
+				for (int i = 1; i < int.MaxValue; i++)
+				{
+					string arg = Settings.Get("CEF", string.Format(CultureInfo.InvariantCulture, "CommandLineArg{0}", i));
+					if (string.IsNullOrWhiteSpace(arg))
+						break;
+					cefSettings.CefCommandLineArgs.Add(arg);
+				}
+
+				cefSettings.UserAgent = Settings.Get("CEF", "UserAgent", string.Empty);
+
+				cefSettings.PersistUserPreferences = false;
+				cefSettings.WindowlessRenderingEnabled = false;
+
+				Cef.EnableWaitForBrowsersToClose();
+				if (Settings.Get("CEF", "EnableHighDPISupport") == "1")
+					Cef.EnableHighDPISupport();
+
+				Cef.Initialize(cefSettings);
 			}
 			#endregion
 
-		Application.Run(new BrowserForm());
+			Application.Run(new BrowserForm());
+
 			return 0;
-        }
-
-		private static void SystemEvents_SessionSwitch(object sender, SessionSwitchEventArgs e)
-		{
-			if (e.Reason != SessionSwitchReason.RemoteDisconnect &&
-				e.Reason != SessionSwitchReason.ConsoleDisconnect &&
-				e.Reason != SessionSwitchReason.SessionLogoff)
-			{
-				return;
-			}
-
-			// TODO: Shut down CEF
-
-			Application.Exit();
 		}
+
+		private static void Application_ApplicationExit(object sender, EventArgs e)
+		{
+
+			if (Program.WebBrowser != null)
+			{
+				Program.WebBrowser.Dispose();
+				Cef.Shutdown();
+			}
+		}
+
 	}
 }
