@@ -220,7 +220,7 @@ Private Sub UserControl_ReadProperties(PropBag As PropertyBag)
     rdpClient.SecuredSettings2.StartProgram = CStr(PropBag.ReadProperty("RDP_Backend", vbNullString))
 
     If rdpClient.Server <> "" And rdpClient.UserName <> "" And CStr(PropBag.ReadProperty("RDP_Password", vbNullString)) <> "" And rdpClient.SecuredSettings2.StartProgram <> "" Then
-        'm_DoInitialConnect = True
+        m_DoInitialConnect = True
       Else 'NOT RDPCLIENT.SERVER...
         Err.Raise -1, "YOMIGAERI", LoadResString(103) ' The parameters for the frontend are incorrect.
     End If
