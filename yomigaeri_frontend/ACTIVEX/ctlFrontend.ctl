@@ -32,19 +32,43 @@ Attribute m_BrowserManager.VB_VarHelpID = -1
 
 Public Event StatusMessage(text As String)
 
+Private Sub m_BrowserManager_IEToolbarCommandClicked(commandId As Long)
+
+    Select Case commandId
+      Case m_BrowserManager.ToolbarIdCommandBack
+
+        rdpClient.SendOnVirtualChannel VIRTUAL_CHANNEL_NAME, "BTNBACK"
+      Case m_BrowserManager.ToolbarIdCommandForward
+
+        rdpClient.SendOnVirtualChannel VIRTUAL_CHANNEL_NAME, "BTNFORW"
+      Case m_BrowserManager.ToolbarIdCommandRefresh
+
+        rdpClient.SendOnVirtualChannel VIRTUAL_CHANNEL_NAME, "BTNREFR"
+      Case m_BrowserManager.ToolbarIdCommandStop
+
+        rdpClient.SendOnVirtualChannel VIRTUAL_CHANNEL_NAME, "BTNSTOP"
+      Case Else
+
+        modLogging.WriteLineToLog "IEToolbarCommandClicked: Unknown command ID."
+    End Select
+
+End Sub
+
 Private Sub m_BrowserManager_IEWantsToNavigate(newUrl As String)
+
     If rdpClient.Connected <> True Then
-        Exit Sub
+        Exit Sub '---> Bottom
     End If
-    
+
     rdpClient.SendOnVirtualChannel VIRTUAL_CHANNEL_NAME, "NAVIGATE:" & newUrl
+
 End Sub
 
 Private Sub rdpClient_OnChannelReceivedData(ByVal chanName As String, ByVal data As String)
 
-    Dim intPos As Integer
-    Dim strURL As String
-    Dim strTitle As String
+  Dim intPos As Integer
+  Dim strURL As String
+  Dim strTitle As String
 
     If chanName <> VIRTUAL_CHANNEL_NAME Then
         Exit Sub '---> Bottom
@@ -54,16 +78,29 @@ Private Sub rdpClient_OnChannelReceivedData(ByVal chanName As String, ByVal data
 
     ' STYLING: Send colors of the client running frontend to backend
     ' CURSORS: Send paths to custom mouse cursors that backend will load via drive sharing
+    ' LANGLST: Gets IE Accept-Language language list from registry or "<EMPTY>" if unset
     ' ADDRESS: Set IE address bar text to content following after "ADDRESS"
     ' ADDHIST: Add to IE history following after "ADDHIST" in the format URL\tTitle
     ' VISIBLE: Makes the RDP client visible
     ' INVISIB: Makes the RDP client invisible
+    ' BBACKON: Toolbar BACK button ON
+    ' BBACKOF: Toolbar BACK button OFF
+    ' BFORWON: Toolbar FORWARD button ON
+    ' BFORWOF: Toolbar FORWARD button OFF
+    ' BSTOPON: Toolbar STOP button ON
+    ' BSTOPOF: Toolbar STOP button OFF
+    ' BREFRON: Toolbar REFRESH button ON
+    ' BREFROF: Toolbar REFRESH button OFF
+    ' BMEDION: Toolbar MEDIA button ON
+    ' BMEDIOF: Toolbar MEDIA button OFF
 
     Select Case Left$(UCase$(data), 7)
       Case "STYLING"
         rdpClient.SendOnVirtualChannel VIRTUAL_CHANNEL_NAME, modFrontendStyling.MakeStyling(UserControl.hdc)
       Case "CURSORS"
-        rdpClient.SendOnVirtualChannel VIRTUAL_CHANNEL_NAME, modFrontendStyling.GetUserCursors()
+        rdpClient.SendOnVirtualChannel VIRTUAL_CHANNEL_NAME, modFrontendStyling.GetCursors()
+      Case "LANGLST"
+        rdpClient.SendOnVirtualChannel VIRTUAL_CHANNEL_NAME, modFrontendStyling.GetAcceptLanguage()
       Case "ADDRESS"
         If Len(data) < 8 Then
             modLogging.WriteLineToLog "Cannot set address because data is too short."
@@ -99,6 +136,30 @@ Private Sub rdpClient_OnChannelReceivedData(ByVal chanName As String, ByVal data
 
       Case "INVISIB"
         rdpClient.Visible = False
+      Case "BBACKON"
+
+        m_BrowserManager.ToolbarButtonStateBack = True
+      Case "BBACKOF"
+
+        m_BrowserManager.ToolbarButtonStateBack = False
+      Case "BFORWON"
+
+        m_BrowserManager.ToolbarButtonStateForward = True
+      Case "BFORWOF"
+
+        m_BrowserManager.ToolbarButtonStateForward = False
+      Case "BSTOPON"
+
+        m_BrowserManager.ToolbarButtonStateStop = True
+      Case "BSTOPOF"
+
+        m_BrowserManager.ToolbarButtonStateStop = False
+      Case "BREFRON"
+
+        m_BrowserManager.ToolbarButtonStateRefresh = True
+      Case "BREFROF"
+
+        m_BrowserManager.ToolbarButtonStateRefresh = False
 
       Case Else
         rdpClient.SendOnVirtualChannel VIRTUAL_CHANNEL_NAME, "UNSUPPORTED"
@@ -116,9 +177,12 @@ Private Sub rdpClient_OnDisconnected(ByVal discReason As Long)
 End Sub
 
 Private Sub UserControl_Initialize()
+
     Set m_BrowserManager = New IEBrowserManager
+    Set modWndProc.BROWSER_MANAGER_INSTANCE = m_BrowserManager
+
     m_BrowserManager.hWndUserControl = UserControl.hWnd
-    
+
     rdpClient.CreateVirtualChannels VIRTUAL_CHANNEL_NAME
 
     rdpClient.AdvancedSettings5.EnableAutoReconnect = True
@@ -141,12 +205,13 @@ Private Sub UserControl_Initialize()
     ' Visible is False. *sigh*
 
     rdpClient.Visible = False
+
 End Sub
 
 Private Sub UserControl_ReadProperties(PropBag As PropertyBag)
 
     modLogging.ENABLE_DEBUG_LOG = CBool(PropBag.ReadProperty("DebugLog", False))
-    
+
     modLogging.WriteLineToLog "--------------------------------------------------"
 
     rdpClient.Server = CStr(PropBag.ReadProperty("RDP_Server", vbNullString))
@@ -155,8 +220,8 @@ Private Sub UserControl_ReadProperties(PropBag As PropertyBag)
     rdpClient.SecuredSettings2.StartProgram = CStr(PropBag.ReadProperty("RDP_Backend", vbNullString))
 
     If rdpClient.Server <> "" And rdpClient.UserName <> "" And CStr(PropBag.ReadProperty("RDP_Password", vbNullString)) <> "" And rdpClient.SecuredSettings2.StartProgram <> "" Then
-        m_DoInitialConnect = True
-    Else 'NOT RDPCLIENT.SERVER...
+        'm_DoInitialConnect = True
+      Else 'NOT RDPCLIENT.SERVER...
         Err.Raise -1, "YOMIGAERI", LoadResString(103) ' The parameters for the frontend are incorrect.
     End If
 
@@ -187,30 +252,50 @@ Private Sub UserControl_Resize()
         If bWasConnected Then
             RaiseEvent StatusMessage(LoadResString(104)) ' Reconnecting to rendering engine...
         End If
-        
+
         rdpClient.Connect
     End If
 
 End Sub
 
 Private Sub UserControl_Show()
-    ' Will be fired when the control is actually shown on the website.
-    ' UserControl_Initialize still has the control floating in space.
-    
-    m_BrowserManager.LockOntoIWebBrowser2
-    
+
+  ' Will be fired when the control is actually shown on the website.
+  ' UserControl_Initialize still has the control floating in space.
+
+    m_BrowserManager.HookIWebBrowser2
+    m_BrowserManager.HookButtonToolbarCommands
+
     If m_DoInitialConnect Then
-      RaiseEvent StatusMessage(LoadResString(101)) ' Connecting to rendering engine...
+        RaiseEvent StatusMessage(LoadResString(101)) ' Connecting to rendering engine...
     End If
-    
+
+End Sub
+
+Private Sub UserControl_Terminate()
+
+    If Not m_BrowserManager Is Nothing Then
+        m_BrowserManager.ReleaseIWebBrowser2
+        m_BrowserManager.ReleaseButtonToolbarCommands
+    End If
+
+    Set m_BrowserManager = Nothing
+
 End Sub
 
 Public Sub PerformRemoteRefresh()
+
     If rdpClient.Connected Then
         rdpClient.SendOnVirtualChannel VIRTUAL_CHANNEL_NAME, "REFRESH"
     End If
+
 End Sub
 
 Public Sub QueryStreamingAvailable()
+
     MsgBox LoadResString(105), vbInformation ' Not implemented.
+
 End Sub
+
+':) Ulli's VB Code Formatter V2.24.17 (2022-Oct-29 22:35)  Decl: 8  Code: 268  Total: 276 Lines
+':) CommentOnly: 32 (11.6%)  Commented: 6 (2.2%)  Filled: 195 (70.7%)  Empty: 81 (29.3%)  Max Logic Depth: 3

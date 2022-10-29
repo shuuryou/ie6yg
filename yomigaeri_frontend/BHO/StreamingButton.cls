@@ -13,18 +13,11 @@ Attribute VB_PredeclaredId = False
 Attribute VB_Exposed = True
 Option Explicit
 
-' Adapted from the book
-' Visual Basic Shell Programming
-' J.P.Hamilton
-' Publisher: O 'Reilly
-' First Edition July 2000
-' ISBN: 1-56592-670-6
-
 Implements IObjectWithSite
 Implements IOleCommandTarget
 
 Private m_pUnkSite As IUnknownVB
-Private WithEvents m_IEBrowser As InternetExplorer
+Private m_IEBrowser As InternetExplorer
 Attribute m_IEBrowser.VB_VarHelpID = -1
 
 Private Const IID_IWebBrowserApp = "{0002DF05-0000-0000-C000-000000000046}"
@@ -47,12 +40,9 @@ Private Sub IObjectWithSite_SetSite(ByVal pSite As VBShellLib.IUnknownVB)
         Exit Sub '---> Bottom
     End If
 
-    'Save the site pointer for GetSite
     Set m_pUnkSite = pSite
-
     Set pServiceProvider = m_pUnkSite
 
-    'Query service provider to get IWebBrowser2 (InternetExplorer)
     CLSIDFromString StrPtr(IID_IWebBrowserApp), clsidWebApp
     CLSIDFromString StrPtr(IID_IWebBrowser2), clsidWebBrowser2
 
@@ -83,24 +73,22 @@ Private Sub IOleCommandTarget_Exec(ByVal pguidCmdGroup As VBShellLib.LPGUID, ByV
             Exit Sub '---> Bottom
         End If
     Next objElement
-    
+
     ' 101: Web streaming support is not available for the current website.
     ' 102: Web Streaming Support
     MsgBox LoadResString(101), vbCritical, LoadResString(102)
+
 End Sub
 
 Private Sub IOleCommandTarget_QueryStatus(ByVal pguidCmdGroup As VBShellLib.LPGUID, ByVal cCmds As VBShellLib.ULONG, ByVal prgCmds As VBShellLib.LPOLECMD, ByVal pCmdText As VBShellLib.LPOLECMDTEXT)
 
-  Dim i As Integer
   Dim cmd As OLECMD
 
-    For i = 0 To cCmds - 1
-        CopyMemory cmd, ByVal prgCmds + (Len(cmd) * i), Len(cmd)
-        cmd.cmdf = OLECMDF_SUPPORTED Or OLECMDF_ENABLED
-        CopyMemory ByVal prgCmds + (Len(cmd) * i), cmd, Len(cmd)
-    Next i
+    CopyMemory cmd, ByVal prgCmds + Len(cmd), Len(cmd)
+    cmd.cmdf = OLECMDF_SUPPORTED Or OLECMDF_ENABLED
+    CopyMemory ByVal prgCmds + Len(cmd), cmd, Len(cmd)
 
 End Sub
 
-':) Ulli's VB Code Formatter V2.24.17 (2022-Oct-26 21:22)  Decl: 17  Code: 72  Total: 89 Lines
-':) CommentOnly: 16 (18%)  Commented: 0 (0%)  Filled: 61 (68.5%)  Empty: 28 (31.5%)  Max Logic Depth: 3
+':) Ulli's VB Code Formatter V2.24.17 (2022-Oct-29 22:16)  Decl: 10  Code: 70  Total: 80 Lines
+':) CommentOnly: 10 (12.5%)  Commented: 0 (0%)  Filled: 53 (66.2%)  Empty: 27 (33.8%)  Max Logic Depth: 3

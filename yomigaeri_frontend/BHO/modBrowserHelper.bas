@@ -18,5 +18,5 @@ Public Type GUID
     Data4(7) As Byte
 End Type
 
-':) Ulli's VB Code Formatter V2.24.17 (2022-Oct-26 21:22)  Decl: 21  Code: 0  Total: 21 Lines
+':) Ulli's VB Code Formatter V2.24.17 (2022-Oct-29 22:16)  Decl: 21  Code: 0  Total: 21 Lines
 ':) CommentOnly: 8 (38.1%)  Commented: 0 (0%)  Filled: 17 (81%)  Empty: 4 (19%)  Max Logic Depth: 1

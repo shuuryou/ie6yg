@@ -5,14 +5,14 @@ Public ENABLE_DEBUG_LOG As Boolean
 
 Public Sub WriteLineToLog(line As String)
 
-    Dim intFF As Integer
+  Dim intFF As Integer
 
     If ENABLE_DEBUG_LOG <> True Then
         Exit Sub '---> Bottom
     End If
 
     intFF = -1
-    
+
     On Error GoTo EH
 
     intFF = FreeFile
@@ -22,7 +22,8 @@ Public Sub WriteLineToLog(line As String)
 
 EH:
     Close #intFF
+
 End Sub
 
-':) Ulli's VB Code Formatter V2.24.17 (2022-Oct-25 21:21)  Decl: 3  Code: 27  Total: 30 Lines
-':) CommentOnly: 4 (13.3%)  Commented: 0 (0%)  Filled: 19 (63.3%)  Empty: 11 (36.7%)  Max Logic Depth: 2
+':) Ulli's VB Code Formatter V2.24.17 (2022-Oct-29 22:14)  Decl: 3  Code: 25  Total: 28 Lines
+':) CommentOnly: 2 (7.1%)  Commented: 0 (0%)  Filled: 18 (64.3%)  Empty: 10 (35.7%)  Max Logic Depth: 2

@@ -1,12 +1,11 @@
 Type=OleDll
-Reference=*\G{00020430-0000-0000-C000-000000000046}#2.0#0#..\..\..\..\..\WINDOWS\system32\stdole2.tlb#OLE Automation
-Reference=*\G{3050F1C5-98B5-11CF-BB82-00AA00BDCE0B}#4.0#0#..\..\..\..\..\WINDOWS\system32\MSHTML.TLB#Microsoft HTML Object Library
-Reference=*\G{EAB22AC0-30C1-11CF-A7EB-0000C05BAE0B}#1.1#0#..\..\..\..\..\WINDOWS\system32\shdocvw.dll#Microsoft Internet Controls
+Reference=*\G{00020430-0000-0000-C000-000000000046}#2.0#0#C:\WINDOWS\system32\stdole2.tlb#OLE Automation
+Reference=*\G{3050F1C5-98B5-11CF-BB82-00AA00BDCE0B}#4.0#0#C:\WINDOWS\system32\MSHTML.TLB#Microsoft HTML Object Library
+Reference=*\G{EAB22AC0-30C1-11CF-A7EB-0000C05BAE0B}#1.1#0#C:\WINDOWS\system32\shdocvw.dll#Microsoft Internet Controls
 Reference=*\G{39898EB0-DE1B-11D2-9FD6-00550076E06F}#1.0#0#Vbshell.tlb#VB Shell Library
-Class=RefreshButton; RefreshButton.cls
+Class=StreamingButton; StreamingButton.cls
 Module=modBrowserHelper; modBrowserHelper.bas
 ResFile32="BHO.RES"
-Class=StreamingButton; StreamingButton.cls
 Startup="(None)"
 HelpFile=""
 Title="IE6 Yomigaeri Browser Helper Object"

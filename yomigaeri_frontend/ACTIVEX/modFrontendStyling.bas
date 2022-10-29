@@ -150,75 +150,101 @@ Public Function MakeStyling(ByRef hdc As Long) As String
 
 End Function
 
-Public Function GetUserCursors()
-    Dim Registry As New CRegistry
-    
-    ' What's a Dictionary<string, string>?
-    ' Yes, yes, I know scrrun.dll has one, but I'm not going to drag in
-    ' another dependency for this one function.
-        Dim strAppStarting As String, strArrow As String, strCrosshair As String
-    Dim strIBeam As String, strNo As String, strSizeAll As String
-    Dim strSizeNESW As String, strSizeNS As String, strSizeNWSE As String
-    Dim strSizeWE As String, strWait As String
-    
+Public Function GetCursors() As String
+
+  Dim Registry As New CRegistry
+
+  ' What's a Dictionary<string, string>?
+  ' Yes, yes, I know scrrun.dll has one, but I'm not going to drag in
+  ' another dependency for this one function.
+  Dim strAppStarting As String, strArrow As String, strCrosshair As String
+  Dim strIBeam As String, strNo As String, strSizeAll As String
+  Dim strSizeNESW As String, strSizeNS As String, strSizeNWSE As String
+  Dim strSizeWE As String, strWait As String
+
     With Registry
         .ClassKey = HKEY_CURRENT_USER
         .SectionKey = "Control Panel\Cursors"
         .ValueType = REG_SZ
-        
+
         .ValueKey = "AppStarting"
         strAppStarting = .Value
-        
+
         .ValueKey = "Arrow"
         strArrow = .Value
-        
+
         .ValueKey = "Crosshair"
         strCrosshair = .Value
-        
+
         .ValueKey = "Arrow"
         strArrow = .Value
-        
+
         .ValueKey = "IBeam"
         strIBeam = .Value
-        
+
         .ValueKey = "No"
         strNo = .Value
-        
+
         .ValueKey = "SizeAll"
         strSizeAll = .Value
-        
+
         .ValueKey = "SizeNESW"
         strSizeNESW = .Value
-        
+
         .ValueKey = "SizeNS"
         strSizeNS = .Value
-        
+
         .ValueKey = "SizeNWSE"
         strSizeNWSE = .Value
-        
+
         .ValueKey = "SizeWE"
         strSizeWE = .Value
-        
+
         .ValueKey = "Wait"
         strWait = .Value
-    End With
+    End With 'REGISTRY
 
     Set Registry = Nothing
 
-    GetUserCursors = _
-        "AppStarting=" & TrimNull(strAppStarting) & vbTab & _
-        "Arrow=" & TrimNull(strArrow) & vbTab & _
-        "Crosshair=" & TrimNull(strCrosshair) & vbTab & _
-        "IBeam=" & TrimNull(strIBeam) & vbTab & _
-        "No=" & TrimNull(strNo) & vbTab & _
-        "SizeAll=" & TrimNull(strSizeAll) & vbTab & _
-        "SizeNESW=" & TrimNull(strSizeNESW) & vbTab & _
-        "SizeNS=" & TrimNull(strSizeNS) & vbTab & _
-        "SizeNWSE=" & TrimNull(strSizeNWSE) & vbTab & _
-        "SizeWE=" & TrimNull(strSizeWE) & vbTab & _
-        "Wait=" & TrimNull(strWait)
-    
+    GetCursors = _
+                 "AppStarting=" & TrimNull(strAppStarting) & vbTab & _
+                 "Arrow=" & TrimNull(strArrow) & vbTab & _
+                 "Crosshair=" & TrimNull(strCrosshair) & vbTab & _
+                 "IBeam=" & TrimNull(strIBeam) & vbTab & _
+                 "No=" & TrimNull(strNo) & vbTab & _
+                 "SizeAll=" & TrimNull(strSizeAll) & vbTab & _
+                 "SizeNESW=" & TrimNull(strSizeNESW) & vbTab & _
+                 "SizeNS=" & TrimNull(strSizeNS) & vbTab & _
+                 "SizeNWSE=" & TrimNull(strSizeNWSE) & vbTab & _
+                 "SizeWE=" & TrimNull(strSizeWE) & vbTab & _
+                 "Wait=" & TrimNull(strWait)
+
 End Function
 
-':) Ulli's VB Code Formatter V2.24.17 (2022-Oct-25 21:21)  Decl: 70  Code: 83  Total: 153 Lines
-':) CommentOnly: 12 (7.8%)  Commented: 1 (0.7%)  Filled: 131 (85.6%)  Empty: 22 (14.4%)  Max Logic Depth: 2
+Public Function GetAcceptLanguage() As String
+
+  Dim strRet As String
+  Dim Registry As New CRegistry
+
+    With Registry
+        .ClassKey = HKEY_CURRENT_USER
+        .SectionKey = "Software\Microsoft\Internet Explorer\International"
+        .ValueType = REG_SZ
+
+        .ValueKey = "AcceptLanguage"
+
+        strRet = .Value
+    End With 'REGISTRY
+
+    Set Registry = Nothing
+
+    If strRet = "" Then
+        strRet = "<EMPTY>"
+    End If
+
+    GetAcceptLanguage = strRet
+
+End Function
+
+':) Ulli's VB Code Formatter V2.24.17 (2022-Oct-29 22:14)  Decl: 70  Code: 179  Total: 249 Lines
+':) CommentOnly: 15 (6%)  Commented: 3 (1.2%)  Filled: 199 (79.9%)  Empty: 50 (20.1%)  Max Logic Depth: 2
