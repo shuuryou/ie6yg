@@ -1,0 +1,9 @@
+REGEDIT4
+
+[HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Internet Explorer\Extensions\{d762d2f7-de9a-436f-8a6f-9557b50ac85b}]
+"clsid"="{1FBA04EE-3024-11d2-8F1F-0000F87ABD16}"
+"ButtonText"="@IE6YGBHO.DLL,-104"
+"HotIcon"="IE6YGBHO.DLL,103"
+"Icon"="IE6YGBHO.DLL,104"
+"Default Visible"="Yes"
+"ClsidExtension"="{30F62764-049F-49E3-BE4F-B529DDBC5104}"

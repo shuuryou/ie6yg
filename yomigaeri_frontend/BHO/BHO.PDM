@@ -1,0 +1,85 @@
+[Root]
+Most Recent Package=Standard Setup Package
+
+
+[Package|Standard Setup Package|Root]
+SubWizProgID=PDWizard.SetupPkgSubWiz
+BuildFolder=\\VBOXSVR\yomigaeri_frontend\BHO\Package
+
+[Package|Standard Setup Package|Configure DAO ISAMs]
+Applicable=No
+
+[Package|Standard Setup Package|Configure DAO ODBC]
+JetWorkspace=
+ODBCDirect=
+
+[Package|Standard Setup Package|Files Found]
+
+[Package|Standard Setup Package|Files Released]
+
+[Package|Standard Setup Package|Missing Dependency Information]
+\\VBOXSVR\yomigaeri_frontend\BHO\Vbshell.tlb=
+
+[Package|Standard Setup Package|Out-of-Date Dependency Information]
+
+[Package|Standard Setup Package|Files Added]
+\\vboxsvr\yomigaeri_frontend\bho\setupregbho.reg=
+
+[Package|Standard Setup Package|Files Removed]
+\\vboxsvr\yomigaeri_frontend\bho\vbshell.tlb=
+
+[Package|Standard Setup Package|Files In Project]
+C:\WINDOWS\system32\msvbvm60.dll=Yes
+C:\Program Files\Microsoft Visual Studio\VB98\Wizards\PDWizard\Redist\OLEAUT32.DLL=Yes
+C:\Program Files\Microsoft Visual Studio\VB98\Wizards\PDWizard\Redist\OLEPRO32.DLL=Yes
+C:\Program Files\Microsoft Visual Studio\VB98\Wizards\PDWizard\Redist\ASYCFILT.DLL=Yes
+C:\Program Files\Microsoft Visual Studio\VB98\Wizards\PDWizard\Redist\STDOLE2.TLB=Yes
+C:\Program Files\Microsoft Visual Studio\VB98\Wizards\PDWizard\Redist\COMCAT.DLL=Yes
+\\VBOXSVR\yomigaeri_frontend\BHO\Vbshell.tlb=No
+C:\Program Files\Microsoft Visual Studio\VB98\Wizards\PDWizard\SETUP.EXE=Yes
+C:\Program Files\Microsoft Visual Studio\VB98\Wizards\PDWizard\SETUP1.EXE=Yes
+C:\WINDOWS\system32\VB6STKIT.DLL=Yes
+C:\Program Files\Microsoft Visual Studio\VB98\Wizards\PDWizard\ST6UNST.EXE=Yes
+\\VBOXSVR\yomigaeri_frontend\BHO\SETUPREGBHO.REG=Yes
+\\VBOXSVR\yomigaeri_frontend\BHO\IE6YGBHO.DLL=Yes
+
+[Package|Standard Setup Package|Configure Registry Files]
+Applicable=Yes
+\\VBOXSVR\yomigaeri_frontend\BHO\SETUPREGBHO.REG=Register
+
+[Package|Standard Setup Package|Configure Remote Servers]
+Applicable=No
+
+[Package|Standard Setup Package|Install Locations]
+\\VBOXSVR\yomigaeri_frontend\BHO\YOMIGAERIBHO.DLL=$(WinSysPath)
+C:\WINDOWS\system32\msvbvm60.dll=$(WinSysPathSysFile)
+C:\Program Files\Microsoft Visual Studio\VB98\Wizards\PDWizard\Redist\OLEAUT32.DLL=$(WinSysPathSysFile)
+C:\Program Files\Microsoft Visual Studio\VB98\Wizards\PDWizard\Redist\OLEPRO32.DLL=$(WinSysPathSysFile)
+C:\Program Files\Microsoft Visual Studio\VB98\Wizards\PDWizard\Redist\ASYCFILT.DLL=$(WinSysPathSysFile)
+C:\Program Files\Microsoft Visual Studio\VB98\Wizards\PDWizard\Redist\STDOLE2.TLB=$(WinSysPathSysFile)
+C:\Program Files\Microsoft Visual Studio\VB98\Wizards\PDWizard\Redist\COMCAT.DLL=$(WinSysPathSysFile)
+C:\Program Files\Microsoft Visual Studio\VB98\Wizards\PDWizard\SETUP.EXE=$(AppPath)
+C:\Program Files\Microsoft Visual Studio\VB98\Wizards\PDWizard\SETUP1.EXE=$(WinPath)
+C:\WINDOWS\system32\VB6STKIT.DLL=$(WinSysPathSysFile)
+C:\Program Files\Microsoft Visual Studio\VB98\Wizards\PDWizard\ST6UNST.EXE=$(WinPath)
+\\VBOXSVR\yomigaeri_frontend\BHO\IE6YGBHO.DLL=$(WinSysPath)
+
+[Package|Standard Setup Package|Configure Shared Files]
+Applicable=No
+
+[Package|Standard Setup Package|Distribution]
+Type=multi
+Size=1.44 MB
+Title=IE6YG Browser Helper Object
+
+[Package|Standard Setup Package|Package]
+PackageFolder=\\VBOXSVR\yomigaeri_frontend\BHO\Package
+ProjectFolder=\\VBOXSVR\yomigaeri_frontend\BHO
+ServerSideCab=
+File1=\\VBOXSVR\yomigaeri_frontend\BHO\Package\setup.exe
+File2=\\VBOXSVR\yomigaeri_frontend\BHO\Package\Setup.Lst
+File3=\\VBOXSVR\yomigaeri_frontend\BHO\Package\IE6YGB1.CAB
+File4=\\VBOXSVR\yomigaeri_frontend\BHO\Package\IE6YGB2.CAB
+Handler1=PDWizard.FloppyDplySubWiz
+Handler2=PDWizard.FolderDplySubWiz
+Handler3=PDWizard.WebPostDplySubWiz

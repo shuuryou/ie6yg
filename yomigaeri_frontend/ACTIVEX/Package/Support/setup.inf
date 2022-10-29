@@ -1,0 +1,27 @@
+;*** BEGIN **********************************************************
+;**                                                                **
+;** Automatically generated on: Sat Oct 29 23:38:47 2022           **
+;**                                                                **
+;** MakeCAB Version: (32) 1.00.603.4 (06/25/98)                     **
+;**                                                                **
+;*** BEGIN **********************************************************
+[disk list]
+1,Disk 1
+[cabinet list]
+1,1,YOMIGAERI.CAB
+[file list]
+1,1,YOMIGAERI.INF,2667
+1,1,YOMIGAERI.OCX,106563
+1,1,msvbvm60.dll,1426944
+1,1,OLEAUT32.DLL,598288
+1,1,OLEPRO32.DLL,164112
+1,1,ASYCFILT.DLL,147728
+1,1,STDOLE2.TLB,17920
+1,1,COMCAT.DLL,22288
+1,1,oleexp.tlb,1548236
+1,1,comdlg32.ocx,163480
+;*** END ************************************************************
+;**                                                                **
+;** Automatically generated on: Sat Oct 29 23:38:47 2022           **
+;**                                                                **
+;*** END ************************************************************
