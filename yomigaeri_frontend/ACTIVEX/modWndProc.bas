@@ -8,9 +8,17 @@ Option Explicit
 
 Private Declare Function CallWindowProc Lib "user32" Alias "CallWindowProcA" (ByVal lpPrevWndFunc As Long, ByVal hWnd As Long, ByVal Msg As Long, ByVal wParam As Long, ByVal lParam As Long) As Long
 
-Private Const WM_COMMAND As Long = &H111
 Private Const WM_USER As Long = &H400
-Private Const TB_ENABLEBUTTON  As Long = (WM_USER + &H1)
+
+Private Const WM_COMMAND As Long = &H111
+
+Private Const TB_ENABLEBUTTON As Long = (WM_USER + &H1)
+
+Private Const SB_SETTEXT As Long = WM_USER + 1
+Private Const SB_SETPARTS As Long = WM_USER + 4
+Private Const SB_SETMINHEIGHT As Long = WM_USER + 8
+Private Const SB_SETICON As Long = WM_USER + 15
+
 
 Public BROWSER_MANAGER_INSTANCE As IEBrowserManager
 
@@ -47,6 +55,21 @@ Public Function RebarWindow32WndProc(ByVal hWnd As Long, ByVal uMsg As Long, ByV
     End If
 
     RebarWindow32WndProc = CallWindowProc(BROWSER_MANAGER_INSTANCE.ReBarOldWndProc, hWnd, uMsg, wParam, lParam)
+
+End Function
+
+Public Function StatusBarWndProc(ByVal hWnd As Long, ByVal uMsg As Long, ByVal wParam As Long, ByVal lParam As Long) As Long
+
+    Select Case uMsg
+        Case SB_SETTEXT:
+        Case SB_SETPARTS:
+        lParam = 4
+        Case SB_SETMINHEIGHT:
+        Case SB_SETICON:
+                Exit Function
+    End Select
+
+    StatusBarWndProc = CallWindowProc(BROWSER_MANAGER_INSTANCE.StatusBarOldWndProc, hWnd, uMsg, wParam, lParam)
 
 End Function
 

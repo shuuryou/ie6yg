@@ -8,6 +8,14 @@ Begin VB.UserControl ctlFrontend
    ClientWidth     =   3975
    ScaleHeight     =   2640
    ScaleWidth      =   3975
+   Begin VB.CommandButton Command1 
+      Caption         =   "Command1"
+      Height          =   495
+      Left            =   1440
+      TabIndex        =   1
+      Top             =   1080
+      Width           =   1215
+   End
    Begin MSTSCLibCtl.MsRdpClient6NotSafeForScripting rdpClient 
       Height          =   2535
       Left            =   600
@@ -30,7 +38,9 @@ Private m_DoInitialConnect As Boolean
 Private WithEvents m_BrowserManager As IEBrowserManager
 Attribute m_BrowserManager.VB_VarHelpID = -1
 
-Public Event StatusMessage(text As String)
+Private Sub Command1_Click()
+    m_BrowserManager.SetStatusBarText "fuck"
+End Sub
 
 Private Sub m_BrowserManager_IEToolbarCommandClicked(commandId As Long)
 
@@ -171,7 +181,7 @@ End Sub
 
 Private Sub rdpClient_OnDisconnected(ByVal discReason As Long)
 
-    RaiseEvent StatusMessage(LoadResString(102)) ' Disconnected from rendering engine.
+    m_BrowserManager.SetStatusBarText LoadResString(102)  ' Disconnected from rendering engine.
     rdpClient.Visible = False
 
 End Sub
@@ -182,7 +192,7 @@ Private Sub UserControl_Initialize()
     Set modWndProc.BROWSER_MANAGER_INSTANCE = m_BrowserManager
 
     m_BrowserManager.hWndUserControl = UserControl.hWnd
-
+    
     rdpClient.CreateVirtualChannels VIRTUAL_CHANNEL_NAME
 
     rdpClient.AdvancedSettings5.EnableAutoReconnect = True
@@ -220,7 +230,7 @@ Private Sub UserControl_ReadProperties(PropBag As PropertyBag)
     rdpClient.SecuredSettings2.StartProgram = CStr(PropBag.ReadProperty("RDP_Backend", vbNullString))
 
     If rdpClient.Server <> "" And rdpClient.UserName <> "" And CStr(PropBag.ReadProperty("RDP_Password", vbNullString)) <> "" And rdpClient.SecuredSettings2.StartProgram <> "" Then
-        m_DoInitialConnect = True
+        'm_DoInitialConnect = True 'XXX WRONG
       Else 'NOT RDPCLIENT.SERVER...
         Err.Raise -1, "YOMIGAERI", LoadResString(103) ' The parameters for the frontend are incorrect.
     End If
@@ -230,6 +240,8 @@ End Sub
 Private Sub UserControl_Resize()
 
   Dim bWasConnected As Boolean
+
+    m_BrowserManager.FixStatusBar
 
     bWasConnected = rdpClient.Connected
 
@@ -250,7 +262,7 @@ Private Sub UserControl_Resize()
 
     If bWasConnected Or m_DoInitialConnect Then
         If bWasConnected Then
-            RaiseEvent StatusMessage(LoadResString(104)) ' Reconnecting to rendering engine...
+            m_BrowserManager.SetStatusBarText LoadResString(104)  ' Reconnecting to rendering engine...
         End If
 
         rdpClient.Connect
@@ -265,9 +277,11 @@ Private Sub UserControl_Show()
 
     m_BrowserManager.HookIWebBrowser2
     m_BrowserManager.HookButtonToolbarCommands
+    m_BrowserManager.HookStatusBar
+    m_BrowserManager.FixStatusBar
 
     If m_DoInitialConnect Then
-        RaiseEvent StatusMessage(LoadResString(101)) ' Connecting to rendering engine...
+        m_BrowserManager.SetStatusBarText LoadResString(101)  ' Connecting to rendering engine...
     End If
 
 End Sub
@@ -277,6 +291,7 @@ Private Sub UserControl_Terminate()
     If Not m_BrowserManager Is Nothing Then
         m_BrowserManager.ReleaseIWebBrowser2
         m_BrowserManager.ReleaseButtonToolbarCommands
+        m_BrowserManager.ReleaseStatusBar
     End If
 
     Set m_BrowserManager = Nothing

@@ -72,19 +72,58 @@ Private TOOLBAR_BUTTON_STATE_FORWARD As Boolean
 Private TOOLBAR_BUTTON_STATE_STOP As Boolean
 Private TOOLBAR_BUTTON_STATE_REFRESH As Boolean
 
-Private m_History As IUrlHistoryStg
-Private WithEvents m_Browser As WebBrowser
-Attribute m_Browser.VB_VarHelpID = -1
-
 Private m_hWndUserControl As Long
 Private m_hWndAddressBar As Long
 Private m_hWndButtonToolbar As Long
 Private m_hWndReBarWindow32 As Long
+Private m_hWndStatusBar As Long
+Private m_hWndProgressBar As Long
+
 Private m_hOldWndProcButtonToolbar As Long
 Private m_hOldWndProcReBarWindow32 As Long
+Private m_hOldWndProcStatusBar As Long
+
+Private WithEvents m_Browser As WebBrowser
+Attribute m_Browser.VB_VarHelpID = -1
 
 Public Event IEWantsToNavigate(newUrl As String)
 Public Event IEToolbarCommandClicked(commandId As Long)
+
+Private m_History As IUrlHistoryStg
+
+
+' XXX sort ME XXX
+   
+  Private Const STATUS_PANES   As Integer = 4
+ Private Const STATUS_PANE_NAVIGATION     As Integer = 0
+ Private Const STATUS_PANE_PROGRESS       As Integer = 1
+ Private Const STATUS_PANE_SSL            As Integer = 2
+  Private Const STATUS_PANE_ZONE          As Integer = 3
+    
+Private Const SB_SETTEXT   As Long = WM_USER + 1
+Private Const SB_SIMPLE   As Long = WM_USER + 9
+Private Const SB_GETPARTS As Long = WM_USER + 6
+Private Const SB_SETICON  As Long = WM_USER + 15
+Private Const SB_GETRECT                As Long = WM_USER + 10
+Private Const SB_SETPARTS               As Long = WM_USER + 4
+Private Const SB_SETMINHEIGHT          As Long = WM_USER + 8
+
+Private Const SBT_NOTABPARSING As Long = &H800
+
+Private Const SWP_NOZORDER     As Long = &H4
+Private Const SWP_NOACTIVATE      As Long = &H10
+
+Private Declare Function GetClientRect Lib "user32.dll" (ByVal hWnd As Long, lpRect As RECT) As Long
+Private Declare Function InflateRect Lib "user32.dll" (lpRect As RECT, ByVal x As Long, ByVal y As Long) As Long
+Private Declare Function SetWindowPos Lib "user32.dll" (ByVal hWnd As Long, ByVal hWndInsertAfter As Long, ByVal x As Long, ByVal y As Long, ByVal cx As Long, ByVal cy As Long, ByVal wFlags As Long) As Long
+                                  
+Private Type RECT
+  Left As Long
+  Top As Long
+  Right As Long
+  Bottom As Long
+End Type
+
 
 Private Sub Class_Initialize()
 
@@ -92,9 +131,13 @@ Private Sub Class_Initialize()
     m_hWndAddressBar = -1
     m_hWndButtonToolbar = -1
     m_hWndReBarWindow32 = -1
+    m_hWndStatusBar = -1
+    m_hWndProgressBar = -1
+
     m_hOldWndProcButtonToolbar = -1
     m_hOldWndProcReBarWindow32 = -1
-
+    m_hOldWndProcStatusBar = -1
+    
 End Sub
 
 Public Property Let hWndUserControl(ByRef hWnd As Long)
@@ -215,10 +258,22 @@ Public Property Get RebarWindow32OldWndProc() As Long
 
 End Property
 
+Public Property Get StatusBarOldWndProc() As Long
+
+    StatusBarOldWndProc = m_hOldWndProcStatusBar
+
+End Property
+
 Private Function FindInternetExplorerServer() As Long
 
   Dim hWnd As Long
   Dim strClassName As String
+
+    If m_hWndUserControl = -1 Then
+        modLogging.WriteLineToLog "FindInternetExplorerServer: Don't know the hWnd of the user control yet."
+        FindInternetExplorerServer = -1
+        Exit Function
+    End If
 
     hWnd = GetParent(m_hWndUserControl)
 
@@ -548,6 +603,182 @@ Public Sub ReleaseButtonToolbarCommands()
 
 End Sub
 
+Public Sub HookStatusBar()
+
+  Dim hwndIEFrame As Long
+  Dim hWndTemp As Long
+  
+    hwndIEFrame = FindIEFrame()
+    
+    If hwndIEFrame = -1 Then
+        m_hWndButtonToolbar = -1
+        Exit Sub '---> Bottom
+    End If
+
+    hWndTemp = FindWindowEx(hwndIEFrame, 0&, "msctls_statusbar32", vbNullString)
+
+    If hWndTemp = 0 Then
+        modLogging.WriteLineToLog "HookStatusBar: msctls_statusbar32 not found."
+        Exit Sub '---> Bottom
+    End If
+    
+    m_hWndStatusBar = hWndTemp
+
+    hWndTemp = FindWindowEx(hWndTemp, 0&, "msctls_progress32", vbNullString)
+
+    If hWndTemp = 0 Then
+        modLogging.WriteLineToLog "HookStatusBar: ReBarWindow32 not found."
+        m_hWndStatusBar = -1
+        Exit Sub '---> Bottom
+    End If
+    
+    m_hWndProgressBar = hWndTemp
+
+    modLogging.WriteLineToLog "HookStatusBar: Found msctls_statusbar32: " & Hex$(m_hWndStatusBar) & " and msctls_progress32: " & Hex$(m_hWndProgressBar)
+
+    m_hOldWndProcStatusBar = SetWindowLong(m_hWndStatusBar, GWL_WNDPROC, AddressOf modWndProc.StatusBarWndProc)
+    modLogging.WriteLineToLog "HookStatusBar: Hooked msctls_statusbar32 WndProc. Old one was at " & Hex$(m_hOldWndProcStatusBar)
+End Sub
+
+Public Sub FixStatusBar()
+    If m_hWndStatusBar = -1 Or m_hWndProgressBar = -1 Then
+        modLogging.WriteLineToLog "FixStatusBar: Don't know m_hWndStatusBar or m_hWndProgressBar are bad."
+        Exit Sub
+    End If
+
+   ' Following code adapted from leaked WinXP code available at:
+    ' http://xxx.xxx.xxx.xxx:8090/download/developer/xpsource/XPSP1/NT/shell/shdocvw/dochost.cpp
+    ' void CDocObjectHost::_PlaceProgressBar(BOOL fForcedLayout)
+    '
+    ' I found it by searching the Internet for window messages
+    ' shown in Spy++ when IE6 navigates somewhere and updates
+    ' the status bar.
+ 
+    SendMessage m_hWndStatusBar, SB_SIMPLE, Abs(False), 0&
+    
+    Dim rc As RECT
+    
+    GetClientRect m_hWndStatusBar, rc
+    
+    Dim cxZone As Long
+    cxZone = ZoneComputePaneSize()
+    
+    Dim cxProgressBar As Long
+    cxProgressBar = 100
+    
+    Dim nSBWidth As Integer
+    nSBWidth = rc.Right - rc.Left
+    
+    Dim arnRtEdge(STATUS_PANES) As Long
+    arnRtEdge(0) = 1
+
+    Dim nIconPaneWidth As Long
+    nIconPaneWidth = GetSystemMetrics(SM_CXSMICON) + _
+        GetSystemMetrics(SM_CXEDGE) * 4
+                
+    Dim nWidthReqd As Long
+    nWidthReqd = cxZone + cxProgressBar + (nIconPaneWidth * 1)
+    
+    ' Oh lord, VB6 not even has Max(). What a garbage language.
+    
+    arnRtEdge(STATUS_PANE_NAVIGATION) = IIf(1 > nSBWidth - nWidthReqd, 1, nSBWidth - nWidthReqd)
+    
+    nWidthReqd = nWidthReqd - cxProgressBar
+    arnRtEdge(STATUS_PANE_PROGRESS) = IIf(1 > nSBWidth - nWidthReqd, 1, nSBWidth - nWidthReqd)
+    
+    nWidthReqd = nWidthReqd - nIconPaneWidth
+    arnRtEdge(STATUS_PANE_SSL) = IIf(1 > nSBWidth - nWidthReqd, 1, nSBWidth - nWidthReqd)
+
+    arnRtEdge(STATUS_PANE_ZONE) = -1
+    
+    Dim nParts As Long
+    nParts = SendMessage(m_hWndStatusBar, SB_GETPARTS, 0, 0&)
+    
+    If nParts <> STATUS_PANES Then
+        Dim n As Integer
+        For n = 0 To nParts - 1 Step 1
+            SendMessage m_hWndStatusBar, SB_SETTEXT, n Or SBT_NOTABPARSING, 0&
+            SendMessage m_hWndStatusBar, SB_SETICON, n, 0&
+        Next n
+            
+       SendMessage m_hWndStatusBar, SB_SETPARTS, 0, 0&
+    End If
+        
+    SendMessage m_hWndStatusBar, SB_SETPARTS, STATUS_PANES, arnRtEdge(0)
+
+    If SendMessage(m_hWndStatusBar, SB_GETRECT, 1, rc) <> 0 Then
+        InflateRect rc, -1 * GetSystemMetrics(SM_CXEDGE), -1 * GetSystemMetrics(SM_CYEDGE)
+    Else
+        rc.Left = rc.Top = rc.Right = rc.Bottom = 0
+    End If
+    
+    SetWindowPos m_hWndProgressBar, 0&, _
+        rc.Left, rc.Top, _
+        rc.Right - rc.Left, rc.Bottom - rc.Top, _
+        SWP_NOZORDER Or SWP_NOACTIVATE
+
+    SendMessage m_hWndStatusBar, SB_SETMINHEIGHT, GetSystemMetrics(SM_CYSMICON) + _
+        GetSystemMetrics(SM_CYBORDER) * 2, 0&
+        
+        Dim text() As Byte
+        text = StrConv(LoadResString(106), vbFromUnicode) & Chr$(0) ' IE6YG Engine
+        
+        SendMessage m_hWndStatusBar, SB_SETTEXT, STATUS_PANE_ZONE, text(0)
+    
+    modLogging.WriteLineToLog "FixStatusBar: Attempted to fix it."
+End Sub
+
+Private Function ZoneComputePaneSize() As Long
+
+    ' Essentially measures the width of a string and some
+    ' cosmetic elements around it in shlwapi/security.cpp
+    
+    Dim s_cxMaxZoneText As Single
+    
+    ' No way to do this easily from *here*, so fuck it
+    ' s_cxMaxZoneText = m_FrontendInstance.TextWidth(LoadResString(106)) ' IE6YG Engine
+    s_cxMaxZoneText = 100
+
+    ZoneComputePaneSize = s_cxMaxZoneText + _
+       GetSystemMetrics(SM_CXSMICON) + _
+       GetSystemMetrics(SM_CXVSCROLL) + _
+       GetSystemMetrics(SM_CXEDGE) * 4
+
+End Function
+
+Public Sub SetStatusBarText(newText As String)
+
+    If m_hWndStatusBar = -1 Then
+        modLogging.WriteLineToLog "SetStatusBarText: m_hWndStatusBar is bad."
+        Exit Sub '---> Bottom
+    End If
+    
+    Dim text() As Byte
+    text = StrConv(newText, vbFromUnicode) & Chr$(0)
+    
+    SendMessage m_hWndStatusBar, SB_SETTEXT, STATUS_PANE_NAVIGATION, text(0)
+
+    modLogging.WriteLineToLog "SetStatusBarText: Text becomes: " & newText
+
+End Sub
+
+Public Sub ReleaseStatusBar()
+
+    If m_hOldWndProcStatusBar = -1 Then
+        Exit Sub '---> Bottom
+    End If
+
+    SetWindowLong m_hWndStatusBar, GWL_WNDPROC, m_hOldWndProcStatusBar
+    m_hOldWndProcStatusBar = -1
+    modLogging.WriteLineToLog "Restored msctls_statusbar32 WndProc."
+End Sub
+
+
+
+
+
+
+
 Public Sub RaiseButtonToolbarEvent(commandId As Long)
 
     modLogging.WriteLineToLog "RaiseButtonToolbarEvent: Catch and redirect command ID " & CStr(commandId)
@@ -636,21 +867,7 @@ Public Sub ReleaseIWebBrowser2()
 
 End Sub
 
-Public Sub SetStatusBarText(text As String)
 
-  ' This is unfortunately not reliable very early during ActiveX control
-  ' initialization when the page has not yet settled. Therefore it is
-  ' done using a JScript event instead.
-
-    If m_Browser Is Nothing Then
-        modLogging.WriteLineToLog "SetStatusBarText: IWebBrowser2 not locked onto."
-        Exit Sub '---> Bottom
-    End If
-
-    m_Browser.StatusText = text
-    modLogging.WriteLineToLog "SetStatusBarText: Text becomes: " & text
-
-End Sub
 
 Private Sub m_Browser_BeforeNavigate2(ByVal pDisp As Object, URL As Variant, Flags As Variant, TargetFrameName As Variant, PostData As Variant, Headers As Variant, Cancel As Boolean)
 
