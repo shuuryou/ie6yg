@@ -1,0 +1,17 @@
+This is a patched version that supports unicode windows.
+
+The patch is taken from:
+
+http://www.vbaccelerator.com/home/VB/Code/Libraries/Subclassing/SSubTimer/bugTrak17_1.html
+
+Archived as "bugdesc.pdf" in this folder.
+
+Another description of the problem is at:
+
+https://www.codeproject.com/Articles/984/How-to-Subclass-Unicode-Window-from-ANSI-Applicati
+
+Archived as "bugdesc2.pdf" in this folder.
+
+Basically, you can't subclass a window using the relevant *A functions if it's a Unicode window. In that case you MUST use the *W functions. If you try to do it, the title bar starts becoming really funny dancing mojibake on OS like Win2K or WinXP.
+
+The original author never implemented the fix. Because of that I also can't use the asm-stubbed version of SSubTimer either.
