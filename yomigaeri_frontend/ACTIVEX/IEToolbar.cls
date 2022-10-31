@@ -1,0 +1,339 @@
+VERSION 1.0 CLASS
+BEGIN
+  MultiUse = -1  'True
+  Persistable = 0  'NotPersistable
+  DataBindingBehavior = 0  'vbNone
+  DataSourceBehavior  = 0  'vbNone
+  MTSTransactionMode  = 0  'NotAnMTSObject
+END
+Attribute VB_Name = "IEToolbar"
+Attribute VB_GlobalNameSpace = False
+Attribute VB_Creatable = False
+Attribute VB_PredeclaredId = False
+Attribute VB_Exposed = False
+Attribute VB_Ext_KEY = "SavedWithClassBuilder6" ,"Yes"
+Attribute VB_Ext_KEY = "Top_Level" ,"Yes"
+Option Explicit
+
+Implements SSubTimer.ISubclass
+
+Private m_hWndIEFrame As Long
+Private m_hWndButtonToolbar As Long
+Private m_hWndReBarWindow32 As Long
+
+Private m_ToolbarIdCommandBACK As Integer
+Private m_ToolbarIdCommandFORWARD As Integer
+Private m_ToolbarIdCommandSTOP As Integer
+Private m_ToolbarIdCommandREFRESH As Integer
+Private m_ToolbarIdCommandHOME As Integer
+Private m_ToolbarIdCommandMEDIA As Integer
+
+Private m_ToolbarButtonStateBACK As Boolean
+Private m_ToolbarButtonStateFORWARD As Boolean
+Private m_ToolbarButtonStateSTOP As Boolean
+Private m_ToolbarButtonStateREFRESH As Boolean
+Private m_ToolbarButtonStateHOME As Boolean
+Private m_ToolbarButtonStateMEDIA As Boolean
+
+' These are the TBBUTTON.iBitmap values, at least in IE6. I don't know if it's
+' a good idea to use iBitmap values, but the values of idCommand will change
+' randomly when toolbar buttons are added, removed, or moved around. Toolbar
+' bitmap indexes appear to always remain stable.
+Private Const TOOLBAR_IBITMAP_BACK As Byte = 0
+Private Const TOOLBAR_IBITMAP_FORWARD As Byte = 1
+Private Const TOOLBAR_IBITMAP_STOP As Byte = 2
+Private Const TOOLBAR_IBITMAP_REFRESH As Byte = 3
+Private Const TOOLBAR_IBITMAP_HOME As Byte = 4
+'Private Const TOOLBAR_IBITMAP_SEARCH As Byte = 5
+'Private Const TOOLBAR_IBITMAP_FAVORITES As Byte = 6
+'Private Const TOOLBAR_IBITMAP_PRINT As Byte = 7
+Private Const TOOLBAR_IBITMAP_MEDIA As Byte = 11
+'Private Const TOOLBAR_IBITMAP_HISTORY As Byte = 12
+
+
+Public Enum ToolbarCommand
+    CommandUnknown = 0
+    CommandBack = 1
+    CommandForward = 2
+    CommandStop = 3
+    CommandRefresh = 4
+    CommandHome = 5
+    CommandMedia = 6
+End Enum
+
+Public Event ToolbarButtonPressed(command As ToolbarCommand)
+
+Public Sub Constructor(hWndIEFrame As Long)
+    m_hWndIEFrame = hWndIEFrame
+    
+    FindToolbar
+    
+    If m_hWndButtonToolbar = -1 Or m_hWndReBarWindow32 = -1 Then
+        Exit Sub
+    End If
+    
+    AttachMessage Me, m_hWndButtonToolbar, TB_ENABLEBUTTON
+    AttachMessage Me, m_hWndReBarWindow32, WM_COMMAND
+End Sub
+
+Private Sub Class_Terminate()
+    If m_hWndButtonToolbar = -1 Or m_hWndReBarWindow32 = -1 Then
+        Exit Sub
+    End If
+    
+    DetachMessage Me, m_hWndButtonToolbar, TB_ENABLEBUTTON
+    DetachMessage Me, m_hWndReBarWindow32, WM_COMMAND
+End Sub
+
+Public Property Get hWndButtonToolbar() As Long
+    hWndButtonToolbar = m_hWndButtonToolbar
+End Property
+
+Public Property Get hWndReBarWindow32() As Long
+    hWndReBarWindow32 = m_hWndReBarWindow32
+End Property
+
+Private Property Let ISubclass_MsgResponse(ByVal RHS As SSubTimer.EMsgResponse)
+    ' Unused
+End Property
+
+Private Property Get ISubclass_MsgResponse() As SSubTimer.EMsgResponse
+    ISubclass_MsgResponse = emrConsume
+End Property
+
+Private Function ISubclass_WindowProc(ByVal hWnd As Long, ByVal iMsg As Long, ByVal WParam As Long, ByVal lParam As Long) As Long
+    
+    If hWnd = m_hWndButtonToolbar Then
+        If iMsg = TB_ENABLEBUTTON Then
+            Select Case WParam
+              Case m_ToolbarIdCommandBACK:
+                lParam = Abs(m_ToolbarButtonStateBACK)
+              Case m_ToolbarIdCommandFORWARD:
+                lParam = Abs(m_ToolbarButtonStateFORWARD)
+              Case m_ToolbarIdCommandSTOP:
+                lParam = Abs(m_ToolbarButtonStateSTOP)
+              Case m_ToolbarIdCommandREFRESH:
+                lParam = Abs(m_ToolbarButtonStateREFRESH)
+            Case m_ToolbarIdCommandHOME:
+                lParam = Abs(m_ToolbarButtonStateHOME)
+            Case m_ToolbarIdCommandMEDIA:
+                lParam = Abs(m_ToolbarButtonStateMEDIA)
+            End Select
+        End If
+
+        GoTo Done
+    End If
+    
+    If hWnd = m_hWndReBarWindow32 Then
+        If iMsg = WM_COMMAND Then
+            
+            Dim command As ToolbarCommand
+            command = ToolbarCommandIdToEnum(WParam)
+            
+            If command <> CommandUnknown Then
+                RaiseEvent ToolbarButtonPressed(command)
+            End If
+            
+            Exit Function
+        End If
+        
+        GoTo Done
+    End If
+
+Done:
+    CallOldWindowProc hWnd, iMsg, WParam, lParam
+End Function
+
+Private Sub FindToolbar()
+
+  Dim hWndTemp As Long
+  Dim hwndToolbar As Long
+
+  Dim sctTbButton As TBBUTTON
+  Dim intButtonCount As Integer
+
+  Dim i As Integer, j As Integer
+
+    If m_hWndIEFrame = -1 Then
+        modLogging.WriteLineToLog "FindToolbar: m_hWndIEFrame is bad."
+        m_hWndButtonToolbar = -1
+        Exit Sub '---> Bottom
+    End If
+
+    hWndTemp = FindWindowEx(m_hWndIEFrame, 0&, "WorkerW", vbNullString)
+
+    If hWndTemp = 0 Then
+        modLogging.WriteLineToLog "FindToolbar: WorkerW not found."
+        m_hWndButtonToolbar = -1
+        Exit Sub '---> Bottom
+    End If
+
+    hWndTemp = FindWindowEx(hWndTemp, 0&, "ReBarWindow32", vbNullString)
+
+    If hWndTemp = 0 Then
+        modLogging.WriteLineToLog "FindToolbar: ReBarWindow32 not found."
+        m_hWndButtonToolbar = -1
+        Exit Sub '---> Bottom
+    End If
+
+    modLogging.WriteLineToLog "FindToolbar: Found ReBarWindow32: " & Hex$(hWndTemp)
+    m_hWndReBarWindow32 = hWndTemp
+
+    hwndToolbar = 0&
+
+NextToolbar:
+    m_ToolbarIdCommandBACK = -1
+    m_ToolbarIdCommandFORWARD = -1
+    m_ToolbarIdCommandSTOP = -1
+    m_ToolbarIdCommandREFRESH = -1
+    m_ToolbarIdCommandHOME = -1
+    m_ToolbarIdCommandMEDIA = -1
+
+    hwndToolbar = FindWindowEx(hWndTemp, hwndToolbar, "ToolbarWindow32", vbNullString)
+
+    If hwndToolbar = 0 Then
+        modLogging.WriteLineToLog "FindToolbar: ToolbarWindow32 not found or all of them were wrong."
+        m_hWndButtonToolbar = -1
+        m_hWndReBarWindow32 = -1
+        Exit Sub '---> Bottom
+    End If
+
+    intButtonCount = SendMessage(hwndToolbar, TB_BUTTONCOUNT, 0, 0)
+
+    For i = 0 To intButtonCount - 1 Step 1
+        SendMessage hwndToolbar, TB_GETBUTTON, i, sctTbButton
+
+        ' Another shitty hack. It would have been nice to use TB_GETBUTTONTEXT,
+        ' but this consistenly crashed the BHO and IE unless there was a MsgBox
+        ' in this loop to interrupt it every iteration. I guess it's a bug in
+        ' COMCTL32?
+
+        ' Don't know. Don't care. All of this is insane anyway, so I gave up
+        ' after a day of trying to debug the crash. BHO's have a very large
+        ' iBitmap value, so the following is reliable enough to find the button
+        ' toolbar.
+
+        ' It doesn't help that most BHO development went down 15-20 years ago
+        ' and the knowledge has since become somewhat lost on the Internet.
+        If sctTbButton.idCommand <> 0 And sctTbButton.iBitmap = TOOLBAR_IBITMAP_REFRESH Then
+            m_hWndButtonToolbar = hwndToolbar
+            modLogging.WriteLineToLog "FindToolbar: Found it: " & Hex$(hwndToolbar)
+
+            ' Now go through the buttons a second time to find the interesting
+            ' ones by their bitmap index. The bitmap index seems to be stable.
+            ' The command IDs change randomly when changing toolbar settings.
+
+            For j = 0 To intButtonCount - 1 Step 1
+                SendMessage hwndToolbar, TB_GETBUTTON, j, sctTbButton
+
+                Select Case sctTbButton.iBitmap
+                  Case TOOLBAR_IBITMAP_BACK
+                    modLogging.WriteLineToLog "FindToolbar: Found BACK button. Command ID: " & sctTbButton.idCommand
+                    m_ToolbarIdCommandBACK = sctTbButton.idCommand
+                  Case TOOLBAR_IBITMAP_FORWARD
+                    modLogging.WriteLineToLog "FindToolbar: Found FORWARD button. Command ID: " & sctTbButton.idCommand
+                    m_ToolbarIdCommandFORWARD = sctTbButton.idCommand
+                  Case TOOLBAR_IBITMAP_STOP
+                    modLogging.WriteLineToLog "FindToolbar: Found STOP button. Command ID: " & sctTbButton.idCommand
+                    m_ToolbarIdCommandSTOP = sctTbButton.idCommand
+                  Case TOOLBAR_IBITMAP_REFRESH
+                    modLogging.WriteLineToLog "FindToolbar: Found REFRESH button. Command ID: " & sctTbButton.idCommand
+                    m_ToolbarIdCommandREFRESH = sctTbButton.idCommand
+                Case TOOLBAR_IBITMAP_HOME:
+                    modLogging.WriteLineToLog "FindToolbar: Found HOME button. Command ID: " & sctTbButton.idCommand
+                    m_ToolbarIdCommandHOME = sctTbButton.idCommand
+                Case TOOLBAR_IBITMAP_MEDIA:
+                    modLogging.WriteLineToLog "FindToolbar: Found MEDIA button. Command ID: " & sctTbButton.idCommand
+                    m_ToolbarIdCommandMEDIA = sctTbButton.idCommand
+
+                End Select
+            Next j
+
+            Exit Sub
+        End If
+    Next i
+
+    GoTo NextToolbar
+End Sub
+
+Public Sub SetToolbarCommandState(command As ToolbarCommand, enable As Boolean)
+    Dim commandId As Long
+    commandId = EnumToToolbarCommandId(command)
+
+    If commandId = -1 Then
+        modLogging.WriteLineToLog "SetToolbarCommandState: Cannot do it because command is unknown."
+        Exit Sub
+    End If
+
+    SendMessage m_hWndButtonToolbar, TB_ENABLEBUTTON, commandId, Abs(enable)
+    modLogging.WriteLineToLog "SetToolbarCommandState: Command ID " & commandId & " new state: " & enable
+End Sub
+
+Private Function ToolbarCommandIdToEnum(idCommand As Long) As ToolbarCommand
+    If idCommand = m_ToolbarIdCommandBACK Then
+        ToolbarCommandIdToEnum = CommandBack
+        Exit Function
+    End If
+    
+    If idCommand = m_ToolbarIdCommandFORWARD Then
+        ToolbarCommandIdToEnum = CommandForward
+        Exit Function
+    End If
+    
+    If idCommand = m_ToolbarIdCommandSTOP Then
+        ToolbarCommandIdToEnum = CommandStop
+        Exit Function
+    End If
+    
+    If idCommand = m_ToolbarIdCommandREFRESH Then
+        ToolbarCommandIdToEnum = CommandRefresh
+        Exit Function
+    End If
+    
+    If idCommand = m_ToolbarIdCommandHOME Then
+        ToolbarCommandIdToEnum = CommandHome
+        Exit Function
+    End If
+    
+    If idCommand = m_ToolbarIdCommandMEDIA Then
+        ToolbarCommandIdToEnum = CommandMedia
+        Exit Function
+    End If
+    
+    ToolbarCommandIdToEnum = CommandUnknown
+End Function
+
+Private Function EnumToToolbarCommandId(command As ToolbarCommand) As Long
+    If command = CommandBack Then
+        EnumToToolbarCommandId = m_ToolbarIdCommandBACK
+        Exit Function
+    End If
+    
+    If command = CommandForward Then
+        EnumToToolbarCommandId = m_ToolbarIdCommandFORWARD
+        Exit Function
+    End If
+    
+    If command = CommandStop Then
+        EnumToToolbarCommandId = m_ToolbarIdCommandSTOP
+        Exit Function
+    End If
+    
+    If command = CommandRefresh Then
+        EnumToToolbarCommandId = m_ToolbarIdCommandREFRESH
+        Exit Function
+    End If
+    
+    If command = CommandHome Then
+        EnumToToolbarCommandId = m_ToolbarIdCommandHOME
+        Exit Function
+    End If
+    
+    If command = CommandMedia Then
+        EnumToToolbarCommandId = m_ToolbarIdCommandMEDIA
+        Exit Function
+    End If
+    
+    EnumToToolbarCommandId = -1
+
+End Function

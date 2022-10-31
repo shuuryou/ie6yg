@@ -2,27 +2,21 @@ VERSION 5.00
 Object = "{8C11EFA1-92C3-11D1-BC1E-00C04FA31489}#1.0#0"; "mstscax.dll"
 Begin VB.UserControl ctlFrontend 
    BackColor       =   &H80000005&
-   ClientHeight    =   2640
+   ClientHeight    =   2955
    ClientLeft      =   0
    ClientTop       =   0
    ClientWidth     =   3975
-   ScaleHeight     =   2640
+   ScaleHeight     =   2955
    ScaleWidth      =   3975
-   Begin VB.CommandButton Command1 
-      Caption         =   "Command1"
-      Height          =   495
-      Left            =   1440
-      TabIndex        =   1
-      Top             =   1080
-      Width           =   1215
-   End
-   Begin MSTSCLibCtl.MsRdpClient6NotSafeForScripting rdpClient 
-      Height          =   2535
+   Begin MSTSCLibCtl.MsRdpClient2 rdpClient 
+      Height          =   2655
       Left            =   600
-      OleObjectBlob   =   "ctlFrontend.ctx":0000
       TabIndex        =   0
-      Top             =   0
+      Top             =   120
       Width           =   2895
+      Server          =   ""
+      FullScreen      =   0   'False
+      StartConnected  =   0
    End
 End
 Attribute VB_Name = "ctlFrontend"
@@ -35,43 +29,74 @@ Option Explicit
 Private Const VIRTUAL_CHANNEL_NAME As String = "BEFECOM"
 
 Private m_DoInitialConnect As Boolean
-Private WithEvents m_BrowserManager As IEBrowserManager
-Attribute m_BrowserManager.VB_VarHelpID = -1
 
-Private Sub Command1_Click()
-    m_BrowserManager.SetStatusBarText "fuck"
-End Sub
+Private m_IEAddressBar As IEAddressBar
+Private WithEvents m_IEBrowser As IEBrowser
+Attribute m_IEBrowser.VB_VarHelpID = -1
+Private WithEvents m_IEFrame As IEFrame
+Attribute m_IEFrame.VB_VarHelpID = -1
+Private m_IEStatusBar As IEStatusBar
+Private WithEvents m_IEToolbar As IEToolbar
+Attribute m_IEToolbar.VB_VarHelpID = -1
 
-Private Sub m_BrowserManager_IEToolbarCommandClicked(commandId As Long)
-
-    Select Case commandId
-      Case m_BrowserManager.ToolbarIdCommandBack
-
-        rdpClient.SendOnVirtualChannel VIRTUAL_CHANNEL_NAME, "BTNBACK"
-      Case m_BrowserManager.ToolbarIdCommandForward
-
-        rdpClient.SendOnVirtualChannel VIRTUAL_CHANNEL_NAME, "BTNFORW"
-      Case m_BrowserManager.ToolbarIdCommandRefresh
-
-        rdpClient.SendOnVirtualChannel VIRTUAL_CHANNEL_NAME, "BTNREFR"
-      Case m_BrowserManager.ToolbarIdCommandStop
-
-        rdpClient.SendOnVirtualChannel VIRTUAL_CHANNEL_NAME, "BTNSTOP"
-      Case Else
-
-        modLogging.WriteLineToLog "IEToolbarCommandClicked: Unknown command ID."
-    End Select
-
-End Sub
-
-Private Sub m_BrowserManager_IEWantsToNavigate(newUrl As String)
-
+Private Sub m_IEBrowser_NavigationIntercepted(destinationURL As String)
     If rdpClient.Connected <> True Then
         Exit Sub '---> Bottom
     End If
 
-    rdpClient.SendOnVirtualChannel VIRTUAL_CHANNEL_NAME, "NAVIGATE:" & newUrl
+    rdpClient.SendOnVirtualChannel VIRTUAL_CHANNEL_NAME, "NAVIGATE:" & destinationURL
 
+End Sub
+
+Private Sub m_IEFrame_WindowResized()
+
+  Dim bWasConnected As Boolean
+
+    bWasConnected = rdpClient.Connected
+
+    If bWasConnected Then
+        rdpClient.Disconnect
+
+        Do Until rdpClient.Connected = False
+            DoEvents
+        Loop
+    End If
+
+    rdpClient.Top = 0
+    rdpClient.Left = 0
+    rdpClient.Width = UserControl.Width
+    rdpClient.Height = UserControl.Height
+    rdpClient.DesktopWidth = rdpClient.Width / Screen.TwipsPerPixelX
+    rdpClient.DesktopHeight = rdpClient.Height / Screen.TwipsPerPixelY
+
+    If bWasConnected Or m_DoInitialConnect Then
+        If bWasConnected Then
+            m_IEStatusBar.SetText LoadResString(104)  ' Reconnecting to rendering engine...
+        End If
+
+        rdpClient.Connect
+    End If
+    
+End Sub
+
+Private Sub m_IEFrame_WindowResizing()
+    m_IEStatusBar.FixStatusBar
+End Sub
+
+Private Sub m_IEToolbar_ToolbarButtonPressed(command As ToolbarCommand)
+
+    Select Case command
+    Case ToolbarCommand.CommandBack
+        rdpClient.SendOnVirtualChannel VIRTUAL_CHANNEL_NAME, "BTNBACK"
+    Case ToolbarCommand.CommandForward
+        rdpClient.SendOnVirtualChannel VIRTUAL_CHANNEL_NAME, "BTNFORW"
+    Case ToolbarCommand.CommandStop
+        rdpClient.SendOnVirtualChannel VIRTUAL_CHANNEL_NAME, "BTNSTOP"
+    Case ToolbarCommand.CommandRefresh
+        rdpClient.SendOnVirtualChannel VIRTUAL_CHANNEL_NAME, "BTNREFR"
+    Case Else
+        modLogging.WriteLineToLog "ToolbarButtonPressed: Unknown command ID."
+    End Select
 End Sub
 
 Private Sub rdpClient_OnChannelReceivedData(ByVal chanName As String, ByVal data As String)
@@ -101,8 +126,11 @@ Private Sub rdpClient_OnChannelReceivedData(ByVal chanName As String, ByVal data
     ' BSTOPOF: Toolbar STOP button OFF
     ' BREFRON: Toolbar REFRESH button ON
     ' BREFROF: Toolbar REFRESH button OFF
+    ' BHOMEON: Toolbar HOME button ON
+    ' BHOMEOF: Toolbar HOME button OFF
     ' BMEDION: Toolbar MEDIA button ON
     ' BMEDIOF: Toolbar MEDIA button OFF
+    ' PGTITLE: Set the title of the page to the content following after "PGTITLE"
 
     Select Case Left$(UCase$(data), 7)
       Case "STYLING"
@@ -117,7 +145,7 @@ Private Sub rdpClient_OnChannelReceivedData(ByVal chanName As String, ByVal data
             Exit Sub '---> Bottom
         End If
 
-        m_BrowserManager.SetAddressBarText Mid$(data, 8)
+        m_IEAddressBar.SetText Mid$(data, 8)
       Case "ADDHIST"
         If Len(data) < 8 Then
             modLogging.WriteLineToLog "Cannot add history because data is too short."
@@ -140,7 +168,7 @@ Private Sub rdpClient_OnChannelReceivedData(ByVal chanName As String, ByVal data
 
         ' IUrlHistory gracefully deals with an empty title by making up a sensible one.
 
-        m_BrowserManager.PushIntoHistory strURL, strTitle
+        m_IEBrowser.PushIntoHistory strURL, strTitle
       Case "VISIBLE"
         rdpClient.Visible = True
 
@@ -148,29 +176,49 @@ Private Sub rdpClient_OnChannelReceivedData(ByVal chanName As String, ByVal data
         rdpClient.Visible = False
       Case "BBACKON"
 
-        m_BrowserManager.ToolbarButtonStateBack = True
+        m_IEToolbar.SetToolbarCommandState CommandBack, True
       Case "BBACKOF"
 
-        m_BrowserManager.ToolbarButtonStateBack = False
+        m_IEToolbar.SetToolbarCommandState CommandBack, False
       Case "BFORWON"
 
-        m_BrowserManager.ToolbarButtonStateForward = True
+        m_IEToolbar.SetToolbarCommandState CommandForward, True
       Case "BFORWOF"
 
-        m_BrowserManager.ToolbarButtonStateForward = False
+        m_IEToolbar.SetToolbarCommandState CommandForward, False
       Case "BSTOPON"
 
-        m_BrowserManager.ToolbarButtonStateStop = True
+        m_IEToolbar.SetToolbarCommandState CommandStop, True
       Case "BSTOPOF"
 
-        m_BrowserManager.ToolbarButtonStateStop = False
+        m_IEToolbar.SetToolbarCommandState CommandStop, False
       Case "BREFRON"
 
-        m_BrowserManager.ToolbarButtonStateRefresh = True
+        m_IEToolbar.SetToolbarCommandState CommandRefresh, True
       Case "BREFROF"
 
-        m_BrowserManager.ToolbarButtonStateRefresh = False
+        m_IEToolbar.SetToolbarCommandState CommandRefresh, False
 
+      Case "BHOMEON"
+
+        m_IEToolbar.SetToolbarCommandState CommandHome, True
+      Case "BHOMEOF"
+
+        m_IEToolbar.SetToolbarCommandState CommandHome, False
+
+      Case "BMEDION"
+
+        m_IEToolbar.SetToolbarCommandState CommandMedia, True
+      Case "BMEDIOF"
+
+        m_IEToolbar.SetToolbarCommandState CommandMedia, False
+      Case "PGTITLE"
+        If Len(data) < 8 Then
+            modLogging.WriteLineToLog "Cannot set address because data is too short."
+            Exit Sub '---> Bottom
+        End If
+
+        m_IEBrowser.SetTitle Mid$(data, 8)
       Case Else
         rdpClient.SendOnVirtualChannel VIRTUAL_CHANNEL_NAME, "UNSUPPORTED"
 
@@ -181,27 +229,28 @@ End Sub
 
 Private Sub rdpClient_OnDisconnected(ByVal discReason As Long)
 
-    m_BrowserManager.SetStatusBarText LoadResString(102)  ' Disconnected from rendering engine.
+    m_IEStatusBar.SetText LoadResString(102)  ' Disconnected from rendering engine.
     rdpClient.Visible = False
 
 End Sub
 
 Private Sub UserControl_Initialize()
 
-    Set m_BrowserManager = New IEBrowserManager
-    Set modWndProc.BROWSER_MANAGER_INSTANCE = m_BrowserManager
-
-    m_BrowserManager.hWndUserControl = UserControl.hWnd
-    
+    Set m_IEAddressBar = New IEAddressBar
+    Set m_IEBrowser = New IEBrowser
+    Set m_IEFrame = New IEFrame
+    Set m_IEStatusBar = New IEStatusBar
+    Set m_IEToolbar = New IEToolbar
+        
     rdpClient.CreateVirtualChannels VIRTUAL_CHANNEL_NAME
 
-    rdpClient.AdvancedSettings5.EnableAutoReconnect = True
-    rdpClient.AdvancedSettings5.RedirectDrives = True
-    rdpClient.AdvancedSettings5.RedirectPrinters = True
-    rdpClient.AdvancedSettings5.EnableWindowsKey = False
-    rdpClient.AdvancedSettings5.keepAliveInterval = 5000
-    rdpClient.AdvancedSettings5.MaximizeShell = True
-    rdpClient.AdvancedSettings5.PerformanceFlags = &H1F
+    rdpClient.AdvancedSettings3.EnableAutoReconnect = True
+    rdpClient.AdvancedSettings3.RedirectDrives = True
+    rdpClient.AdvancedSettings3.RedirectPrinters = True
+    rdpClient.AdvancedSettings3.EnableWindowsKey = False
+    rdpClient.AdvancedSettings3.keepAliveInterval = 5000
+    rdpClient.AdvancedSettings3.MaximizeShell = True
+    rdpClient.AdvancedSettings3.PerformanceFlags = &H1F
     ' &H1F =
     ' TS_PERF_DISABLE_WALLPAPER |
     ' TS_PERF_DISABLE_FULLWINDOWDRAG |
@@ -226,7 +275,7 @@ Private Sub UserControl_ReadProperties(PropBag As PropertyBag)
 
     rdpClient.Server = CStr(PropBag.ReadProperty("RDP_Server", vbNullString))
     rdpClient.UserName = CStr(PropBag.ReadProperty("RDP_Username", vbNullString))
-    rdpClient.AdvancedSettings5.ClearTextPassword = CStr(PropBag.ReadProperty("RDP_Password", vbNullString))
+    rdpClient.AdvancedSettings3.ClearTextPassword = CStr(PropBag.ReadProperty("RDP_Password", vbNullString))
     rdpClient.SecuredSettings2.StartProgram = CStr(PropBag.ReadProperty("RDP_Backend", vbNullString))
 
     If rdpClient.Server <> "" And rdpClient.UserName <> "" And CStr(PropBag.ReadProperty("RDP_Password", vbNullString)) <> "" And rdpClient.SecuredSettings2.StartProgram <> "" Then
@@ -237,64 +286,41 @@ Private Sub UserControl_ReadProperties(PropBag As PropertyBag)
 
 End Sub
 
-Private Sub UserControl_Resize()
-
-  Dim bWasConnected As Boolean
-
-    m_BrowserManager.FixStatusBar
-
-    bWasConnected = rdpClient.Connected
-
-    If bWasConnected Then
-        rdpClient.Disconnect
-
-        Do Until rdpClient.Connected = False
-            DoEvents
-        Loop
-    End If
-
-    rdpClient.Top = 0
-    rdpClient.Left = 0
-    rdpClient.Width = UserControl.Width
-    rdpClient.Height = UserControl.Height
-    rdpClient.DesktopWidth = rdpClient.Width / Screen.TwipsPerPixelX
-    rdpClient.DesktopHeight = rdpClient.Height / Screen.TwipsPerPixelY
-
-    If bWasConnected Or m_DoInitialConnect Then
-        If bWasConnected Then
-            m_BrowserManager.SetStatusBarText LoadResString(104)  ' Reconnecting to rendering engine...
-        End If
-
-        rdpClient.Connect
-    End If
-
-End Sub
-
 Private Sub UserControl_Show()
 
   ' Will be fired when the control is actually shown on the website.
   ' UserControl_Initialize still has the control floating in space.
 
-    m_BrowserManager.HookIWebBrowser2
-    m_BrowserManager.HookButtonToolbarCommands
-    m_BrowserManager.HookStatusBar
-    m_BrowserManager.FixStatusBar
-
+    m_IEFrame.Constructor UserControl.hWnd
+    m_IEAddressBar.Constructor m_IEFrame.hWndIEFrame
+    m_IEBrowser.Constructor m_IEFrame.hWndInternetExplorerServer
+    m_IEStatusBar.Constructor m_IEFrame.hWndIEFrame
+    m_IEToolbar.Constructor m_IEFrame.hWndIEFrame
+    
+    m_IEBrowser.SetTitle ""
+    
+    m_IEToolbar.SetToolbarCommandState CommandBack, False
+    m_IEToolbar.SetToolbarCommandState CommandForward, False
+    m_IEToolbar.SetToolbarCommandState CommandHome, False
+    m_IEToolbar.SetToolbarCommandState CommandMedia, False
+    m_IEToolbar.SetToolbarCommandState CommandRefresh, False
+    m_IEToolbar.SetToolbarCommandState CommandStop, False
+    
     If m_DoInitialConnect Then
-        m_BrowserManager.SetStatusBarText LoadResString(101)  ' Connecting to rendering engine...
+        m_IEStatusBar.SetText LoadResString(101)  ' Connecting to rendering engine...
     End If
 
 End Sub
 
 Private Sub UserControl_Terminate()
 
-    If Not m_BrowserManager Is Nothing Then
-        m_BrowserManager.ReleaseIWebBrowser2
-        m_BrowserManager.ReleaseButtonToolbarCommands
-        m_BrowserManager.ReleaseStatusBar
-    End If
+    Set m_IEAddressBar = Nothing
+    Set m_IEBrowser = Nothing
+    Set m_IEFrame = Nothing
+    Set m_IEStatusBar = Nothing
+    Set m_IEToolbar = Nothing
 
-    Set m_BrowserManager = Nothing
+    DoEvents
 
 End Sub
 
