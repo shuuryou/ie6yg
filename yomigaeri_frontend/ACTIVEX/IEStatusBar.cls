@@ -44,6 +44,8 @@ Private m_hIconSSLBad As Long
 Private m_hIconSSLOK As Long
 Private m_hIconZone As Long
 
+Private m_EngineText() As Byte
+
 Public Enum ConnectionIconState
     None = 0
     Disconnected = 1
@@ -94,7 +96,7 @@ Private Sub Class_Terminate()
     DetachMessage Me, m_hWndStatusBar, SB_SETPARTS
     DetachMessage Me, m_hWndStatusBar, SB_SETMINHEIGHT
     DetachMessage Me, m_hWndStatusBar, SB_SETICON
-    
+
     DetachMessage Me, m_hWndStatusBar, WM_SIZE
     DetachMessage Me, m_hWndStatusBar, WM_WINDOWPOSCHANGING
     DetachMessage Me, m_hWndStatusBar, WM_WINDOWPOSCHANGED
@@ -146,12 +148,14 @@ Public Sub Constructor(hWndIEFrame As Long)
         Exit Sub
     End If
 
+    m_EngineText = StrConv(LoadResString(106), vbFromUnicode) & Chr$(0) ' Chromium
+
     AttachMessage Me, m_hWndStatusBar, SB_SETTEXTA
     AttachMessage Me, m_hWndStatusBar, SB_SETTEXTW
     AttachMessage Me, m_hWndStatusBar, SB_SETPARTS
     AttachMessage Me, m_hWndStatusBar, SB_SETMINHEIGHT
     AttachMessage Me, m_hWndStatusBar, SB_SETICON
-    
+
     AttachMessage Me, m_hWndStatusBar, WM_SIZE
     AttachMessage Me, m_hWndStatusBar, WM_WINDOWPOSCHANGING
     AttachMessage Me, m_hWndStatusBar, WM_WINDOWPOSCHANGED
@@ -180,7 +184,7 @@ Private Sub FindStatusBar()
   Dim hWndTemp As Long
 
     If m_hWndIEFrame = -1 Then
-        modLogging.WriteLineToLog "FindStatusBar: m_hWndIEFrame is bad."
+        modLogging.WriteLineToLog "IEStatusBar: m_hWndIEFrame is bad."
         m_hWndStatusBar = -1
         Exit Sub
     End If
@@ -188,7 +192,7 @@ Private Sub FindStatusBar()
     hWndTemp = FindWindowEx(m_hWndIEFrame, 0&, "msctls_statusbar32", vbNullString)
 
     If hWndTemp = 0 Then
-        modLogging.WriteLineToLog "FindStatusBar: msctls_statusbar32 not found."
+        modLogging.WriteLineToLog "IEStatusBar: msctls_statusbar32 not found."
         Exit Sub
     End If
 
@@ -197,14 +201,14 @@ Private Sub FindStatusBar()
     hWndTemp = FindWindowEx(hWndTemp, 0&, "msctls_progress32", vbNullString)
 
     If hWndTemp = 0 Then
-        modLogging.WriteLineToLog "FindStatusBar: ReBarWindow32 not found."
+        modLogging.WriteLineToLog "IEStatusBar: ReBarWindow32 not found."
         m_hWndStatusBar = -1
         Exit Sub
     End If
 
     m_hWndProgressBar = hWndTemp
 
-    modLogging.WriteLineToLog "FindStatusBar: Found msctls_statusbar32: " & Hex$(m_hWndStatusBar) & " and msctls_progress32: " & Hex$(m_hWndProgressBar)
+    modLogging.WriteLineToLog "IEStatusBar: Found msctls_statusbar32: " & Hex$(m_hWndStatusBar) & " and msctls_progress32: " & Hex$(m_hWndProgressBar)
 
 End Sub
 
@@ -246,8 +250,6 @@ Public Sub FixStatusBar()
   Dim nIconPaneWidth As Long
     nIconPaneWidth = GetSystemMetrics(SM_CXSMICON) + _
                      GetSystemMetrics(SM_CXEDGE) * 2
-
-    modLogging.WriteLineToLog "XXXX" & rc.Right - rc.Left
 
   Dim nWidthReqd As Long
     nWidthReqd = cxZone + cxProgressBar + (nIconPaneWidth * 1)
@@ -291,18 +293,17 @@ Public Sub FixStatusBar()
     SendMessage m_hWndStatusBar, SB_SETICON + SB_IE6YG_SHIFT, STATUS_PANE_NAVIGATION, ByVal m_hIconWebpage
     SendMessage m_hWndStatusBar, SB_SETICON + SB_IE6YG_SHIFT, STATUS_PANE_ZONE, ByVal m_hIconZone
 
-    SetWindowPos m_hWndProgressBar, 0&, _
-                 rc.Left, rc.Top, _
-                 rc.Right - rc.Left, rc.Bottom - rc.Top, _
-                 SWP_NOZORDER Or SWP_NOACTIVATE
-
     SendMessage m_hWndStatusBar, SB_SETMINHEIGHT + SB_IE6YG_SHIFT, _
                 GetSystemMetrics(SM_CYSMICON) + GetSystemMetrics(SM_CYBORDER) * 2, 0&
 
-  Dim text() As Byte
-    text = StrConv(LoadResString(106), vbFromUnicode) & Chr$(0) ' IE6YG Engine
+    SendMessage m_hWndStatusBar, SB_SETTEXTA + SB_IE6YG_SHIFT, STATUS_PANE_ZONE, m_EngineText(0)
 
-    SendMessage m_hWndStatusBar, SB_SETTEXTA + SB_IE6YG_SHIFT, STATUS_PANE_ZONE, text(0)
+    SetWindowPos m_hWndProgressBar, 0&, _
+                 rc.Left, rc.Top, _
+                 rc.Right - rc.Left, rc.Bottom - rc.Top, _
+                 SWP_NOZORDER Or SWP_NOACTIVATE Or SWP_SHOWWINDOW
+
+    SendMessage m_hWndProgressBar, PBM_SETRANGE, 0&, ByVal MAKELPARAM(0, 100)
 
     Rem Mark On
 
@@ -332,7 +333,7 @@ Private Property Let ISubclass_MsgResponse(ByVal RHS As SSubTimer.EMsgResponse)
 
 End Property ':( No executable Code
 
-Private Function ISubclass_WindowProc(ByVal hWnd As Long, ByVal iMsg As Long, ByVal WParam As Long, ByVal lParam As Long) As Long
+Private Function ISubclass_WindowProc(ByVal hwnd As Long, ByVal iMsg As Long, ByVal WParam As Long, ByVal lParam As Long) As Long
 
     If iMsg = WM_SIZE Or iMsg = WM_WINDOWPOSCHANGING Or iMsg = WM_WINDOWPOSCHANGED Then
         FixStatusBar
@@ -348,30 +349,45 @@ Private Function ISubclass_WindowProc(ByVal hWnd As Long, ByVal iMsg As Long, By
         iMsg = iMsg - SB_IE6YG_SHIFT
     End If
 
-    CallOldWindowProc hWnd, iMsg, WParam, lParam
+    CallOldWindowProc hwnd, iMsg, WParam, lParam
 
 End Function
 
-Public Sub SetText(newText As String)
+Public Property Let ProgressBarValue(ByVal newValue As Integer)
 
-  Dim text() As Byte
-
-    If m_hWndStatusBar = -1 Then
-        modLogging.WriteLineToLog "SetStatusBarText: m_hWndStatusBar is bad."
-        Exit Sub
+    If newValue < 0 Then
+        newValue = 0
     End If
 
-    text = StrConv(newText, vbFromUnicode) & Chr$(0)
+    If newValue > 100 Then
+        newValue = 100
+    End If
 
-    SendMessage m_hWndStatusBar, SB_SETTEXTA + SB_IE6YG_SHIFT, STATUS_PANE_NAVIGATION, text(0)
+    If m_hWndProgressBar = -1 Then
+        Exit Property
+    End If
 
-    modLogging.WriteLineToLog "SetStatusBarText: Text becomes: " & newText
+    FixStatusBar ' TODO: Why is this needed for it to work?
 
-End Sub
+    SendMessage m_hWndProgressBar, PBM_SETPOS, newValue, 0&
 
-Public Property Get SSLIcon() As SSLIconState
+End Property
 
-    ConnectionIcon = m_StateConnectionIcon
+Public Property Get ProgressBarValue() As Integer
+
+  Dim lngRet As Long
+
+    lngRet = SendMessage(m_hWndProgressBar, PBM_GETPOS, 0&, 0&)
+
+    If lngRet < 0 Then
+        lngRet = 0
+    End If
+
+    If lngRet > 100 Then
+        lngRet = 100
+    End If
+
+    ProgressBarValue = lngRet
 
 End Property
 
@@ -393,6 +409,51 @@ Public Property Let SSLIcon(newState As SSLIconState)
 
 End Property
 
+Public Property Get SSLIcon() As SSLIconState
+
+    ConnectionIcon = m_StateConnectionIcon
+
+End Property
+
+Public Property Let Text(newText As String)
+
+  Dim bytText() As Byte
+
+    If m_hWndProgressBar = -1 Then
+        Exit Property
+    End If
+
+    bytText = StrConv(newText, vbFromUnicode) & Chr$(0)
+
+    SendMessage m_hWndStatusBar, SB_SETTEXTA + SB_IE6YG_SHIFT, 0&, bytText(0)
+
+End Property
+
+Public Property Get Text() As String
+
+  Dim lngLength As Long
+  Dim strText As String
+
+    If m_hWndProgressBar = -1 Then
+        Text = ""
+        Exit Property
+    End If
+
+    lngLength = SendMessage(m_hWndProgressBar, SB_GETTEXTLENGTHA, 0&, 0&)
+
+    If lngLength = 0 Then
+        Text = ""
+        Exit Property
+    End If
+
+    strText = String$(lngLength + 1, vbNullChar)
+
+    SendMessage m_hWndStatusBar, SB_GETTEXTA, ByVal (lngLength + 1), ByVal StrPtr(strText)
+
+    Text = strText
+
+End Property
+
 Private Function ZoneComputePaneSize() As Long
 
   ' TODO: Use something more sensible than 80
@@ -404,5 +465,5 @@ Private Function ZoneComputePaneSize() As Long
 
 End Function
 
-':) Ulli's VB Code Formatter V2.24.17 (2022-Nov-01 16:03)  Decl: 53  Code: 326  Total: 379 Lines
-':) CommentOnly: 15 (4%)  Commented: 8 (2,1%)  Filled: 270 (71,2%)  Empty: 109 (28,8%)  Max Logic Depth: 3
+':) Ulli's VB Code Formatter V2.24.17 (2022-Nov-01 23:53)  Decl: 55  Code: 399  Total: 454 Lines
+':) CommentOnly: 15 (3,3%)  Commented: 8 (1,8%)  Filled: 311 (68,5%)  Empty: 143 (31,5%)  Max Logic Depth: 3

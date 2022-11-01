@@ -138,7 +138,7 @@ Private Sub FindToolbar()
   Dim i As Integer, j As Integer
 
     If m_hWndIEFrame = -1 Then
-        modLogging.WriteLineToLog "FindToolbar: m_hWndIEFrame is bad."
+        modLogging.WriteLineToLog "IEToolbar: m_hWndIEFrame is bad."
         m_hWndButtonToolbar = -1
         Exit Sub
     End If
@@ -146,7 +146,7 @@ Private Sub FindToolbar()
     hWndTemp = FindWindowEx(m_hWndIEFrame, 0&, "WorkerW", vbNullString)
 
     If hWndTemp = 0 Then
-        modLogging.WriteLineToLog "FindToolbar: WorkerW not found."
+        modLogging.WriteLineToLog "IEToolbar: WorkerW not found."
         m_hWndButtonToolbar = -1
         Exit Sub
     End If
@@ -154,12 +154,12 @@ Private Sub FindToolbar()
     hWndTemp = FindWindowEx(hWndTemp, 0&, "ReBarWindow32", vbNullString)
 
     If hWndTemp = 0 Then
-        modLogging.WriteLineToLog "FindToolbar: ReBarWindow32 not found."
+        modLogging.WriteLineToLog "IEToolbar: ReBarWindow32 not found."
         m_hWndButtonToolbar = -1
         Exit Sub
     End If
 
-    modLogging.WriteLineToLog "FindToolbar: Found ReBarWindow32: " & Hex$(hWndTemp)
+    modLogging.WriteLineToLog "IEToolbar: Found ReBarWindow32: " & Hex$(hWndTemp)
     m_hWndReBarWindow32 = hWndTemp
 
     hwndToolbar = 0&
@@ -175,7 +175,7 @@ NextToolbar:
     hwndToolbar = FindWindowEx(hWndTemp, hwndToolbar, "ToolbarWindow32", vbNullString)
 
     If hwndToolbar = 0 Then
-        modLogging.WriteLineToLog "FindToolbar: ToolbarWindow32 not found or all of them were wrong."
+        modLogging.WriteLineToLog "IEToolbar: ToolbarWindow32 not found or all of them were wrong."
         m_hWndButtonToolbar = -1
         m_hWndReBarWindow32 = -1
         Exit Sub
@@ -200,7 +200,7 @@ NextToolbar:
         ' and the knowledge has since become somewhat lost on the Internet.
         If sctTbButton.idCommand <> 0 And sctTbButton.iBitmap = TOOLBAR_IBITMAP_REFRESH Then
             m_hWndButtonToolbar = hwndToolbar
-            modLogging.WriteLineToLog "FindToolbar: Found it: " & Hex$(hwndToolbar)
+            modLogging.WriteLineToLog "IEToolbar: Found it: " & Hex$(hwndToolbar)
 
             ' Now go through the buttons a second time to find the interesting
             ' ones by their bitmap index. The bitmap index seems to be stable.
@@ -211,22 +211,22 @@ NextToolbar:
 
                 Select Case sctTbButton.iBitmap
                   Case TOOLBAR_IBITMAP_BACK
-                    modLogging.WriteLineToLog "FindToolbar: Found BACK button. Command ID: " & sctTbButton.idCommand
+                    modLogging.WriteLineToLog "IEToolbar: Found BACK button. Command ID: " & sctTbButton.idCommand
                     m_ToolbarIdCommandBACK = sctTbButton.idCommand
                   Case TOOLBAR_IBITMAP_FORWARD
-                    modLogging.WriteLineToLog "FindToolbar: Found FORWARD button. Command ID: " & sctTbButton.idCommand
+                    modLogging.WriteLineToLog "IEToolbar: Found FORWARD button. Command ID: " & sctTbButton.idCommand
                     m_ToolbarIdCommandFORWARD = sctTbButton.idCommand
                   Case TOOLBAR_IBITMAP_STOP
-                    modLogging.WriteLineToLog "FindToolbar: Found STOP button. Command ID: " & sctTbButton.idCommand
+                    modLogging.WriteLineToLog "IEToolbar: Found STOP button. Command ID: " & sctTbButton.idCommand
                     m_ToolbarIdCommandSTOP = sctTbButton.idCommand
                   Case TOOLBAR_IBITMAP_REFRESH
-                    modLogging.WriteLineToLog "FindToolbar: Found REFRESH button. Command ID: " & sctTbButton.idCommand
+                    modLogging.WriteLineToLog "IEToolbar: Found REFRESH button. Command ID: " & sctTbButton.idCommand
                     m_ToolbarIdCommandREFRESH = sctTbButton.idCommand
                   Case TOOLBAR_IBITMAP_HOME:
-                    modLogging.WriteLineToLog "FindToolbar: Found HOME button. Command ID: " & sctTbButton.idCommand
+                    modLogging.WriteLineToLog "IEToolbar: Found HOME button. Command ID: " & sctTbButton.idCommand
                     m_ToolbarIdCommandHOME = sctTbButton.idCommand
                   Case TOOLBAR_IBITMAP_MEDIA:
-                    modLogging.WriteLineToLog "FindToolbar: Found MEDIA button. Command ID: " & sctTbButton.idCommand
+                    modLogging.WriteLineToLog "IEToolbar: Found MEDIA button. Command ID: " & sctTbButton.idCommand
                     m_ToolbarIdCommandMEDIA = sctTbButton.idCommand
 
                 End Select
@@ -315,7 +315,7 @@ Public Sub SetToolbarCommandState(command As ToolbarCommand, enable As Boolean)
     commandId = EnumToToolbarCommandId(command)
 
     If commandId = -1 Then
-        modLogging.WriteLineToLog "SetToolbarCommandState: Command is unknown."
+        modLogging.WriteLineToLog "IEToolbar: Cannot set state on unknown command."
         Exit Sub
     End If
 

@@ -71,7 +71,7 @@ Private Sub FindIEFrame()
     m_hWndIEFrame = GetParent(m_hWndShellDocObjectView)
 
     If Err.LastDllError <> 0 Then
-        modLogging.WriteLineToLog "FindAndSubclassIEFrame: GetParent failed: " & Hex$(Err.LastDllError)
+        modLogging.WriteLineToLog "IEFrame: GetParent failed in search for IEFrame: " & Hex$(Err.LastDllError)
         m_hWndIEFrame = -1
         Exit Sub
     End If
@@ -80,7 +80,7 @@ Private Sub FindIEFrame()
     GetClassNameA m_hWndIEFrame, strClassName, 128
 
     If Err.LastDllError <> 0 Then
-        modLogging.WriteLineToLog "FindAndSubclassIEFrame: GetClassName failed: " & Hex$(Err.LastDllError)
+        modLogging.WriteLineToLog "IEFrame: GetClassName failed in search for IEFrame: " & Hex$(Err.LastDllError)
         m_hWndIEFrame = -1
         Exit Sub
     End If
@@ -88,12 +88,12 @@ Private Sub FindIEFrame()
     strClassName = TrimNull(strClassName)
 
     If strClassName <> "IEFrame" Then
-        modLogging.WriteLineToLog "FindAndSubclassIEFrame: Failed (" & strClassName & ")"
+        modLogging.WriteLineToLog "IEFrame: Failed to find IEFrame. Found instead: " & strClassName
         m_hWndIEFrame = -1
         Exit Sub
     End If
 
-    modLogging.WriteLineToLog "FindAndSubclassIEFrame: IEFrame hWnd is " & Hex$(m_hWndIEFrame)
+    modLogging.WriteLineToLog "IEFrame: IEFrame hWnd is " & Hex$(m_hWndIEFrame)
 
 End Sub
 
@@ -103,7 +103,7 @@ Private Function FindInternetExplorerServer() As Long
   Dim strClassName As String
 
     If m_hWndUserControl = -1 Then
-        modLogging.WriteLineToLog "FindInternetExplorerServer: Don't know the hWnd of the user control yet."
+        modLogging.WriteLineToLog "IEFrame: Don't know the hWnd of the user control."
         FindInternetExplorerServer = -1
         Exit Function
     End If
@@ -111,7 +111,7 @@ Private Function FindInternetExplorerServer() As Long
     hWnd = GetParent(m_hWndUserControl)
 
     If Err.LastDllError <> 0 Then
-        modLogging.WriteLineToLog "FindInternetExplorerServer: GetParent failed: " & Hex$(Err.LastDllError)
+        modLogging.WriteLineToLog "IEFrame: GetParent failed in search for InternetExplorer_Server: " & Hex$(Err.LastDllError)
         FindInternetExplorerServer = -1
         Exit Function
     End If
@@ -120,7 +120,7 @@ Private Function FindInternetExplorerServer() As Long
     GetClassNameA hWnd, strClassName, 128
 
     If Err.LastDllError <> 0 Then
-        modLogging.WriteLineToLog "FindInternetExplorerServer: GetClassName failed: " & Hex$(Err.LastDllError)
+        modLogging.WriteLineToLog "IEFrame: GetClassName failed in search for InternetExplorer_Server: " & Hex$(Err.LastDllError)
         FindInternetExplorerServer = -1
         Exit Function
     End If
@@ -128,12 +128,12 @@ Private Function FindInternetExplorerServer() As Long
     strClassName = TrimNull(strClassName)
 
     If strClassName <> "Internet Explorer_Server" Then
-        modLogging.WriteLineToLog "FindInternetExplorerServer: Failed (" & strClassName & ")"
+        modLogging.WriteLineToLog "IEFrame: Failed to find Internet Explorer_Server. Found instead: " & strClassName
         FindInternetExplorerServer = -1
         Exit Function
     End If
 
-    modLogging.WriteLineToLog "FindInternetExplorerServer: Internet Explorer_Server hWnd is " & Hex$(hWnd)
+    modLogging.WriteLineToLog "IEFrame: Internet Explorer_Server hWnd is " & Hex$(hWnd)
 
     FindInternetExplorerServer = hWnd
 
@@ -147,7 +147,7 @@ Private Function FindShellDocObjectView(ByVal hWndInternetExplorerServer As Long
     hWnd = GetParent(hWndInternetExplorerServer)
 
     If Err.LastDllError <> 0 Then
-        modLogging.WriteLineToLog "FindShellDocObjectView: GetParent failed: " & Hex$(Err.LastDllError)
+        modLogging.WriteLineToLog "IEFrame: GetParent failed in search for Shell DocObject View: " & Hex$(Err.LastDllError)
         FindShellDocObjectView = -1
         Exit Function
     End If
@@ -156,7 +156,7 @@ Private Function FindShellDocObjectView(ByVal hWndInternetExplorerServer As Long
     GetClassNameA hWnd, strClassName, 128
 
     If Err.LastDllError <> 0 Then
-        modLogging.WriteLineToLog "FindShellDocObjectView: GetClassName failed: returns " & Hex$(Err.LastDllError)
+        modLogging.WriteLineToLog "IEFrame: GetClassName failed in search for Shell DocObject View: " & Hex$(Err.LastDllError)
         FindShellDocObjectView = -1
         Exit Function
     End If
@@ -164,12 +164,12 @@ Private Function FindShellDocObjectView(ByVal hWndInternetExplorerServer As Long
     strClassName = TrimNull(strClassName)
 
     If strClassName <> "Shell DocObject View" Then
-        modLogging.WriteLineToLog "FindShellDocObjectView: Failed (" & strClassName & ")"
+        modLogging.WriteLineToLog "IEFrame: Failed to find Shell DocObject View. Found instead: " & strClassName
         FindShellDocObjectView = -1
         Exit Function
     End If
 
-    modLogging.WriteLineToLog "FindShellDocObjectView: Shell DocObject View hWnd is " & Hex$(hWnd)
+    modLogging.WriteLineToLog "IEFrame: Shell DocObject View hWnd is " & Hex$(hWnd)
 
     FindShellDocObjectView = hWnd
 

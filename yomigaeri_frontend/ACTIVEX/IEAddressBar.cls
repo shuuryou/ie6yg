@@ -31,7 +31,7 @@ Private Sub FindAddressBar()
   Dim hWnd As Long
 
     If m_hWndIEFrame = -1 Then
-        modLogging.WriteLineToLog "FindAddressBar: m_hWndIEFrame is bad."
+        modLogging.WriteLineToLog "IEAddressBar: m_hWndIEFrame is bad."
         Exit Sub
     End If
 
@@ -42,7 +42,7 @@ Private Sub FindAddressBar()
     hWnd = FindWindowEx(m_hWndIEFrame, 0&, "WorkerW", vbNullString)
 
     If Err.LastDllError <> 0 Or hWnd = 0 Then
-        modLogging.WriteLineToLog "FindAddressBar: FindWindowEx WorkerW failed. GetLastError returns " & Hex$(Err.LastDllError)
+        modLogging.WriteLineToLog "IEAddressBar: FindWindowEx WorkerW failed. GetLastError returns " & Hex$(Err.LastDllError)
         m_hWndAddressBar = -1
         Exit Sub
     End If
@@ -56,12 +56,12 @@ Private Sub FindAddressBar()
     hWnd = FindWindowEx(hWnd, 0&, "ReBarWindow32", vbNullString)
 
     If Err.LastDllError <> 0 Or hWnd = 0 Then
-        modLogging.WriteLineToLog "FindAddressBar: FindWindowEx ReBarWindow32 failed. GetLastError returns " & Hex$(Err.LastDllError)
+        modLogging.WriteLineToLog "IEAddressBar: FindWindowEx ReBarWindow32 failed. GetLastError returns " & Hex$(Err.LastDllError)
         m_hWndAddressBar = -1
         Exit Sub
     End If
 
-    modLogging.WriteLineToLog "FindAddressBar: ReBarWindow32 hWnd is " & Hex$(hWnd)
+    modLogging.WriteLineToLog "IEAddressBar: ReBarWindow32 hWnd is " & Hex$(hWnd)
 
     ' ------------------------------------------------------------------------
 
@@ -70,12 +70,12 @@ Private Sub FindAddressBar()
     hWnd = FindWindowEx(hWnd, 0&, "ComboBoxEx32", vbNullString)
 
     If Err.LastDllError <> 0 Or hWnd = 0 Then
-        modLogging.WriteLineToLog "FindAddressBar: FindWindowEx ComboBoxEx32 failed. GetLastError returns " & Hex$(Err.LastDllError)
+        modLogging.WriteLineToLog "IEAddressBar: FindWindowEx ComboBoxEx32 failed. GetLastError returns " & Hex$(Err.LastDllError)
         m_hWndAddressBar = -1
         Exit Sub
     End If
 
-    modLogging.WriteLineToLog "FindAddressBar: ComboBoxEx32 hWnd is " & Hex$(hWnd)
+    modLogging.WriteLineToLog "IEAddressBar: ComboBoxEx32 hWnd is " & Hex$(hWnd)
 
     ' ------------------------------------------------------------------------
 
@@ -84,12 +84,12 @@ Private Sub FindAddressBar()
     hWnd = FindWindowEx(hWnd, 0&, "ComboBox", vbNullString)
 
     If Err.LastDllError <> 0 Or hWnd = 0 Then
-        modLogging.WriteLineToLog "FindAddressBar: FindWindowEx ComboBox failed. GetLastError returns " & Hex$(Err.LastDllError)
+        modLogging.WriteLineToLog "IEAddressBar: FindWindowEx ComboBox failed. GetLastError returns " & Hex$(Err.LastDllError)
         m_hWndAddressBar = -1
         Exit Sub
     End If
 
-    modLogging.WriteLineToLog "FindAddressBar: ComboBox hWnd is " & Hex$(hWnd)
+    modLogging.WriteLineToLog "IEAddressBar: ComboBox hWnd is " & Hex$(hWnd)
 
     ' ------------------------------------------------------------------------
 
@@ -98,12 +98,12 @@ Private Sub FindAddressBar()
     hWnd = FindWindowEx(hWnd, 0&, "Edit", vbNullString)
 
     If Err.LastDllError <> 0 Or hWnd = 0 Then
-        modLogging.WriteLineToLog "FindAddressBar: FindWindowEx Edit failed. GetLastError returns " & Hex$(Err.LastDllError)
+        modLogging.WriteLineToLog "IEAddressBar: FindWindowEx Edit failed. GetLastError returns " & Hex$(Err.LastDllError)
         m_hWndAddressBar = -1
         Exit Sub
     End If
 
-    modLogging.WriteLineToLog "FindAddressBar: Edit hWnd is " & Hex$(hWnd)
+    modLogging.WriteLineToLog "IEAddressBar: Edit hWnd is " & Hex$(hWnd)
 
     m_hWndAddressBar = hWnd
 
@@ -115,18 +115,41 @@ Public Property Get hWnd() As Long
 
 End Property
 
-Public Sub SetText(newText As String)
-
+Public Property Get Text() As String
+    Dim lngLength As Long
+    Dim bytText() As Byte
+    
     If m_hWndAddressBar = -1 Then
-        modLogging.WriteLineToLog "SetAddressBarText: Cannot set if address bar not found."
-        Exit Sub
+        Text = ""
+        Exit Property
+    End If
+    
+    lngLength = SendMessage(m_hWndAddressBar, WM_GETTEXTLENGTH, 0&, 0&)
+    
+    If lngLength = 0 Then
+        Text = ""
+        Exit Property
     End If
 
-    modLogging.WriteLineToLog "SetAddressBarText: Text becomes: " & newText
+    ReDim bytText(0 To lngLength + 1) As Byte
+    
+    SendMessage m_hWndAddressBar, WM_GETTEXT, ByVal (lngLength + 1), bytText(0)
+    
+    Text = TrimNull(StrConv(bytText, vbUnicode))
+End Property
 
-    SendMessage m_hWndAddressBar, WM_SETTEXT, 0&, ByVal newText
+Public Property Let Text(newText As String)
+    Dim Text() As Byte
+    
+    If m_hWndAddressBar = -1 Then
+        Exit Property
+    End If
+    
+    Text = StrConv(newText, vbFromUnicode) & Chr$(0)
 
-End Sub
+    SendMessage m_hWndAddressBar, WM_SETTEXT, 0&, Text(0)
+End Property
+
 
 ':) Ulli's VB Code Formatter V2.24.17 (2022-Nov-01 16:03)  Decl: 4  Code: 115  Total: 119 Lines
 ':) CommentOnly: 13 (10,9%)  Commented: 0 (0%)  Filled: 78 (65,5%)  Empty: 41 (34,5%)  Max Logic Depth: 2

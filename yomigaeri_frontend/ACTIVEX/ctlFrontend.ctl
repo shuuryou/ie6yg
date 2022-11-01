@@ -63,16 +63,11 @@ Private Sub m_IEFrame_WindowResized()
         Loop
     End If
 
-    rdpClient.Top = 0
-    rdpClient.Left = 0
-    rdpClient.Width = UserControl.Width
-    rdpClient.Height = UserControl.Height
-    rdpClient.DesktopWidth = rdpClient.Width / Screen.TwipsPerPixelX
-    rdpClient.DesktopHeight = rdpClient.Height / Screen.TwipsPerPixelY
+    PositionRDPClient
 
-    If bWasConnected Or m_DoInitialConnect Then
+    If bWasConnected Then
         If bWasConnected Then
-            m_IEStatusBar.SetText LoadResString(104)  ' Reconnecting to rendering engine...
+            m_IEStatusBar.Text = LoadResString(104)  ' Reconnecting to rendering engine...
         End If
 
         rdpClient.Connect
@@ -97,17 +92,14 @@ Private Sub m_IEToolbar_ToolbarButtonPressed(command As ToolbarCommand)
 
 End Sub
 
-Public Sub PerformRemoteRefresh()
+Private Sub PositionRDPClient()
 
-    If rdpClient.Connected Then
-        rdpClient.SendOnVirtualChannel VIRTUAL_CHANNEL_NAME, "REFRESH"
-    End If
-
-End Sub
-
-Public Sub QueryStreamingAvailable()
-
-    MsgBox LoadResString(105), vbInformation ' Not implemented.
+    rdpClient.Top = 0
+    rdpClient.Left = 0
+    rdpClient.Width = UserControl.Width
+    rdpClient.Height = UserControl.Height
+    rdpClient.DesktopWidth = rdpClient.Width / Screen.TwipsPerPixelX
+    rdpClient.DesktopHeight = rdpClient.Height / Screen.TwipsPerPixelY
 
 End Sub
 
@@ -146,6 +138,7 @@ Private Sub rdpClient_OnChannelReceivedData(ByVal chanName As String, ByVal data
     ' SSLICON: Make the SSL icon visible with OK state
     ' SSLICBD: Make the SSL icon visible with error state
     ' SSLICOF: Make the SSL icon invisible
+    ' PROGRES: Set the value of the progress bar (value 0-100 follows after "PROGRES")
 
     Select Case Left$(UCase$(data), 7)
       Case "STYLING"
@@ -160,7 +153,7 @@ Private Sub rdpClient_OnChannelReceivedData(ByVal chanName As String, ByVal data
             Exit Sub
         End If
 
-        m_IEAddressBar.SetText Mid$(data, 8)
+        m_IEAddressBar.Text = Mid$(data, 8)
       Case "ADDHIST"
         If Len(data) < 8 Then
             modLogging.WriteLineToLog "Cannot add history because data is too short."
@@ -243,6 +236,18 @@ Private Sub rdpClient_OnChannelReceivedData(ByVal chanName As String, ByVal data
       Case "SSLICOF"
 
         m_IEStatusBar.SSLIcon = SSLIconState.None
+      Case "PROGRES"
+        If Len(data) < 8 Then
+            modLogging.WriteLineToLog "Cannot set progress bar value because data is too short."
+            Exit Sub
+        End If
+
+  Dim newValue As Integer
+        On Error Resume Next
+            newValue = CInt(Mid$(data, 8))
+        On Error GoTo 0
+
+        m_IEStatusBar.ProgressBarValue = newValue
       Case Else
         rdpClient.SendOnVirtualChannel VIRTUAL_CHANNEL_NAME, "UNSUPPORTED"
 
@@ -254,6 +259,8 @@ End Sub
 Private Sub rdpClient_OnConnected()
 
     m_IEStatusBar.ConnectionIcon = ConnectionIconState.Connected
+    m_IEStatusBar.Text = LoadResString(107) ' Rendering engine found...
+    rdpClient.Visible = True
 
 End Sub
 
@@ -265,7 +272,7 @@ End Sub
 
 Private Sub rdpClient_OnDisconnected(ByVal discReason As Long)
 
-    m_IEStatusBar.SetText LoadResString(102)  ' Disconnected from rendering engine.
+    m_IEStatusBar.Text = LoadResString(102)  ' Disconnected from rendering engine.
     m_IEStatusBar.ConnectionIcon = ConnectionIconState.Disconnected
     rdpClient.Visible = False
 
@@ -328,7 +335,10 @@ Private Sub UserControl_Show()
   ' Will be fired when the control is actually shown on the website.
   ' UserControl_Initialize still has the control floating in space.
 
-    m_IEFrame.Constructor UserControl.hWnd
+    PositionRDPClient
+    rdpClient.Visible = False
+
+    m_IEFrame.Constructor UserControl.hwnd
     m_IEAddressBar.Constructor m_IEFrame.hWndIEFrame
     m_IEBrowser.Constructor m_IEFrame.hWndInternetExplorerServer
     m_IEStatusBar.Constructor m_IEFrame.hWndIEFrame
@@ -347,7 +357,9 @@ Private Sub UserControl_Show()
     m_IEStatusBar.SSLIcon = SSLIconState.None
 
     If m_DoInitialConnect Then
-        m_IEStatusBar.SetText LoadResString(101)  ' Connecting to rendering engine...
+
+        m_IEStatusBar.Text = LoadResString(101)  ' Connecting to rendering engine...
+        rdpClient.Connect
     End If
 
 End Sub
@@ -360,9 +372,7 @@ Private Sub UserControl_Terminate()
     Set m_IEStatusBar = Nothing
     Set m_IEToolbar = Nothing
 
-    DoEvents
-
 End Sub
 
-':) Ulli's VB Code Formatter V2.24.17 (2022-Nov-01 16:03)  Decl: 11  Code: 336  Total: 347 Lines
-':) CommentOnly: 38 (11%)  Commented: 6 (1,7%)  Filled: 253 (72,9%)  Empty: 94 (27,1%)  Max Logic Depth: 3
+':) Ulli's VB Code Formatter V2.24.17 (2022-Nov-01 23:53)  Decl: 11  Code: 338  Total: 349 Lines
+':) CommentOnly: 39 (11,2%)  Commented: 5 (1,4%)  Filled: 257 (73,6%)  Empty: 92 (26,4%)  Max Logic Depth: 3
