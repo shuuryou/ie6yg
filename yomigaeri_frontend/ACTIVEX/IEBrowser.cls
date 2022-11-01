@@ -22,9 +22,16 @@ Private m_History As IUrlHistoryStg
 
 Public Event NavigationIntercepted(destinationURL As String)
 
+Private Sub Class_Terminate()
+
+    Set m_Browser = Nothing
+
+End Sub
+
 Public Sub Constructor(hWndInternetExplorerServer As Long)
-    ' VB6 classes can't have a real constructor. *sigh*
- 
+
+  ' VB6 classes can't have a real constructor. *sigh*
+
   Dim iid_IDispatch As UUID
   Dim iid_SWebBrowserApp As UUID
   Dim iid_IHTMLElement As UUID
@@ -39,7 +46,7 @@ Public Sub Constructor(hWndInternetExplorerServer As Long)
   ' Convert the GUID strings for the interfaces to interface identifiers
 
     IIDFromString StrPtr(IIDSTR_IDispatch), iid_IDispatch
-    IIDFromString StrPtr(IIDSTR_SWebBrowserApp), iid_SWebBrowserApp
+    IIDFromString StrPtr(IIDSTR_IWebBrowserApp), iid_SWebBrowserApp
     IIDFromString StrPtr(IIDSTR_IHTMLElement), iid_IHTMLElement
     IIDFromString StrPtr(IIDSTR_IWebBrowser2), iid_IWebBrowser2
 
@@ -52,7 +59,7 @@ Public Sub Constructor(hWndInternetExplorerServer As Long)
 
     If AccessibleObjectFromWindow(hWndInternetExplorerServer, OBJID_CLIENT, iid_IDispatch, objIEBrowser) <> 0 Then
         modLogging.WriteLineToLog "IEBrowser: AccessibleObjectFromWindow failed."
-        Exit Sub '---> Bottom
+        Exit Sub
     End If
 
     Set objIServiceProvider = objIEBrowser.accChild(CVar(0&))
@@ -69,11 +76,6 @@ Public Sub Constructor(hWndInternetExplorerServer As Long)
     Set objIServiceProvider = Nothing
 
     modLogging.WriteLineToLog "IEBrowser: Success!"
-End Sub
-
-Private Sub Class_Terminate()
-    
-    Set m_Browser = Nothing
 
 End Sub
 
@@ -98,9 +100,14 @@ Public Sub PushIntoHistory(ByVal URL As String, ByVal title As String)
 End Sub
 
 Public Sub SetTitle(newTitle As String)
+
     If m_Browser Is Nothing Then
         Exit Sub
     End If
-    
+
     m_Browser.Document.title = newTitle
+
 End Sub
+
+':) Ulli's VB Code Formatter V2.24.17 (2022-Nov-01 16:03)  Decl: 7  Code: 90  Total: 97 Lines
+':) CommentOnly: 9 (9,3%)  Commented: 0 (0%)  Filled: 63 (64,9%)  Empty: 34 (35,1%)  Max Logic Depth: 2

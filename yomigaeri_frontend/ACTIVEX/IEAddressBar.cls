@@ -17,23 +17,22 @@ Private m_hWndIEFrame As Long
 Private m_hWndAddressBar As Long
 
 Public Sub Constructor(hWndIEFrame As Long)
-    ' VB6 classes can't have a real constructor. *sigh*
-    
+
+  ' VB6 classes can't have a real constructor. *sigh*
+
     m_hWndIEFrame = hWndIEFrame
 
     FindAddressBar
+
 End Sub
 
-Public Property Get hWnd() As Long
-    hWnd = m_hWndAddressBar
-End Property
-
 Private Sub FindAddressBar()
+
   Dim hWnd As Long
 
     If m_hWndIEFrame = -1 Then
         modLogging.WriteLineToLog "FindAddressBar: m_hWndIEFrame is bad."
-        Exit Sub      '---> Bottom
+        Exit Sub
     End If
 
     ' ------------------------------------------------------------------------
@@ -45,7 +44,7 @@ Private Sub FindAddressBar()
     If Err.LastDllError <> 0 Or hWnd = 0 Then
         modLogging.WriteLineToLog "FindAddressBar: FindWindowEx WorkerW failed. GetLastError returns " & Hex$(Err.LastDllError)
         m_hWndAddressBar = -1
-        Exit Sub      '---> Bottom
+        Exit Sub
     End If
 
     modLogging.WriteLineToLog "FindAddressBar: WorkerW hWnd is " & Hex$(hWnd)
@@ -59,7 +58,7 @@ Private Sub FindAddressBar()
     If Err.LastDllError <> 0 Or hWnd = 0 Then
         modLogging.WriteLineToLog "FindAddressBar: FindWindowEx ReBarWindow32 failed. GetLastError returns " & Hex$(Err.LastDllError)
         m_hWndAddressBar = -1
-        Exit Sub      '---> Bottom
+        Exit Sub
     End If
 
     modLogging.WriteLineToLog "FindAddressBar: ReBarWindow32 hWnd is " & Hex$(hWnd)
@@ -73,7 +72,7 @@ Private Sub FindAddressBar()
     If Err.LastDllError <> 0 Or hWnd = 0 Then
         modLogging.WriteLineToLog "FindAddressBar: FindWindowEx ComboBoxEx32 failed. GetLastError returns " & Hex$(Err.LastDllError)
         m_hWndAddressBar = -1
-        Exit Sub      '---> Bottom
+        Exit Sub
     End If
 
     modLogging.WriteLineToLog "FindAddressBar: ComboBoxEx32 hWnd is " & Hex$(hWnd)
@@ -87,7 +86,7 @@ Private Sub FindAddressBar()
     If Err.LastDllError <> 0 Or hWnd = 0 Then
         modLogging.WriteLineToLog "FindAddressBar: FindWindowEx ComboBox failed. GetLastError returns " & Hex$(Err.LastDllError)
         m_hWndAddressBar = -1
-        Exit Sub      '---> Bottom
+        Exit Sub
     End If
 
     modLogging.WriteLineToLog "FindAddressBar: ComboBox hWnd is " & Hex$(hWnd)
@@ -101,22 +100,33 @@ Private Sub FindAddressBar()
     If Err.LastDllError <> 0 Or hWnd = 0 Then
         modLogging.WriteLineToLog "FindAddressBar: FindWindowEx Edit failed. GetLastError returns " & Hex$(Err.LastDllError)
         m_hWndAddressBar = -1
-        Exit Sub      '---> Bottom
+        Exit Sub
     End If
 
     modLogging.WriteLineToLog "FindAddressBar: Edit hWnd is " & Hex$(hWnd)
 
     m_hWndAddressBar = hWnd
+
 End Sub
+
+Public Property Get hWnd() As Long
+
+    hWnd = m_hWndAddressBar
+
+End Property
 
 Public Sub SetText(newText As String)
 
     If m_hWndAddressBar = -1 Then
         modLogging.WriteLineToLog "SetAddressBarText: Cannot set if address bar not found."
-        Exit Sub '---> Bottom
+        Exit Sub
     End If
 
     modLogging.WriteLineToLog "SetAddressBarText: Text becomes: " & newText
 
     SendMessage m_hWndAddressBar, WM_SETTEXT, 0&, ByVal newText
+
 End Sub
+
+':) Ulli's VB Code Formatter V2.24.17 (2022-Nov-01 16:03)  Decl: 4  Code: 115  Total: 119 Lines
+':) CommentOnly: 13 (10,9%)  Commented: 0 (0%)  Filled: 78 (65,5%)  Empty: 41 (34,5%)  Max Logic Depth: 2

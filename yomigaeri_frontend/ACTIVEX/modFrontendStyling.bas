@@ -1,9 +1,9 @@
 Attribute VB_Name = "modFrontendStyling"
 Option Explicit
 
-Private Declare Function SystemParametersInfo Lib "user32.dll" Alias "SystemParametersInfoA" (ByVal uAction As Long, ByVal uParam As Long, ByRef lpvParam As Any, ByVal fuWinIni As Long) As Long
-Private Declare Function GetDeviceCaps Lib "gdi32.dll" (ByVal hdc As Long, ByVal nIndex As Long) As Long
-Private Declare Function GetSysColor Lib "user32.dll" (ByVal nIndex As Long) As Long
+Private Declare Function SystemParametersInfo Lib "USER32.DLL" Alias "SystemParametersInfoA" (ByVal uAction As Long, ByVal uParam As Long, ByRef lpvParam As Any, ByVal fuWinIni As Long) As Long
+Private Declare Function GetDeviceCaps Lib "gdi32.dll" (ByVal hDC As Long, ByVal nIndex As Long) As Long
+Private Declare Function GetSysColor Lib "USER32.DLL" (ByVal nIndex As Long) As Long
 
 Private Const LOGPIXELSX As Long = 88
 Private Const LOGPIXELSY As Long = 90
@@ -70,83 +70,28 @@ Private Type NONCLIENTMETRICS
     lfMessageFont As LOGFONT
 End Type
 
-Private Function LongToRGBHex(ByVal lLong As Long) As String
+Public Function GetAcceptLanguage() As String
 
-  ' by Donald, donald@xbeat.net, 20010910
+  Dim strRet As String
+  Dim Registry As New CRegistry
 
-  Dim bRed As Long
-  Dim bGreen As Long
-  Dim bBlue As Long
-  ' mask out highest byte
+    With Registry
+        .ClassKey = HKEY_CURRENT_USER
+        .SectionKey = "Software\Microsoft\Internet Explorer\International"
+        .ValueType = REG_SZ
 
-    lLong = lLong And &HFFFFFF
-    ' extract color bytes
-    bRed = lLong And &HFF
-    bGreen = (lLong \ &H100) And &HFF
-    bBlue = (lLong \ &H10000) And &HFF
-    ' reverse bytes
-    lLong = bRed * &H10000 + bGreen * &H100 + bBlue
-    ' to hex, left-padd zeroes
-    ' the string op is the bottleneck of this procedure, and since in real
-    ' world most colors have a red-part >= 16, it's a good idea to check if
-    ' we really need the string op
-    If bRed < &H10 Then
-        LongToRGBHex = Right$("00000" & Hex$(lLong), 6)
-      Else 'NOT BRED...
-        LongToRGBHex = Hex$(lLong)
+        .ValueKey = "AcceptLanguage"
+
+        strRet = .Value
+    End With
+
+    Set Registry = Nothing
+
+    If strRet = "" Then
+        strRet = "<EMPTY>"
     End If
 
-End Function
-
-Public Function MakeStyling(ByRef hdc As Long) As String
-
-  Dim lngRet As Long
-  Dim sctNCM As NONCLIENTMETRICS
-  Dim strFont As String
-  Dim strResponse As String
-
-    sctNCM.cbSize = Len(sctNCM)
-
-    lngRet = SystemParametersInfo(SPI_GETNONCLIENTMETRICS, 0, sctNCM, 0)
-
-    If lngRet = 0 Then
-        MakeStyling = "ERROR"
-        Exit Function '---> Bottom
-    End If
-
-    strFont = StrConv(sctNCM.lfMessageFont.lfFaceName, vbUnicode)
-    strFont = Left$(strFont, InStr(strFont, Chr$(0)) - 1)
-
-    ' Str$ in the font size is important to account for locales that
-    ' do not use a period as the decimal separator.
-
-    strResponse = strFont & vbTab & _
-                  Str$(-(sctNCM.lfMessageFont.lfHeight * (72 / GetDeviceCaps(hdc, LOGPIXELSY)))) & vbTab & _
-                  LongToRGBHex(GetSysColor(COLOR_SCROLLBAR)) & vbTab & _
-                  LongToRGBHex(GetSysColor(COLOR_BACKGROUND)) & vbTab & _
-                  LongToRGBHex(GetSysColor(COLOR_ACTIVECAPTION)) & vbTab & _
-                  LongToRGBHex(GetSysColor(COLOR_INACTIVECAPTION)) & vbTab & _
-                  LongToRGBHex(GetSysColor(COLOR_MENU)) & vbTab & _
-                  LongToRGBHex(GetSysColor(COLOR_WINDOW)) & vbTab & _
-                  LongToRGBHex(GetSysColor(COLOR_WINDOWFRAME)) & vbTab & _
-                  LongToRGBHex(GetSysColor(COLOR_MENUTEXT)) & vbTab & _
-                  LongToRGBHex(GetSysColor(COLOR_WINDOWTEXT)) & vbTab & _
-                  LongToRGBHex(GetSysColor(COLOR_CAPTIONTEXT)) & vbTab & _
-                  LongToRGBHex(GetSysColor(COLOR_ACTIVEBORDER)) & vbTab & _
-                  LongToRGBHex(GetSysColor(COLOR_INACTIVEBORDER)) & vbTab & _
-                  LongToRGBHex(GetSysColor(COLOR_APPWORKSPACE)) & vbTab & _
-                  LongToRGBHex(GetSysColor(COLOR_HIGHLIGHT)) & vbTab & _
-                  LongToRGBHex(GetSysColor(COLOR_HIGHLIGHTTEXT)) & vbTab & _
-                  LongToRGBHex(GetSysColor(COLOR_BTNFACE)) & vbTab & _
-                  LongToRGBHex(GetSysColor(COLOR_BTNSHADOW)) & vbTab & _
-                  LongToRGBHex(GetSysColor(COLOR_GRAYTEXT)) & vbTab & _
-                  LongToRGBHex(GetSysColor(COLOR_BTNTEXT)) & vbTab & _
-                  LongToRGBHex(GetSysColor(COLOR_INACTIVECAPTIONTEXT)) & vbTab & _
-                  LongToRGBHex(GetSysColor(COLOR_BTNHIGHLIGHT)) & vbTab & _
-                  LongToRGBHex(GetSysColor(COLOR_2NDACTIVECAPTION)) & vbTab & _
-                  LongToRGBHex(GetSysColor(COLOR_2NDINACTIVECAPTION))
-
-    MakeStyling = strResponse
+    GetAcceptLanguage = strRet
 
 End Function
 
@@ -202,7 +147,7 @@ Public Function GetCursors() As String
 
         .ValueKey = "Wait"
         strWait = .Value
-    End With 'REGISTRY
+    End With
 
     Set Registry = Nothing
 
@@ -221,30 +166,85 @@ Public Function GetCursors() As String
 
 End Function
 
-Public Function GetAcceptLanguage() As String
+Private Function LongToRGBHex(ByVal lLong As Long) As String
 
-  Dim strRet As String
-  Dim Registry As New CRegistry
+  ' by Donald, donald@xbeat.net, 20010910
 
-    With Registry
-        .ClassKey = HKEY_CURRENT_USER
-        .SectionKey = "Software\Microsoft\Internet Explorer\International"
-        .ValueType = REG_SZ
+  Dim bRed As Long
+  Dim bGreen As Long
+  Dim bBlue As Long
+  ' mask out highest byte
 
-        .ValueKey = "AcceptLanguage"
-
-        strRet = .Value
-    End With 'REGISTRY
-
-    Set Registry = Nothing
-
-    If strRet = "" Then
-        strRet = "<EMPTY>"
+    lLong = lLong And &HFFFFFF
+    ' extract color bytes
+    bRed = lLong And &HFF
+    bGreen = (lLong \ &H100) And &HFF
+    bBlue = (lLong \ &H10000) And &HFF
+    ' reverse bytes
+    lLong = bRed * &H10000 + bGreen * &H100 + bBlue
+    ' to hex, left-padd zeroes
+    ' the string op is the bottleneck of this procedure, and since in real
+    ' world most colors have a red-part >= 16, it's a good idea to check if
+    ' we really need the string op
+    If bRed < &H10 Then
+        LongToRGBHex = Right$("00000" & Hex$(lLong), 6)
+      Else
+        LongToRGBHex = Hex$(lLong)
     End If
-
-    GetAcceptLanguage = strRet
 
 End Function
 
-':) Ulli's VB Code Formatter V2.24.17 (2022-Oct-29 22:14)  Decl: 70  Code: 179  Total: 249 Lines
-':) CommentOnly: 15 (6%)  Commented: 3 (1.2%)  Filled: 199 (79.9%)  Empty: 50 (20.1%)  Max Logic Depth: 2
+Public Function MakeStyling(ByRef hDC As Long) As String
+
+  Dim lngRet As Long
+  Dim sctNCM As NONCLIENTMETRICS
+  Dim strFont As String
+  Dim strResponse As String
+
+    sctNCM.cbSize = Len(sctNCM)
+
+    lngRet = SystemParametersInfo(SPI_GETNONCLIENTMETRICS, 0, sctNCM, 0)
+
+    If lngRet = 0 Then
+        MakeStyling = "ERROR"
+        Exit Function
+    End If
+
+    strFont = StrConv(sctNCM.lfMessageFont.lfFaceName, vbUnicode)
+    strFont = Left$(strFont, InStr(strFont, Chr$(0)) - 1)
+
+    ' Str$ in the font size is important to account for locales that
+    ' do not use a period as the decimal separator.
+
+    strResponse = strFont & vbTab & _
+                  Str$(-(sctNCM.lfMessageFont.lfHeight * (72 / GetDeviceCaps(hDC, LOGPIXELSY)))) & vbTab & _
+                  LongToRGBHex(GetSysColor(COLOR_SCROLLBAR)) & vbTab & _
+                  LongToRGBHex(GetSysColor(COLOR_BACKGROUND)) & vbTab & _
+                  LongToRGBHex(GetSysColor(COLOR_ACTIVECAPTION)) & vbTab & _
+                  LongToRGBHex(GetSysColor(COLOR_INACTIVECAPTION)) & vbTab & _
+                  LongToRGBHex(GetSysColor(COLOR_MENU)) & vbTab & _
+                  LongToRGBHex(GetSysColor(COLOR_WINDOW)) & vbTab & _
+                  LongToRGBHex(GetSysColor(COLOR_WINDOWFRAME)) & vbTab & _
+                  LongToRGBHex(GetSysColor(COLOR_MENUTEXT)) & vbTab & _
+                  LongToRGBHex(GetSysColor(COLOR_WINDOWTEXT)) & vbTab & _
+                  LongToRGBHex(GetSysColor(COLOR_CAPTIONTEXT)) & vbTab & _
+                  LongToRGBHex(GetSysColor(COLOR_ACTIVEBORDER)) & vbTab & _
+                  LongToRGBHex(GetSysColor(COLOR_INACTIVEBORDER)) & vbTab & _
+                  LongToRGBHex(GetSysColor(COLOR_APPWORKSPACE)) & vbTab & _
+                  LongToRGBHex(GetSysColor(COLOR_HIGHLIGHT)) & vbTab & _
+                  LongToRGBHex(GetSysColor(COLOR_HIGHLIGHTTEXT)) & vbTab & _
+                  LongToRGBHex(GetSysColor(COLOR_BTNFACE)) & vbTab & _
+                  LongToRGBHex(GetSysColor(COLOR_BTNSHADOW)) & vbTab & _
+                  LongToRGBHex(GetSysColor(COLOR_GRAYTEXT)) & vbTab & _
+                  LongToRGBHex(GetSysColor(COLOR_BTNTEXT)) & vbTab & _
+                  LongToRGBHex(GetSysColor(COLOR_INACTIVECAPTIONTEXT)) & vbTab & _
+                  LongToRGBHex(GetSysColor(COLOR_BTNHIGHLIGHT)) & vbTab & _
+                  LongToRGBHex(GetSysColor(COLOR_2NDACTIVECAPTION)) & vbTab & _
+                  LongToRGBHex(GetSysColor(COLOR_2NDINACTIVECAPTION))
+
+    MakeStyling = strResponse
+
+End Function
+
+':) Ulli's VB Code Formatter V2.24.17 (2022-Nov-01 16:03)  Decl: 70  Code: 179  Total: 249 Lines
+':) CommentOnly: 15 (6%)  Commented: 3 (1,2%)  Filled: 199 (79,9%)  Empty: 50 (20,1%)  Max Logic Depth: 2
