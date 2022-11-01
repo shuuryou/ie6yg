@@ -53,8 +53,6 @@ Private Sub m_IEFrame_WindowResized()
 
   Dim bWasConnected As Boolean
 
-    m_IEStatusBar.FixStatusBar
-
     bWasConnected = rdpClient.Connected
 
     If bWasConnected Then
@@ -79,12 +77,6 @@ Private Sub m_IEFrame_WindowResized()
 
         rdpClient.Connect
     End If
-
-End Sub
-
-Private Sub m_IEFrame_WindowResizing()
-
-    m_IEStatusBar.FixStatusBar
 
 End Sub
 
@@ -324,7 +316,7 @@ Private Sub UserControl_ReadProperties(PropBag As PropertyBag)
     rdpClient.SecuredSettings2.StartProgram = CStr(PropBag.ReadProperty("RDP_Backend", vbNullString))
 
     If rdpClient.Server <> "" And rdpClient.UserName <> "" And CStr(PropBag.ReadProperty("RDP_Password", vbNullString)) <> "" And rdpClient.SecuredSettings2.StartProgram <> "" Then
-        'm_DoInitialConnect = True 'XXX WRONG
+        m_DoInitialConnect = True
       Else
         Err.Raise -1, "YOMIGAERI", LoadResString(103) ' The parameters for the frontend are incorrect.
     End If
