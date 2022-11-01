@@ -94,6 +94,10 @@ Private Sub Class_Terminate()
     DetachMessage Me, m_hWndStatusBar, SB_SETPARTS
     DetachMessage Me, m_hWndStatusBar, SB_SETMINHEIGHT
     DetachMessage Me, m_hWndStatusBar, SB_SETICON
+    
+    DetachMessage Me, m_hWndStatusBar, WM_SIZE
+    DetachMessage Me, m_hWndStatusBar, WM_WINDOWPOSCHANGING
+    DetachMessage Me, m_hWndStatusBar, WM_WINDOWPOSCHANGED
 
     DetachMessage Me, m_hWndStatusBar, SB_SETTEXTA + SB_IE6YG_SHIFT
     DetachMessage Me, m_hWndStatusBar, SB_SETPARTS + SB_IE6YG_SHIFT
@@ -147,6 +151,10 @@ Public Sub Constructor(hWndIEFrame As Long)
     AttachMessage Me, m_hWndStatusBar, SB_SETPARTS
     AttachMessage Me, m_hWndStatusBar, SB_SETMINHEIGHT
     AttachMessage Me, m_hWndStatusBar, SB_SETICON
+    
+    AttachMessage Me, m_hWndStatusBar, WM_SIZE
+    AttachMessage Me, m_hWndStatusBar, WM_WINDOWPOSCHANGING
+    AttachMessage Me, m_hWndStatusBar, WM_WINDOWPOSCHANGED
 
     AttachMessage Me, m_hWndStatusBar, SB_SETTEXTA + SB_IE6YG_SHIFT
     AttachMessage Me, m_hWndStatusBar, SB_SETPARTS + SB_IE6YG_SHIFT
@@ -239,6 +247,8 @@ Public Sub FixStatusBar()
     nIconPaneWidth = GetSystemMetrics(SM_CXSMICON) + _
                      GetSystemMetrics(SM_CXEDGE) * 2
 
+    modLogging.WriteLineToLog "XXXX" & rc.Right - rc.Left
+
   Dim nWidthReqd As Long
     nWidthReqd = cxZone + cxProgressBar + (nIconPaneWidth * 1)
 
@@ -323,6 +333,10 @@ Private Property Let ISubclass_MsgResponse(ByVal RHS As SSubTimer.EMsgResponse)
 End Property ':( No executable Code
 
 Private Function ISubclass_WindowProc(ByVal hWnd As Long, ByVal iMsg As Long, ByVal WParam As Long, ByVal lParam As Long) As Long
+
+    If iMsg = WM_SIZE Or iMsg = WM_WINDOWPOSCHANGING Or iMsg = WM_WINDOWPOSCHANGED Then
+        FixStatusBar
+    End If
 
     If iMsg = SB_SETTEXTA Or iMsg = SB_SETTEXTW Or iMsg = SB_SETPARTS _
        Or iMsg = SB_SETMINHEIGHT Or iMsg = SB_SETICON Then

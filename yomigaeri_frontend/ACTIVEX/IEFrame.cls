@@ -20,7 +20,6 @@ Private m_hWndInternetExplorerServer As Long
 Private m_hWndShellDocObjectView As Long
 Private m_hWndIEFrame As Long
 
-Public Event WindowResizing()
 Public Event WindowResized()
 
 Private Sub Class_Terminate()
@@ -29,8 +28,8 @@ Private Sub Class_Terminate()
         Exit Sub
     End If
 
-    DetachMessage Me, m_hWndIEFrame, WM_SIZE
     DetachMessage Me, m_hWndIEFrame, WM_EXITSIZEMOVE
+    DetachMessage Me, m_hWndIEFrame, WM_WINDOWPOSCHANGED
 
 End Sub
 
@@ -46,8 +45,8 @@ Public Sub Constructor(hWndUserControl As Long)
         Exit Sub
     End If
 
-    AttachMessage Me, m_hWndIEFrame, WM_SIZE
     AttachMessage Me, m_hWndIEFrame, WM_EXITSIZEMOVE
+    AttachMessage Me, m_hWndIEFrame, WM_WINDOWPOSCHANGED
 
 End Sub
 
@@ -196,7 +195,7 @@ End Property
 
 Private Property Get ISubclass_MsgResponse() As SSubTimer.EMsgResponse
 
-    ISubclass_MsgResponse = emrConsume
+    ISubclass_MsgResponse = emrPostProcess
 
 End Property
 
@@ -212,15 +211,12 @@ Private Function ISubclass_WindowProc(ByVal hWnd As Long, ByVal iMsg As Long, By
   ' to resolve completely. Read more details about it in this file:
   ' ..\Support\SSubTimerUnicode\READ.TXT
 
-    If iMsg = WM_SIZE Then
-        RaiseEvent WindowResizing
-      ElseIf iMsg = WM_EXITSIZEMOVE Then
+    If iMsg = WM_EXITSIZEMOVE Or iMsg = WM_WINDOWPOSCHANGED Then
         RaiseEvent WindowResized
+        Exit Function
     End If
-
-    CallOldWindowProc hWnd, iMsg, WParam, lParam
 
 End Function
 
-':) Ulli's VB Code Formatter V2.24.17 (2022-Nov-01 16:03)  Decl: 11  Code: 202  Total: 213 Lines
-':) CommentOnly: 7 (3,3%)  Commented: 0 (0%)  Filled: 152 (71,4%)  Empty: 61 (28,6%)  Max Logic Depth: 2
+':) Ulli's VB Code Formatter V2.24.17 (2022-Nov-01 16:15)  Decl: 11  Code: 211  Total: 222 Lines
+':) CommentOnly: 7 (3,2%)  Commented: 0 (0%)  Filled: 149 (67,1%)  Empty: 73 (32,9%)  Max Logic Depth: 2
