@@ -13,27 +13,20 @@ Attribute VB_PredeclaredId = False
 Attribute VB_Exposed = False
 Option Explicit
 
-Implements SSubTimer.ISubclass
+Implements SSubTUP.ISubclass
 
 Private m_hWndUserControl As Long
 Private m_hWndInternetExplorerServer As Long
 Private m_hWndShellDocObjectView As Long
 Private m_hWndIEFrame As Long
 
+Private m_GotSizeMessage As Boolean
+Private m_WasMaximized As Boolean
+Private m_WasMinimized As Boolean
+
 Public Event WindowResized()
 
-Private Sub Class_Terminate()
-
-    If m_hWndIEFrame = -1 Then
-        Exit Sub
-    End If
-
-    DetachMessage Me, m_hWndIEFrame, WM_EXITSIZEMOVE
-    DetachMessage Me, m_hWndIEFrame, WM_WINDOWPOSCHANGED
-
-End Sub
-
-Public Sub Constructor(hWndUserControl As Long)
+Public Sub Construct(hWndUserControl As Long)
 
   ' VB6 classes can't have a real constructor. *sigh*
 
@@ -46,7 +39,14 @@ Public Sub Constructor(hWndUserControl As Long)
     End If
 
     AttachMessage Me, m_hWndIEFrame, WM_EXITSIZEMOVE
-    AttachMessage Me, m_hWndIEFrame, WM_WINDOWPOSCHANGED
+    AttachMessage Me, m_hWndIEFrame, WM_SIZE
+
+End Sub
+
+Public Sub Destroy()
+
+    DetachMessage Me, m_hWndIEFrame, WM_EXITSIZEMOVE
+    DetachMessage Me, m_hWndIEFrame, WM_SIZE
 
 End Sub
 
@@ -193,30 +193,73 @@ Public Property Get hWndShellDocObjectView() As Long
 
 End Property
 
-Private Property Get ISubclass_MsgResponse() As SSubTimer.EMsgResponse
+Private Property Get ISubclass_MsgResponse() As SSubTUP.EMsgResponse
 
-    ISubclass_MsgResponse = emrPostProcess
+    ISubclass_MsgResponse = emrPreprocess
 
 End Property
 
-Private Property Let ISubclass_MsgResponse(ByVal RHS As SSubTimer.EMsgResponse)
+Private Property Let ISubclass_MsgResponse(ByVal RHS As SSubTUP.EMsgResponse)
 
   ' Unused
 
 End Property
 
-Private Function ISubclass_WindowProc(ByVal hWnd As Long, ByVal iMsg As Long, ByVal WParam As Long, ByVal lParam As Long) As Long
+Private Function ISubclass_WindowProc(ByVal hWnd As Long, ByVal iMsg As Long, ByVal wParam As Long, ByVal lParam As Long) As Long
 
-  ' There is a bug here that required a patched version of SSubTimer
-  ' to resolve completely. Read more details about it in this file:
-  ' ..\Support\SSubTimerUnicode\READ.TXT
+  ' The idea of the following exercise is to get WindowResized event
+  ' to trigger only when the size of the window has actually changed.
+  ' That is to say, after the fact. Not before. Not during.
 
-    If iMsg = WM_EXITSIZEMOVE Or iMsg = WM_WINDOWPOSCHANGED Then
-        RaiseEvent WindowResized
+    If iMsg = WM_EXITSIZEMOVE Then
+        If m_GotSizeMessage Then
+            ' This way, because WM_EXITSIZEMOVE won't tell you whether
+            ' it was a window sizing or window moving operation that
+            ' has just finished. *sigh*
+            m_GotSizeMessage = False
+            RaiseEvent WindowResized
+        End If
+
         Exit Function
+    End If
+
+    If iMsg = WM_SIZE Then
+        m_GotSizeMessage = True
+
+        ' Window was minimized
+        If wParam = SIZE_MINIMIZED Then
+            m_WasMinimized = True
+            Exit Function
+        End If
+
+        ' Window was not maximized and is now no longer minimized
+        If wParam = SIZE_RESTORED And m_WasMinimized Then
+            m_WasMinimized = False
+            Exit Function
+        End If
+
+        ' Window was maximized before and now it's no longer minimized
+        If wParam = SIZE_MAXIMIZED And m_WasMinimized Then
+            m_WasMinimized = False
+            Exit Function
+        End If
+
+        ' Window was just maximized
+        If wParam = SIZE_MAXIMIZED Then
+            m_WasMaximized = True
+            RaiseEvent WindowResized
+            Exit Function
+        End If
+
+        ' Window was just restored from being maximized
+        If wParam = SIZE_RESTORED And m_WasMaximized Then
+            m_WasMaximized = False
+            RaiseEvent WindowResized
+            Exit Function
+        End If
     End If
 
 End Function
 
-':) Ulli's VB Code Formatter V2.24.17 (2022-Nov-01 16:15)  Decl: 11  Code: 211  Total: 222 Lines
-':) CommentOnly: 7 (3,2%)  Commented: 0 (0%)  Filled: 149 (67,1%)  Empty: 73 (32,9%)  Max Logic Depth: 2
+':) Ulli's VB Code Formatter V2.24.17 (2022-Nov-03 00:39)  Decl: 14  Code: 238  Total: 252 Lines
+':) CommentOnly: 15 (6%)  Commented: 0 (0%)  Filled: 176 (69,8%)  Empty: 76 (30,2%)  Max Logic Depth: 3

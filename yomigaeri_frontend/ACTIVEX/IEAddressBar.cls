@@ -16,7 +16,7 @@ Option Explicit
 Private m_hWndIEFrame As Long
 Private m_hWndAddressBar As Long
 
-Public Sub Constructor(hWndIEFrame As Long)
+Public Sub Construct(hWndIEFrame As Long)
 
   ' VB6 classes can't have a real constructor. *sigh*
 
@@ -116,40 +116,43 @@ Public Property Get hWnd() As Long
 End Property
 
 Public Property Get Text() As String
-    Dim lngLength As Long
-    Dim bytText() As Byte
-    
+
+  Dim lngLength As Long
+  Dim bytText() As Byte
+
     If m_hWndAddressBar = -1 Then
         Text = ""
         Exit Property
     End If
-    
+
     lngLength = SendMessage(m_hWndAddressBar, WM_GETTEXTLENGTH, 0&, 0&)
-    
+
     If lngLength = 0 Then
         Text = ""
         Exit Property
     End If
 
     ReDim bytText(0 To lngLength + 1) As Byte
-    
+
     SendMessage m_hWndAddressBar, WM_GETTEXT, ByVal (lngLength + 1), bytText(0)
-    
+
     Text = TrimNull(StrConv(bytText, vbUnicode))
+
 End Property
 
 Public Property Let Text(newText As String)
-    Dim Text() As Byte
-    
+
+  Dim Text() As Byte
+
     If m_hWndAddressBar = -1 Then
         Exit Property
     End If
-    
+
     Text = StrConv(newText, vbFromUnicode) & Chr$(0)
 
     SendMessage m_hWndAddressBar, WM_SETTEXT, 0&, Text(0)
+
 End Property
 
-
-':) Ulli's VB Code Formatter V2.24.17 (2022-Nov-01 16:03)  Decl: 4  Code: 115  Total: 119 Lines
-':) CommentOnly: 13 (10,9%)  Commented: 0 (0%)  Filled: 78 (65,5%)  Empty: 41 (34,5%)  Max Logic Depth: 2
+':) Ulli's VB Code Formatter V2.24.17 (2022-Nov-03 00:39)  Decl: 4  Code: 141  Total: 145 Lines
+':) CommentOnly: 13 (9%)  Commented: 0 (0%)  Filled: 90 (62,1%)  Empty: 55 (37,9%)  Max Logic Depth: 2

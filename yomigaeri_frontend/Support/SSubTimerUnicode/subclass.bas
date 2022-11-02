@@ -93,13 +93,14 @@ End Sub
 Private Function SetWindowProc(ByVal hWnd As Long, ByVal lpFn As Long) As Long
    If (IsWindowUnicode(hWnd) = 0) Then
       ' Not a Unicode window:
-      SetWindowProc = SetWindowLong(hWnd, GWL_WNDPROC, AddressOf WindowProc)
+      SetWindowProc = SetWindowLong(hWnd, GWL_WNDPROC, lpFn)
    Else
       ' Unicode window:
-      SetWindowProc = SetWindowLongW(hWnd, GWL_WNDPROC, AddressOf WindowProc)
+      SetWindowProc = SetWindowLongW(hWnd, GWL_WNDPROC, lpFn)
    End If
  
 End Function
+
  
 Private Property Get MessageCount(ByVal hWnd As Long) As Long
 Dim sName As String

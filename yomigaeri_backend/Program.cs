@@ -1,11 +1,11 @@
 ﻿using CefSharp;
 using CefSharp.WinForms;
-using Microsoft.Win32;
 using System;
 using System.ComponentModel;
 using System.Drawing;
 using System.Globalization;
 using System.IO;
+using System.Threading;
 using System.Windows.Forms;
 
 namespace yomigaeri_backend
@@ -14,14 +14,11 @@ namespace yomigaeri_backend
 	{
 		internal static FuckINI Settings { get; private set; }
 		internal static ChromiumWebBrowser WebBrowser { get; private set; }
+		
 
 		[STAThread]
 		public static int Main(string[] args)
 		{
-			Application.SetCompatibleTextRenderingDefault(true);
-
-			Application.ApplicationExit += Application_ApplicationExit;
-
 			#region Open Logger
 			try
 			{
@@ -40,6 +37,13 @@ namespace yomigaeri_backend
 
 			Logging.WriteBannerToLog("IE6 Yomigaeri's Back Orifice");
 			#endregion
+
+			Application.SetUnhandledExceptionMode(UnhandledExceptionMode.CatchException);
+			Application.ThreadException += Application_ThreadException;
+
+			Application.SetCompatibleTextRenderingDefault(true);
+
+			Application.ApplicationExit += Application_ApplicationExit;
 
 			#region Read INI File
 			{
@@ -64,6 +68,7 @@ namespace yomigaeri_backend
 					MessageBox.Show(err, Resources.Strings.E_InitErrorTitle,
 						MessageBoxButtons.OK, MessageBoxIcon.Error);
 
+
 					return 1;
 				}
 
@@ -72,39 +77,37 @@ namespace yomigaeri_backend
 			#endregion
 
 			#region Initialize RDP Virtual Channel
-			Logging.WriteLineToLog("This is a Terminal Server session? {0}", SystemInformation.TerminalServerSession);
+						Logging.WriteLineToLog("This is a Terminal Server session? {0}", SystemInformation.TerminalServerSession);
 
-			if (!SystemInformation.TerminalServerSession)
-			{
-				MessageBox.Show(Resources.Strings.E_InitErrorNotTerminalSession,
-					Resources.Strings.E_InitErrorTitle, MessageBoxButtons.OK,
-					MessageBoxIcon.None);
+						if (!SystemInformation.TerminalServerSession)
+						{
+							MessageBox.Show(Resources.Strings.E_InitErrorNotTerminalSession,
+								Resources.Strings.E_InitErrorTitle, MessageBoxButtons.OK,
+								MessageBoxIcon.None);
 
+							return 1;
+						}
+
+						Logging.WriteLineToLog("Opening RDP virtual channel to frontend.");
+
+						try
+						{
+							RDPVirtualChannel.OpenChannel();
+						}
+						catch (Win32Exception e)
+						{
+							string err = string.Format(CultureInfo.CurrentUICulture,
+								Resources.Strings.E_InitErrorCouldNotOpenRDPVC,
+								 e.Message);
+
+							Logging.WriteLineToLog("Error opening virtual channel: {0}", e);
+
+							MessageBox.Show(err, Resources.Strings.E_InitErrorTitle,
+								MessageBoxButtons.OK, MessageBoxIcon.Error);
 #if !DEBUG
-				return 1;
+							return 1;
 #endif
-			}
-
-			Logging.WriteLineToLog("Opening RDP virtual channel to frontend.");
-
-			try
-			{
-				RDPVirtualChannel.OpenChannel();
-			}
-			catch (Win32Exception e)
-			{
-				string err = string.Format(CultureInfo.CurrentUICulture,
-					Resources.Strings.E_InitErrorCouldNotOpenRDPVC,
-					 e.Message);
-
-				Logging.WriteLineToLog("Error opening virtual channel: {0}", e);
-
-				MessageBox.Show(err, Resources.Strings.E_InitErrorTitle,
-					MessageBoxButtons.OK, MessageBoxIcon.Error);
-#if !DEBUG
-				return 1;
-#endif
-			}
+						}
 
 			#endregion
 
@@ -112,84 +115,84 @@ namespace yomigaeri_backend
 			{
 				Logging.WriteLineToLog("Request styling from frontend.");
 
-				RDPVirtualChannel.WriteChannel("STYLING");
+							RDPVirtualChannel.WriteChannel("STYLING");
 
-				string response = null;
+							string response = null;
 
-				try
-				{
-					response = RDPVirtualChannel.ReadChannelUntilResponse();
-				}
-				catch (TimeoutException)
-				{
-					Logging.WriteLineToLog("Time out getting styling from frontend.");
-				}
+							try
+							{
+								response = RDPVirtualChannel.ReadChannelUntilResponse();
+							}
+							catch (TimeoutException)
+							{
+								Logging.WriteLineToLog("Time out getting styling from frontend.");
+							}
 
-				if (response == null)
-					goto skipStyling;
+							if (response == null)
+								goto skipStyling;
 
-				Logging.WriteLineToLog("Frontend styling response is: \"{0}\".", response);
+							Logging.WriteLineToLog("Frontend styling response is: \"{0}\".", response);
 
-				if (response == "ERROR" || response == "UNSUPPORTED")
-					goto skipStyling;
+							if (response == "ERROR" || response == "UNSUPPORTED")
+								goto skipStyling;
 
-				Logging.WriteLineToLog("Apply frontend styling to this session.");
+							Logging.WriteLineToLog("Apply frontend styling to this session.");
 
-				try
-				{
-					FrontendStyling.ApplyStyling(response);
-				}
-				catch (Exception e)
-				{
-					Logging.WriteLineToLog("Error applying styling: {0}", e);
-				}
+							try
+							{
+								FrontendStyling.ApplyStyling(response);
+							}
+							catch (Exception e)
+							{
+								Logging.WriteLineToLog("Error applying styling: {0}", e);
+							}
 
 
-			skipStyling:
-				;
-			}
+						skipStyling:
+							;
+						}
 			#endregion
 
 			#region Request and Apply Cursors from Frontend
-			{
-				Logging.WriteLineToLog("Request cursors from frontend.");
+						{
+							Logging.WriteLineToLog("Request cursors from frontend.");
 
-				RDPVirtualChannel.WriteChannel("CURSORS");
+							RDPVirtualChannel.WriteChannel("CURSORS");
 
-				string response = null;
+							string response = null;
 
-				try
-				{
-					response = RDPVirtualChannel.ReadChannelUntilResponse();
-				}
-				catch (TimeoutException)
-				{
-					Logging.WriteLineToLog("Time out getting curors from frontend.");
-				}
+							try
+							{
+								response = RDPVirtualChannel.ReadChannelUntilResponse();
+							}
+							catch (TimeoutException)
+							{
+								Logging.WriteLineToLog("Time out getting curors from frontend.");
+							}
 
-				if (response == null)
-					goto skipStyling;
+							if (response == null)
+								goto skipStyling;
 
-				Logging.WriteLineToLog("Frontend curors response is: \"{0}\".", response);
+							Logging.WriteLineToLog("Frontend curors response is: \"{0}\".", response);
 
-				if (response == "ERROR" || response == "UNSUPPORTED")
-					goto skipStyling;
+							if (response == "ERROR" || response == "UNSUPPORTED")
+								goto skipStyling;
 
-				Logging.WriteLineToLog("Apply frontend curors to this session.");
+							Logging.WriteLineToLog("Apply frontend curors to this session.");
 
-				try
-				{
-					FrontendStyling.ApplyCursors(response);
-				}
-				catch (Exception e)
-				{
-					Logging.WriteLineToLog("Error applying curors: {0}", e);
-				}
+							try
+							{
+								FrontendStyling.ApplyCursors(response);
+							}
+							catch (Exception e)
+							{
+								Logging.WriteLineToLog("Error applying curors: {0}", e);
+							}
 
 
-			skipStyling:
-				;
-			}
+						skipStyling:
+							;
+						}
 			#endregion
 
 			string frontendLanguageList = string.Empty;
@@ -229,13 +232,28 @@ namespace yomigaeri_backend
 			#endregion
 
 			#region Initialize AdBlock
-			AdBlock.Initialize();
+			try
+			{
+				// Some day there will be proper µBO grade blocking and a little
+				// bit more to do here. :-(
 
-			// Some day there will be proper µBO grade blocking and a little
-			// bit more to do here. :-(
+				AdBlock.Initialize();
+			}
+			catch (Exception e)
+			{
+				string err = string.Format(CultureInfo.CurrentUICulture,
+					Resources.Strings.E_InitErrorAdBlock,
+					 e.Message);
+
+				Logging.WriteLineToLog("Error initializing AdBlock: {0}", e);
+
+				MessageBox.Show(err, Resources.Strings.E_InitErrorTitle,
+					MessageBoxButtons.OK, MessageBoxIcon.Error);
+			}
 			#endregion
 
 			#region Initialize Chromium
+			try
 			{
 				CefSettings cefSettings = new CefSettings();
 
@@ -245,8 +263,12 @@ namespace yomigaeri_backend
 				cefSettings.BackgroundColor = Cef.ColorSetARGB(0, SystemColors.Window.R,
 					SystemColors.Window.G, SystemColors.Window.B);
 
-				cefSettings.CachePath =
-					Environment.ExpandEnvironmentVariables(Settings.Get("CEF", "CachePath", string.Empty));
+				string cachePath = Environment.ExpandEnvironmentVariables(Settings.Get("CEF", "CachePath", string.Empty));
+
+				if (!Directory.Exists(cachePath))
+					Directory.CreateDirectory(cachePath);
+
+				cefSettings.CachePath = cachePath;
 
 				for (int i = 1; i < int.MaxValue; i++)
 				{
@@ -266,6 +288,19 @@ namespace yomigaeri_backend
 					Cef.EnableHighDPISupport();
 
 				Cef.Initialize(cefSettings);
+
+				Program.WebBrowser = new ChromiumWebBrowser("about:blank");
+			}
+			catch (Exception e)
+			{
+				string err = string.Format(CultureInfo.CurrentUICulture,
+					Resources.Strings.E_InitErrorChromiumEmbeddedFramework,
+					 e.Message);
+
+				Logging.WriteLineToLog("Error initializing AdBlock: {0}", e);
+
+				MessageBox.Show(err, Resources.Strings.E_InitErrorTitle,
+					MessageBoxButtons.OK, MessageBoxIcon.Error);
 			}
 			#endregion
 
@@ -274,14 +309,16 @@ namespace yomigaeri_backend
 			return 0;
 		}
 
+		private static void Application_ThreadException(object sender, ThreadExceptionEventArgs e)
+		{
+			Logging.WriteBannerToLog("CRASH");
+			Logging.WriteLineToLog(e.Exception.ToString());
+			Application.Exit();
+		}
+
 		private static void Application_ApplicationExit(object sender, EventArgs e)
 		{
-
-			if (Program.WebBrowser != null)
-			{
-				Program.WebBrowser.Dispose();
-				Cef.Shutdown();
-			}
+			Cef.Shutdown();
 		}
 
 	}

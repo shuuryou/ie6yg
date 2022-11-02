@@ -1,4 +1,4 @@
-This is a patched version that supports unicode windows.
+This is a patched version of SSubTmr that supports unicode windows.
 
 The patch is taken from:
 
@@ -12,6 +12,22 @@ https://www.codeproject.com/Articles/984/How-to-Subclass-Unicode-Window-from-ANS
 
 Archived as "bugdesc2.pdf" in this folder.
 
-Basically, you can't subclass a window using the relevant *A functions if it's a Unicode window. In that case you MUST use the *W functions. If you try to do it, the title bar starts becoming really funny dancing mojibake on OS like Win2K or WinXP.
+Basically, you can't subclass a window using the relevant *A functions if it's
+a Unicode window. In that case you MUST use the *W functions. If you try to do
+it, the title bar starts becoming really funny dancing mojibake on OS like
+Win2K or WinXP.
 
-The original author never implemented the fix. Because of that I also can't use the asm-stubbed version of SSubTimer either.
+The original author of SSubTmr, Steve McMahon, never implemented the fix.
+
+Additionally, it turns out that the guy who submitted the patch, Matt Funnell,
+screwed it up in 2003. His addition of the SetWindowProc function, which does
+additional work to decide between the ANSI and the Unicode SetWindowLong call,
+always sets the function pointer to the address of WindowProc instead of lpFn.
+Thanks for two days of searching for the cause of iexplore.exe hanging when
+IEFrame was subclassed.
+
+I would therefore make the humble suggestion that anyone still using ancient
+VB6 should use my patched and fixed version of SSubTmr.
+
+November 2022
+Greetings from the future!

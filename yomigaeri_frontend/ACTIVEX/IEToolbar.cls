@@ -15,7 +15,7 @@ Attribute VB_Ext_KEY = "SavedWithClassBuilder6" ,"Yes"
 Attribute VB_Ext_KEY = "Top_Level" ,"Yes"
 Option Explicit
 
-Implements SSubTimer.ISubclass
+Implements SSubTUP.ISubclass
 
 Private m_hWndIEFrame As Long
 Private m_hWndButtonToolbar As Long
@@ -65,18 +65,7 @@ Private CommandUnknown, CommandBack, CommandForward, CommandStop, CommandRefresh
 
 Public Event ToolbarButtonPressed(command As ToolbarCommand)
 
-Private Sub Class_Terminate()
-
-    If m_hWndButtonToolbar = -1 Or m_hWndReBarWindow32 = -1 Then
-        Exit Sub
-    End If
-
-    DetachMessage Me, m_hWndButtonToolbar, TB_ENABLEBUTTON
-    DetachMessage Me, m_hWndReBarWindow32, WM_COMMAND
-
-End Sub
-
-Public Sub Constructor(hWndIEFrame As Long)
+Public Sub Construct(hWndIEFrame As Long)
 
     m_hWndIEFrame = hWndIEFrame
 
@@ -88,6 +77,17 @@ Public Sub Constructor(hWndIEFrame As Long)
 
     AttachMessage Me, m_hWndButtonToolbar, TB_ENABLEBUTTON
     AttachMessage Me, m_hWndReBarWindow32, WM_COMMAND
+
+End Sub
+
+Public Sub Destroy()
+
+    If m_hWndButtonToolbar = -1 Or m_hWndReBarWindow32 = -1 Then
+        Exit Sub
+    End If
+
+    DetachMessage Me, m_hWndButtonToolbar, TB_ENABLEBUTTON
+    DetachMessage Me, m_hWndReBarWindow32, WM_COMMAND
 
 End Sub
 
@@ -252,23 +252,23 @@ Public Property Get hWndReBarWindow32() As Long
 
 End Property
 
-Private Property Let ISubclass_MsgResponse(ByVal RHS As SSubTimer.EMsgResponse)
-
-  ' Unused
-
-End Property
-
-Private Property Get ISubclass_MsgResponse() As SSubTimer.EMsgResponse
+Private Property Get ISubclass_MsgResponse() As SSubTUP.EMsgResponse
 
     ISubclass_MsgResponse = emrConsume
 
 End Property
 
-Private Function ISubclass_WindowProc(ByVal hWnd As Long, ByVal iMsg As Long, ByVal WParam As Long, ByVal lParam As Long) As Long
+Private Property Let ISubclass_MsgResponse(ByVal RHS As SSubTUP.EMsgResponse)
+
+  ' Unused
+
+End Property
+
+Private Function ISubclass_WindowProc(ByVal hWnd As Long, ByVal iMsg As Long, ByVal wParam As Long, ByVal lParam As Long) As Long
 
     If hWnd = m_hWndButtonToolbar Then
         If iMsg = TB_ENABLEBUTTON Then
-            Select Case WParam
+            Select Case wParam
               Case m_ToolbarIdCommandBACK:
                 lParam = Abs(m_ToolbarButtonStateBACK)
               Case m_ToolbarIdCommandFORWARD:
@@ -291,7 +291,7 @@ Private Function ISubclass_WindowProc(ByVal hWnd As Long, ByVal iMsg As Long, By
         If iMsg = WM_COMMAND Then
 
   Dim command As ToolbarCommand
-            command = ToolbarCommandIdToEnum(WParam)
+            command = ToolbarCommandIdToEnum(wParam)
 
             If command <> CommandUnknown Then
                 RaiseEvent ToolbarButtonPressed(command)
@@ -304,7 +304,7 @@ Private Function ISubclass_WindowProc(ByVal hWnd As Long, ByVal iMsg As Long, By
     End If
 
 Done:
-    CallOldWindowProc hWnd, iMsg, WParam, lParam
+    CallOldWindowProc hWnd, iMsg, wParam, lParam
 
 End Function
 
@@ -360,5 +360,5 @@ Private Function ToolbarCommandIdToEnum(idCommand As Long) As ToolbarCommand
 
 End Function
 
-':) Ulli's VB Code Formatter V2.24.17 (2022-Nov-01 16:03)  Decl: 51  Code: 298  Total: 349 Lines
-':) CommentOnly: 24 (6,9%)  Commented: 3 (0,9%)  Filled: 270 (77,4%)  Empty: 79 (22,6%)  Max Logic Depth: 5
+':) Ulli's VB Code Formatter V2.24.17 (2022-Nov-03 00:39)  Decl: 51  Code: 298  Total: 349 Lines
+':) CommentOnly: 24 (6,9%)  Commented: 3 (0,9%)  Filled: 259 (74,2%)  Empty: 90 (25,8%)  Max Logic Depth: 5

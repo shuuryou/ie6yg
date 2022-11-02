@@ -45,13 +45,16 @@ namespace yomigaeri_backend
 
                     if (idx > 0 && curSection != null)
                     {
-                        string key = line.Substring(0, idx).ToUpperInvariant();
+                        string key = line.Substring(0, idx).ToUpperInvariant().Trim();
                         string value = line.Substring(idx + 1);
 
 						int offsetComment = 0;
 
+						if (value.Length == 0)
+							goto addIt;
+
 						// Do not check for comments inside quoted value
-						if (value[0] == '"')
+						if ( value[0] == '"')
 							offsetComment = value.IndexOf('"', 1);
 
 						// Inline comments
@@ -62,9 +65,9 @@ namespace yomigaeri_backend
 								value = value.Substring(0, idx);
 						}
 
-                        key = key.Trim();
                         value = value.Trim();
 
+					addIt:
                         if (m_Sections[curSection].ContainsKey(key))
                             m_Sections[curSection][key] = value;
                         else

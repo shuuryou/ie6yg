@@ -22,13 +22,7 @@ Private m_History As IUrlHistoryStg
 
 Public Event NavigationIntercepted(destinationURL As String)
 
-Private Sub Class_Terminate()
-
-    Set m_Browser = Nothing
-
-End Sub
-
-Public Sub Constructor(hWndInternetExplorerServer As Long)
+Public Sub Construct(hWndInternetExplorerServer As Long)
 
   ' VB6 classes can't have a real constructor. *sigh*
 
@@ -79,10 +73,17 @@ Public Sub Constructor(hWndInternetExplorerServer As Long)
 
 End Sub
 
+Public Sub Destroy()
+
+    Set m_Browser = Nothing
+
+End Sub
+
 Private Sub m_Browser_BeforeNavigate2(ByVal pDisp As Object, URL As Variant, Flags As Variant, TargetFrameName As Variant, PostData As Variant, Headers As Variant, Cancel As Boolean)
 
     Cancel = True
     modLogging.WriteLineToLog "IEBrowser: Catch and redirect navigating to: " & CStr(URL)
+
     RaiseEvent NavigationIntercepted(CStr(URL))
 
 End Sub
@@ -109,5 +110,5 @@ Public Sub SetTitle(newTitle As String)
 
 End Sub
 
-':) Ulli's VB Code Formatter V2.24.17 (2022-Nov-01 16:03)  Decl: 7  Code: 90  Total: 97 Lines
-':) CommentOnly: 9 (9,3%)  Commented: 0 (0%)  Filled: 63 (64,9%)  Empty: 34 (35,1%)  Max Logic Depth: 2
+':) Ulli's VB Code Formatter V2.24.17 (2022-Nov-03 00:41)  Decl: 7  Code: 91  Total: 98 Lines
+':) CommentOnly: 9 (9,2%)  Commented: 0 (0%)  Filled: 61 (62,2%)  Empty: 37 (37,8%)  Max Logic Depth: 2

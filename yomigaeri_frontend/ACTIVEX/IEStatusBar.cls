@@ -15,7 +15,7 @@ Attribute VB_Ext_KEY = "SavedWithClassBuilder6" ,"Yes"
 Attribute VB_Ext_KEY = "Top_Level" ,"Yes"
 Option Explicit
 
-Implements SSubTimer.ISubclass
+Implements SSubTUP.ISubclass
 
 Private Const STATUS_PANES As Integer = 5
 Private Const STATUS_PANE_NAVIGATION As Integer = 0
@@ -69,51 +69,6 @@ Private m_CurrentStatusText As String
 Private m_StateConnectionIcon As ConnectionIconState
 Private m_StateSSLIcon As SSLIconState
 
-Private Sub Class_Terminate()
-
-    If m_hWndStatusBar = -1 Or m_hWndProgressBar = -1 Then
-        Exit Sub
-    End If
-
-  Dim nParts As Long
-  Dim n As Integer
-
-    nParts = SendMessage(m_hWndStatusBar, SB_GETPARTS, 0, 0&)
-
-    For n = 0 To nParts - 1 Step 1
-        SendMessage m_hWndStatusBar, SB_SETICON + SB_IE6YG_SHIFT, n, 0&
-    Next n
-
-    DestroyIcon m_hIconDisconnected
-    DestroyIcon m_hIconConnected
-    DestroyIcon m_hIconWebpage
-    DestroyIcon m_hIconSSLBad
-    DestroyIcon m_hIconSSLOK
-    DestroyIcon m_hIconZone
-
-    DetachMessage Me, m_hWndStatusBar, SB_SETTEXTA
-    DetachMessage Me, m_hWndStatusBar, SB_SETTEXTW
-    DetachMessage Me, m_hWndStatusBar, SB_SETPARTS
-    DetachMessage Me, m_hWndStatusBar, SB_SETMINHEIGHT
-    DetachMessage Me, m_hWndStatusBar, SB_SETICON
-
-    DetachMessage Me, m_hWndStatusBar, WM_SIZE
-    DetachMessage Me, m_hWndStatusBar, WM_WINDOWPOSCHANGING
-    DetachMessage Me, m_hWndStatusBar, WM_WINDOWPOSCHANGED
-
-    DetachMessage Me, m_hWndStatusBar, SB_SETTEXTA + SB_IE6YG_SHIFT
-    DetachMessage Me, m_hWndStatusBar, SB_SETPARTS + SB_IE6YG_SHIFT
-    DetachMessage Me, m_hWndStatusBar, SB_SETMINHEIGHT + SB_IE6YG_SHIFT
-    DetachMessage Me, m_hWndStatusBar, SB_SETICON + SB_IE6YG_SHIFT
-
-End Sub
-
-Public Property Get ConnectionIcon() As ConnectionIconState
-
-    ConnectionIcon = m_StateConnectionIcon
-
-End Property
-
 Public Property Let ConnectionIcon(newState As ConnectionIconState)
 
   Dim lngIcon As Long
@@ -134,7 +89,13 @@ Public Property Let ConnectionIcon(newState As ConnectionIconState)
 
 End Property
 
-Public Sub Constructor(hWndIEFrame As Long)
+Public Property Get ConnectionIcon() As ConnectionIconState
+
+    ConnectionIcon = m_StateConnectionIcon
+
+End Property
+
+Public Sub Construct(hWndIEFrame As Long)
 
   ' VB6 classes can't have a real constructor. *sigh*
 
@@ -176,6 +137,45 @@ Public Sub Constructor(hWndIEFrame As Long)
     m_hIconZone = LoadImage(App.hInstance, MAKEINTRESOURCE(ICON_ID_ZONE), IMAGE_ICON, lngIconSize, lngIconSize, 0&)
 
     FixStatusBar
+
+End Sub
+
+Public Sub Destroy()
+
+    If m_hWndStatusBar = -1 Or m_hWndProgressBar = -1 Then
+        Exit Sub
+    End If
+
+  Dim nParts As Long
+  Dim n As Integer
+
+    nParts = SendMessage(m_hWndStatusBar, SB_GETPARTS, 0, 0&)
+
+    For n = 0 To nParts - 1 Step 1
+        SendMessage m_hWndStatusBar, SB_SETICON + SB_IE6YG_SHIFT, n, 0&
+    Next n
+
+    DestroyIcon m_hIconDisconnected
+    DestroyIcon m_hIconConnected
+    DestroyIcon m_hIconWebpage
+    DestroyIcon m_hIconSSLBad
+    DestroyIcon m_hIconSSLOK
+    DestroyIcon m_hIconZone
+
+    DetachMessage Me, m_hWndStatusBar, SB_SETTEXTA
+    DetachMessage Me, m_hWndStatusBar, SB_SETTEXTW
+    DetachMessage Me, m_hWndStatusBar, SB_SETPARTS
+    DetachMessage Me, m_hWndStatusBar, SB_SETMINHEIGHT
+    DetachMessage Me, m_hWndStatusBar, SB_SETICON
+
+    DetachMessage Me, m_hWndStatusBar, WM_SIZE
+    DetachMessage Me, m_hWndStatusBar, WM_WINDOWPOSCHANGING
+    DetachMessage Me, m_hWndStatusBar, WM_WINDOWPOSCHANGED
+
+    DetachMessage Me, m_hWndStatusBar, SB_SETTEXTA + SB_IE6YG_SHIFT
+    DetachMessage Me, m_hWndStatusBar, SB_SETPARTS + SB_IE6YG_SHIFT
+    DetachMessage Me, m_hWndStatusBar, SB_SETMINHEIGHT + SB_IE6YG_SHIFT
+    DetachMessage Me, m_hWndStatusBar, SB_SETICON + SB_IE6YG_SHIFT
 
 End Sub
 
@@ -321,19 +321,19 @@ Public Property Get hWndStatusBar() As Long
 
 End Property
 
-Private Property Get ISubclass_MsgResponse() As SSubTimer.EMsgResponse
+Private Property Get ISubclass_MsgResponse() As SSubTUP.EMsgResponse
 
     ISubclass_MsgResponse = emrConsume
 
 End Property
 
-Private Property Let ISubclass_MsgResponse(ByVal RHS As SSubTimer.EMsgResponse)
+Private Property Let ISubclass_MsgResponse(ByVal RHS As SSubTUP.EMsgResponse)
 
   ' Unused
 
 End Property ':( No executable Code
 
-Private Function ISubclass_WindowProc(ByVal hwnd As Long, ByVal iMsg As Long, ByVal WParam As Long, ByVal lParam As Long) As Long
+Private Function ISubclass_WindowProc(ByVal hWnd As Long, ByVal iMsg As Long, ByVal wParam As Long, ByVal lParam As Long) As Long
 
     If iMsg = WM_SIZE Or iMsg = WM_WINDOWPOSCHANGING Or iMsg = WM_WINDOWPOSCHANGED Then
         FixStatusBar
@@ -349,9 +349,27 @@ Private Function ISubclass_WindowProc(ByVal hwnd As Long, ByVal iMsg As Long, By
         iMsg = iMsg - SB_IE6YG_SHIFT
     End If
 
-    CallOldWindowProc hwnd, iMsg, WParam, lParam
+    CallOldWindowProc hWnd, iMsg, wParam, lParam
 
 End Function
+
+Public Property Get ProgressBarValue() As Integer
+
+  Dim lngRet As Long
+
+    lngRet = SendMessage(m_hWndProgressBar, PBM_GETPOS, 0&, 0&)
+
+    If lngRet < 0 Then
+        lngRet = 0
+    End If
+
+    If lngRet > 100 Then
+        lngRet = 100
+    End If
+
+    ProgressBarValue = lngRet
+
+End Property
 
 Public Property Let ProgressBarValue(ByVal newValue As Integer)
 
@@ -373,21 +391,9 @@ Public Property Let ProgressBarValue(ByVal newValue As Integer)
 
 End Property
 
-Public Property Get ProgressBarValue() As Integer
+Public Property Get SSLIcon() As SSLIconState
 
-  Dim lngRet As Long
-
-    lngRet = SendMessage(m_hWndProgressBar, PBM_GETPOS, 0&, 0&)
-
-    If lngRet < 0 Then
-        lngRet = 0
-    End If
-
-    If lngRet > 100 Then
-        lngRet = 100
-    End If
-
-    ProgressBarValue = lngRet
+    ConnectionIcon = m_StateConnectionIcon
 
 End Property
 
@@ -406,26 +412,6 @@ Public Property Let SSLIcon(newState As SSLIconState)
     End If
 
     SendMessage m_hWndStatusBar, SB_SETICON + SB_IE6YG_SHIFT, STATUS_PANE_SSL, ByVal lngIcon
-
-End Property
-
-Public Property Get SSLIcon() As SSLIconState
-
-    ConnectionIcon = m_StateConnectionIcon
-
-End Property
-
-Public Property Let Text(newText As String)
-
-  Dim bytText() As Byte
-
-    If m_hWndProgressBar = -1 Then
-        Exit Property
-    End If
-
-    bytText = StrConv(newText, vbFromUnicode) & Chr$(0)
-
-    SendMessage m_hWndStatusBar, SB_SETTEXTA + SB_IE6YG_SHIFT, 0&, bytText(0)
 
 End Property
 
@@ -454,6 +440,20 @@ Public Property Get Text() As String
 
 End Property
 
+Public Property Let Text(newText As String)
+
+  Dim bytText() As Byte
+
+    If m_hWndProgressBar = -1 Then
+        Exit Property
+    End If
+
+    bytText = StrConv(newText, vbFromUnicode) & Chr$(0)
+
+    SendMessage m_hWndStatusBar, SB_SETTEXTA + SB_IE6YG_SHIFT, 0&, bytText(0)
+
+End Property
+
 Private Function ZoneComputePaneSize() As Long
 
   ' TODO: Use something more sensible than 80
@@ -465,5 +465,5 @@ Private Function ZoneComputePaneSize() As Long
 
 End Function
 
-':) Ulli's VB Code Formatter V2.24.17 (2022-Nov-01 23:53)  Decl: 55  Code: 399  Total: 454 Lines
-':) CommentOnly: 15 (3,3%)  Commented: 8 (1,8%)  Filled: 311 (68,5%)  Empty: 143 (31,5%)  Max Logic Depth: 3
+':) Ulli's VB Code Formatter V2.24.17 (2022-Nov-03 00:39)  Decl: 55  Code: 399  Total: 454 Lines
+':) CommentOnly: 15 (3,3%)  Commented: 8 (1,8%)  Filled: 308 (67,8%)  Empty: 146 (32,2%)  Max Logic Depth: 3

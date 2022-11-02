@@ -61,10 +61,18 @@ namespace yomigaeri_backend
 
 		private static string TempName(string prefix)
 		{
-			// Temporary file name format "%TEMP%\{prefix}_{timestamp}.txt".
+			string tempPath;
+
+#if DEBUG
+			tempPath = "C:\\LOGS\\";
+#else
+			tempPath = Path.GetTempPath()
+#endif
+
+			// Temporary file name format "tempPath\{prefix}_{timestamp}.txt".
 
 			string ret = string.Format(CultureInfo.InvariantCulture,
-				"{0}{1}{2}_{3}.txt", Path.GetTempPath(), Path.DirectorySeparatorChar, prefix,
+				"{0}{1}{2}_{3}.txt", tempPath, Path.DirectorySeparatorChar, prefix,
 				Math.Floor((DateTime.UtcNow - new DateTime(1970, 1, 1, 0, 0, 0)).TotalSeconds));
 
 			ret = Path.GetFullPath(ret); // Normalize

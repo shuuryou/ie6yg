@@ -10,9 +10,9 @@ Begin VB.UserControl ctlFrontend
    ScaleWidth      =   3975
    Begin MSTSCLibCtl.MsRdpClient2 rdpClient 
       Height          =   2655
-      Left            =   600
+      Left            =   0
       TabIndex        =   0
-      Top             =   120
+      Top             =   0
       Width           =   2895
       Server          =   ""
       FullScreen      =   0   'False
@@ -28,8 +28,6 @@ Option Explicit
 
 Private Const VIRTUAL_CHANNEL_NAME As String = "BEFECOM"
 
-Private m_DoInitialConnect As Boolean
-
 Private m_IEAddressBar As IEAddressBar
 Private WithEvents m_IEBrowser As IEBrowser
 Attribute m_IEBrowser.VB_VarHelpID = -1
@@ -39,13 +37,18 @@ Private m_IEStatusBar As IEStatusBar
 Private WithEvents m_IEToolbar As IEToolbar
 Attribute m_IEToolbar.VB_VarHelpID = -1
 
+Private m_DoInitialConnect As Boolean
+Private m_HideRDP As Boolean
+
 Private Sub m_IEBrowser_NavigationIntercepted(destinationURL As String)
 
-    If rdpClient.Connected <> True Then
+    If rdpClient.Connected <> 1 Then
         Exit Sub
     End If
 
     rdpClient.SendOnVirtualChannel VIRTUAL_CHANNEL_NAME, "NAVIGATE:" & destinationURL
+
+    rdpClient.SetFocus
 
 End Sub
 
@@ -53,7 +56,10 @@ Private Sub m_IEFrame_WindowResized()
 
   Dim bWasConnected As Boolean
 
-    bWasConnected = rdpClient.Connected
+    m_HideRDP = True
+    PositionRDPClient
+
+    bWasConnected = (rdpClient.Connected = 1)
 
     If bWasConnected Then
         rdpClient.Disconnect
@@ -63,13 +69,10 @@ Private Sub m_IEFrame_WindowResized()
         Loop
     End If
 
-    PositionRDPClient
-
     If bWasConnected Then
-        If bWasConnected Then
-            m_IEStatusBar.Text = LoadResString(104)  ' Reconnecting to rendering engine...
-        End If
-
+        m_IEStatusBar.ConnectionIcon = ConnectionIconState.Connecting
+        m_IEStatusBar.Text = LoadResString(104)  ' Reconnecting to rendering engine...
+        Sleep 1000 ' XXX Fix this
         rdpClient.Connect
     End If
 
@@ -94,20 +97,19 @@ End Sub
 
 Private Sub PositionRDPClient()
 
-    rdpClient.Top = 0
-    rdpClient.Left = 0
-    rdpClient.Width = UserControl.Width
-    rdpClient.Height = UserControl.Height
-    rdpClient.DesktopWidth = rdpClient.Width / Screen.TwipsPerPixelX
-    rdpClient.DesktopHeight = rdpClient.Height / Screen.TwipsPerPixelY
+    rdpClient.Move 0, 0, _
+                   UserControl.Width, UserControl.Height
+    ' IIf(m_HideRDP, -3000 * Screen.TwipsPerPixelX, 0), _
+          ' IIf(m_HideRDP, -3000 * Screen.TwipsPerPixelY, 0), _
+
+    DoEvents
 
 End Sub
 
 Private Sub rdpClient_OnChannelReceivedData(ByVal chanName As String, ByVal data As String)
 
   Dim intPos As Integer
-  Dim strURL As String
-  Dim strTitle As String
+  Dim Values(0 To 5) As Variant
 
     If chanName <> VIRTUAL_CHANNEL_NAME Then
         Exit Sub
@@ -139,6 +141,7 @@ Private Sub rdpClient_OnChannelReceivedData(ByVal chanName As String, ByVal data
     ' SSLICBD: Make the SSL icon visible with error state
     ' SSLICOF: Make the SSL icon invisible
     ' PROGRES: Set the value of the progress bar (value 0-100 follows after "PROGRES")
+    ' STATUST: Set IE status bar text to content following after "STATUST"
 
     Select Case Left$(UCase$(data), 7)
       Case "STYLING"
@@ -167,21 +170,24 @@ Private Sub rdpClient_OnChannelReceivedData(ByVal chanName As String, ByVal data
             Exit Sub
         End If
 
-        strURL = Trim$(Mid$(data, 8, intPos - 8))
-        strTitle = Trim$(Mid$(data, intPos + 1))
+        Values(0) = Trim$(Mid$(data, 8, intPos - 8))
+        Values(1) = Trim$(Mid$(data, intPos + 1))
 
-        If strURL = "" Then
+        If Values(0) = "" Then
             modLogging.WriteLineToLog "Cannot set address because there is no URL."
         End If
 
         ' IUrlHistory gracefully deals with an empty title by making up a sensible one.
 
-        m_IEBrowser.PushIntoHistory strURL, strTitle
+        m_IEBrowser.PushIntoHistory Values(0), Values(1)
       Case "VISIBLE"
-        rdpClient.Visible = True
+        m_HideRDP = False
+        PositionRDPClient
 
-      Case "INVISIB"
-        rdpClient.Visible = False
+      Case "INVISIBLE"
+        m_HideRDP = True
+        PositionRDPClient
+
       Case "BBACKON"
 
         m_IEToolbar.SetToolbarCommandState CommandBack, True
@@ -242,12 +248,18 @@ Private Sub rdpClient_OnChannelReceivedData(ByVal chanName As String, ByVal data
             Exit Sub
         End If
 
-  Dim newValue As Integer
         On Error Resume Next
-            newValue = CInt(Mid$(data, 8))
+            Values(0) = CInt(Mid$(data, 8))
+            m_IEStatusBar.ProgressBarValue = Values(0)
         On Error GoTo 0
+      Case "STATUST"
+        If Len(data) < 8 Then
+            modLogging.WriteLineToLog "Cannot set status because data is too short."
+            Exit Sub
+        End If
 
-        m_IEStatusBar.ProgressBarValue = newValue
+        m_IEStatusBar.Text = Mid$(data, 8)
+
       Case Else
         rdpClient.SendOnVirtualChannel VIRTUAL_CHANNEL_NAME, "UNSUPPORTED"
 
@@ -260,13 +272,6 @@ Private Sub rdpClient_OnConnected()
 
     m_IEStatusBar.ConnectionIcon = ConnectionIconState.Connected
     m_IEStatusBar.Text = LoadResString(107) ' Rendering engine found...
-    rdpClient.Visible = True
-
-End Sub
-
-Private Sub rdpClient_OnConnecting()
-
-    m_IEStatusBar.ConnectionIcon = ConnectionIconState.Connecting
 
 End Sub
 
@@ -274,11 +279,22 @@ Private Sub rdpClient_OnDisconnected(ByVal discReason As Long)
 
     m_IEStatusBar.Text = LoadResString(102)  ' Disconnected from rendering engine.
     m_IEStatusBar.ConnectionIcon = ConnectionIconState.Disconnected
-    rdpClient.Visible = False
+
+    m_HideRDP = True
+    PositionRDPClient
+
+End Sub
+
+Private Sub UserControl_EnterFocus()
+
+    rdpClient.SetFocus
 
 End Sub
 
 Private Sub UserControl_Initialize()
+
+    m_HideRDP = True
+    PositionRDPClient
 
     Set m_IEAddressBar = New IEAddressBar
     Set m_IEBrowser = New IEBrowser
@@ -288,12 +304,12 @@ Private Sub UserControl_Initialize()
 
     rdpClient.CreateVirtualChannels VIRTUAL_CHANNEL_NAME
 
-    rdpClient.AdvancedSettings3.EnableAutoReconnect = True
+    rdpClient.AdvancedSettings3.EnableAutoReconnect = False
     rdpClient.AdvancedSettings3.RedirectDrives = True
     rdpClient.AdvancedSettings3.RedirectPrinters = True
     rdpClient.AdvancedSettings3.EnableWindowsKey = False
     rdpClient.AdvancedSettings3.keepAliveInterval = 5000
-    rdpClient.AdvancedSettings3.MaximizeShell = True
+    rdpClient.AdvancedSettings3.MaximizeShell = False
     rdpClient.AdvancedSettings3.PerformanceFlags = &H1F
     ' &H1F =
     ' TS_PERF_DISABLE_WALLPAPER |
@@ -303,11 +319,7 @@ Private Sub UserControl_Initialize()
     ' TS_PERF_ENABLE_ENHANCED
     rdpClient.ColorDepth = 24
 
-    ' The RDP client stays hidden until backend is fully loaded and makes it visible.
-    ' In VB6, this doesn't bother MsRdpClient6. It does in C# and it disconnects when
-    ' Visible is False. *sigh*
-
-    rdpClient.Visible = False
+    'rdpClient.Visible = False
 
 End Sub
 
@@ -330,19 +342,33 @@ Private Sub UserControl_ReadProperties(PropBag As PropertyBag)
 
 End Sub
 
+Private Sub UserControl_Resize()
+
+    If m_DoInitialConnect Then
+        m_DoInitialConnect = False
+
+        ' This way it triggers just once when Trident has put the ActiveX
+        ' control in its final place (filling up the document view).
+
+        PositionRDPClient
+        m_IEStatusBar.Text = LoadResString(101)  ' Connecting to rendering engine....
+        rdpClient.Connect
+    End If
+
+End Sub
+
 Private Sub UserControl_Show()
 
   ' Will be fired when the control is actually shown on the website.
   ' UserControl_Initialize still has the control floating in space.
 
     PositionRDPClient
-    rdpClient.Visible = False
 
-    m_IEFrame.Constructor UserControl.hwnd
-    m_IEAddressBar.Constructor m_IEFrame.hWndIEFrame
-    m_IEBrowser.Constructor m_IEFrame.hWndInternetExplorerServer
-    m_IEStatusBar.Constructor m_IEFrame.hWndIEFrame
-    m_IEToolbar.Constructor m_IEFrame.hWndIEFrame
+    m_IEFrame.Construct UserControl.hWnd
+    m_IEAddressBar.Construct m_IEFrame.hWndIEFrame
+    m_IEBrowser.Construct m_IEFrame.hWndInternetExplorerServer
+    m_IEStatusBar.Construct m_IEFrame.hWndIEFrame
+    m_IEToolbar.Construct m_IEFrame.hWndIEFrame
 
     m_IEBrowser.SetTitle ""
 
@@ -356,23 +382,28 @@ Private Sub UserControl_Show()
     m_IEStatusBar.ConnectionIcon = ConnectionIconState.None
     m_IEStatusBar.SSLIcon = SSLIconState.None
 
-    If m_DoInitialConnect Then
-
-        m_IEStatusBar.Text = LoadResString(101)  ' Connecting to rendering engine...
-        rdpClient.Connect
-    End If
-
 End Sub
 
 Private Sub UserControl_Terminate()
 
-    Set m_IEAddressBar = Nothing
-    Set m_IEBrowser = Nothing
+    m_IEFrame.Destroy
+    m_IEStatusBar.Destroy
+    m_IEToolbar.Destroy
+    m_IEBrowser.Destroy
+
     Set m_IEFrame = Nothing
     Set m_IEStatusBar = Nothing
     Set m_IEToolbar = Nothing
+    Set m_IEBrowser = Nothing
+
+    ' Otherwise IE will hang because IEFrame was subclassed
+    ' and IE really doesn't like it even if its completely
+    ' undone.
+
+    'CoUninitialize
+    'ExitProcess 0
 
 End Sub
 
-':) Ulli's VB Code Formatter V2.24.17 (2022-Nov-01 23:53)  Decl: 11  Code: 338  Total: 349 Lines
-':) CommentOnly: 39 (11,2%)  Commented: 5 (1,4%)  Filled: 257 (73,6%)  Empty: 92 (26,4%)  Max Logic Depth: 3
+':) Ulli's VB Code Formatter V2.24.17 (2022-Nov-03 00:39)  Decl: 12  Code: 368  Total: 380 Lines
+':) CommentOnly: 45 (11,8%)  Commented: 6 (1,6%)  Filled: 283 (74,5%)  Empty: 97 (25,5%)  Max Logic Depth: 3

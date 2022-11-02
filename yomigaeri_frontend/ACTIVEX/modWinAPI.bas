@@ -7,11 +7,12 @@ Public Declare Function AccessibleObjectFromWindow Lib "oleacc.dll" (ByVal hWnd 
 Public Declare Function DestroyIcon Lib "USER32.DLL" (ByVal hIcon As Long) As Long
 Public Declare Function GetClientRect Lib "USER32.DLL" (ByVal hWnd As Long, lpRect As RECT) As Long
 Public Declare Function GetParent Lib "USER32.DLL" (ByVal hWnd As Long) As Long
-Public Declare Function IIDFromString Lib "OLE32.dll" (ByVal lpsz As Long, ByRef lpiid As UUID) As Long
+Public Declare Function IIDFromString Lib "OLE32.DLL" (ByVal lpsz As Long, ByRef lpiid As UUID) As Long
 Public Declare Function FindWindowEx Lib "USER32.DLL" Alias "FindWindowExA" (ByVal hWnd1 As Long, ByVal hWnd2 As Long, ByVal lpsz1 As String, ByVal lpsz2 As String) As Long
 Public Declare Function InflateRect Lib "USER32.DLL" (lpRect As RECT, ByVal x As Long, ByVal y As Long) As Long
 Public Declare Function LoadImage Lib "USER32.DLL" Alias "LoadImageA" (ByVal hInst As Long, ByVal lpsz As String, ByVal dwImageType As Long, ByVal dwDesiredWidth As Long, ByVal dwDesiredHeight As Long, ByVal dwFlags As Long) As Long
 Public Declare Function SetWindowPos Lib "USER32.DLL" (ByVal hWnd As Long, ByVal hWndInsertAfter As Long, ByVal x As Long, ByVal y As Long, ByVal cx As Long, ByVal cy As Long, ByVal wFlags As Long) As Long
+Public Declare Sub Sleep Lib "KERNEL32.DLL" (ByVal dwMilliseconds As Long)
 
 Public Type RECT
     Left As Long
@@ -54,6 +55,10 @@ Public Const IMAGE_ICON = 1
 Public Const PBM_GETPOS As Long = WM_USER + 8
 Public Const PBM_SETPOS As Long = WM_USER + 2
 Public Const PBM_SETRANGE As Long = WM_USER + 1
+
+Public Const SIZE_RESTORED As Long = 0
+Public Const SIZE_MINIMIZED As Long = 1
+Public Const SIZE_MAXIMIZED As Long = 2
 
 Public Function HiWord(lDWord As Long) As Integer
 
@@ -102,5 +107,5 @@ Public Function TrimNull(ByVal Text As String) As String
 
 End Function
 
-':) Ulli's VB Code Formatter V2.24.17 (2022-Nov-01 23:53)  Decl: 55  Code: 50  Total: 105 Lines
-':) CommentOnly: 4 (3,8%)  Commented: 0 (0%)  Filled: 72 (68,6%)  Empty: 33 (31,4%)  Max Logic Depth: 2
+':) Ulli's VB Code Formatter V2.24.17 (2022-Nov-03 00:39)  Decl: 60  Code: 50  Total: 110 Lines
+':) CommentOnly: 4 (3,6%)  Commented: 0 (0%)  Filled: 76 (69,1%)  Empty: 34 (30,9%)  Max Logic Depth: 2

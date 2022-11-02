@@ -117,6 +117,14 @@
   <resheader name="writer">
     <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
   </resheader>
+  <data name="E_InitErrorAdBlock" xml:space="preserve">
+    <value>Could not initialize the AdBlock engine:
+{0}</value>
+  </data>
+  <data name="E_InitErrorChromiumEmbeddedFramework" xml:space="preserve">
+    <value>Could not initialize the Chromium engine:
+{0}</value>
+  </data>
   <data name="E_InitErrorCouldNotLoadSettings" xml:space="preserve">
     <value>Could not open the settings file "{0}":
 {1}</value>

@@ -61,6 +61,26 @@ namespace yomigaeri_backend.Resources {
         }
         
         /// <summary>
+        ///   Looks up a localized string similar to Could not initialize the AdBlock engine:
+        ///{0}.
+        /// </summary>
+        internal static string E_InitErrorAdBlock {
+            get {
+                return ResourceManager.GetString("E_InitErrorAdBlock", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Could not initialize the Chromium engine:
+        ///{0}.
+        /// </summary>
+        internal static string E_InitErrorChromiumEmbeddedFramework {
+            get {
+                return ResourceManager.GetString("E_InitErrorChromiumEmbeddedFramework", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Looks up a localized string similar to Could not open the settings file &quot;{0}&quot;:
         ///{1}.
         /// </summary>

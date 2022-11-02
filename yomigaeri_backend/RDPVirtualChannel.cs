@@ -18,7 +18,6 @@ namespace yomigaeri_backend
 	/// esp. the use of CharSet.Ansi, are not a mistake.</remarks>
 	internal static class RDPVirtualChannel
 	{
-		//TODO remove useless logging once confident this works okay.
 
 		// #define CHANNEL_NAME_LEN 7
 		private const string VIRTUAL_CHANNEL_NAME = "BEFECOM";
@@ -63,6 +62,9 @@ namespace yomigaeri_backend
 		{
 			Logging.WriteLineToLog("RDPVirtualChannel OPEN: ENTRY");
 
+			if (s_hChannel != IntPtr.Zero)
+				return;
+
 			// MSDN:
 			// DWORD flags: To open the channel as an SVC, specify zero for this parameter.
 
@@ -89,6 +91,11 @@ namespace yomigaeri_backend
 				throw new Win32Exception();
 
 			Logging.WriteLineToLog("RDPVirtualChannel CLOSE: END");
+		}
+
+		public static void Reset()
+		{
+			s_hChannel = IntPtr.Zero;
 		}
 
 		public static string ReadChannelUntilResponse(int timeout = 5)
