@@ -28,13 +28,6 @@ Private m_ToolbarIdCommandREFRESH As Integer
 Private m_ToolbarIdCommandHOME As Integer
 Private m_ToolbarIdCommandMEDIA As Integer
 
-Private m_ToolbarButtonStateBACK As Boolean
-Private m_ToolbarButtonStateFORWARD As Boolean
-Private m_ToolbarButtonStateSTOP As Boolean
-Private m_ToolbarButtonStateREFRESH As Boolean
-Private m_ToolbarButtonStateHOME As Boolean
-Private m_ToolbarButtonStateMEDIA As Boolean
-
 ' These are the TBBUTTON.iBitmap values, at least in IE6. I don't know if it's
 ' a good idea to use iBitmap values, but the values of idCommand will change
 ' randomly when toolbar buttons are added, removed, or moved around. Toolbar
@@ -76,6 +69,7 @@ Public Sub Construct(hWndIEFrame As Long)
     End If
 
     AttachMessage Me, m_hWndButtonToolbar, TB_ENABLEBUTTON
+    AttachMessage Me, m_hWndButtonToolbar, TB_ENABLEBUTTON + TB_IE6YG_SHIFT
     AttachMessage Me, m_hWndReBarWindow32, WM_COMMAND
 
 End Sub
@@ -87,6 +81,7 @@ Public Sub Destroy()
     End If
 
     DetachMessage Me, m_hWndButtonToolbar, TB_ENABLEBUTTON
+    DetachMessage Me, m_hWndButtonToolbar, TB_ENABLEBUTTON + TB_IE6YG_SHIFT
     DetachMessage Me, m_hWndReBarWindow32, WM_COMMAND
 
 End Sub
@@ -260,51 +255,44 @@ End Property
 
 Private Property Let ISubclass_MsgResponse(ByVal RHS As SSubTUP.EMsgResponse)
 
-  ' Unused
+    ' Unused
 
 End Property
 
 Private Function ISubclass_WindowProc(ByVal hWnd As Long, ByVal iMsg As Long, ByVal wParam As Long, ByVal lParam As Long) As Long
-
+  Dim command As ToolbarCommand
+  
     If hWnd = m_hWndButtonToolbar Then
         If iMsg = TB_ENABLEBUTTON Then
-            Select Case wParam
-              Case m_ToolbarIdCommandBACK:
-                lParam = Abs(m_ToolbarButtonStateBACK)
-              Case m_ToolbarIdCommandFORWARD:
-                lParam = Abs(m_ToolbarButtonStateFORWARD)
-              Case m_ToolbarIdCommandSTOP:
-                lParam = Abs(m_ToolbarButtonStateSTOP)
-              Case m_ToolbarIdCommandREFRESH:
-                lParam = Abs(m_ToolbarButtonStateREFRESH)
-              Case m_ToolbarIdCommandHOME:
-                lParam = Abs(m_ToolbarButtonStateHOME)
-              Case m_ToolbarIdCommandMEDIA:
-                lParam = Abs(m_ToolbarButtonStateMEDIA)
-            End Select
+            modLogging.WriteLineToLog "IEToolbar: Ignore TB_ENABLEBUTTON"
+            Exit Function
         End If
-
-        GoTo Done
+        
+        If iMsg = TB_ENABLEBUTTON + TB_IE6YG_SHIFT Then
+            modLogging.WriteLineToLog "IEToolbar: Process TB_ENABLEBUTTON with TB_IE6YG_SHIFT (wParam=" & wParam & ", lParam=" & lParam & ")"
+            iMsg = iMsg - TB_IE6YG_SHIFT
+        End If
+        
+        ISubclass_WindowProc = CallOldWindowProc(hWnd, iMsg, wParam, lParam)
+        Exit Function
     End If
 
     If hWnd = m_hWndReBarWindow32 Then
         If iMsg = WM_COMMAND Then
-
-  Dim command As ToolbarCommand
             command = ToolbarCommandIdToEnum(wParam)
 
             If command <> CommandUnknown Then
                 RaiseEvent ToolbarButtonPressed(command)
+            Else
+                ISubclass_WindowProc = CallOldWindowProc(hWnd, iMsg, wParam, lParam)
             End If
 
             Exit Function
         End If
 
-        GoTo Done
+        ISubclass_WindowProc = CallOldWindowProc(hWnd, iMsg, wParam, lParam)
+        Exit Function
     End If
-
-Done:
-    CallOldWindowProc hWnd, iMsg, wParam, lParam
 
 End Function
 
@@ -319,7 +307,7 @@ Public Sub SetToolbarCommandState(command As ToolbarCommand, enable As Boolean)
         Exit Sub
     End If
 
-    SendMessage m_hWndButtonToolbar, TB_ENABLEBUTTON, commandId, Abs(enable)
+    SendMessage m_hWndButtonToolbar, TB_ENABLEBUTTON + TB_IE6YG_SHIFT, ByVal commandId, ByVal LoWord(IIf(enable, 1, 0))
     modLogging.WriteLineToLog "SetToolbarCommandState: Command ID " & commandId & " new state: " & enable
 
 End Sub

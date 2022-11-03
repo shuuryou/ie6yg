@@ -26,6 +26,9 @@ Public Const IIDSTR_IWebBrowser2 As String = "{D30C1661-CDAF-11D0-8A3E-00C04FC9E
 
 Public Const OBJID_CLIENT As Long = -4
 
+' Shift messages this amount to filter in WndProc
+Public Const TB_IE6YG_SHIFT As Long = 255
+
 Public Const TB_BUTTONCOUNT As Long = (WM_USER + &H18)
 Public Const TB_GETBUTTON As Long = (WM_USER + &H17)
 Public Const TB_ENABLEBUTTON  As Long = (WM_USER + &H1)

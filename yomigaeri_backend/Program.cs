@@ -41,7 +41,7 @@ namespace yomigaeri_backend
 			Application.SetUnhandledExceptionMode(UnhandledExceptionMode.CatchException);
 			Application.ThreadException += Application_ThreadException;
 
-			Application.SetCompatibleTextRenderingDefault(true);
+			Application.SetCompatibleTextRenderingDefault(false);
 
 			Application.ApplicationExit += Application_ApplicationExit;
 

@@ -97,10 +97,11 @@ End Sub
 
 Private Sub PositionRDPClient()
 
-    rdpClient.Move 0, 0, _
-                   UserControl.Width, UserControl.Height
-    ' IIf(m_HideRDP, -3000 * Screen.TwipsPerPixelX, 0), _
-          ' IIf(m_HideRDP, -3000 * Screen.TwipsPerPixelY, 0), _
+    rdpClient.Move _
+            IIf(m_HideRDP, -3000 * Screen.TwipsPerPixelX, 0), _
+            IIf(m_HideRDP, -3000 * Screen.TwipsPerPixelY, 0), _
+            UserControl.Width, _
+            UserControl.Height
 
     DoEvents
 
@@ -343,7 +344,7 @@ Private Sub UserControl_ReadProperties(PropBag As PropertyBag)
 End Sub
 
 Private Sub UserControl_Resize()
-
+    Exit Sub
     If m_DoInitialConnect Then
         m_DoInitialConnect = False
 

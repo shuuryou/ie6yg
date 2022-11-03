@@ -349,7 +349,7 @@ Private Function ISubclass_WindowProc(ByVal hWnd As Long, ByVal iMsg As Long, By
         iMsg = iMsg - SB_IE6YG_SHIFT
     End If
 
-    CallOldWindowProc hWnd, iMsg, wParam, lParam
+    ISubclass_WindowProc = CallOldWindowProc(hWnd, iMsg, wParam, lParam)
 
 End Function
 

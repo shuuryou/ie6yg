@@ -2,15 +2,8 @@
 using CefSharp.WinForms;
 using Microsoft.Win32;
 using System;
-using System.Collections.Generic;
-using System.ComponentModel;
-using System.Data;
-using System.Diagnostics;
 using System.Drawing;
 using System.Globalization;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using System.Windows.Forms;
 
 namespace yomigaeri_backend
@@ -21,9 +14,7 @@ namespace yomigaeri_backend
 		{
 			InitializeComponent();
 
-#if DEBUG
-			this.BackColor = Color.Red;
-#endif 
+			//this.BackColor = Color.Red;
 
 			Program.WebBrowser.Dock = DockStyle.Fill;
 			Controls.Add(Program.WebBrowser);
