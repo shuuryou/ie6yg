@@ -57,6 +57,7 @@ Private CommandUnknown, CommandBack, CommandForward, CommandStop, CommandRefresh
 #End If ':) Line inserted by Formatter
 
 Public Event ToolbarButtonPressed(command As ToolbarCommand)
+Public Event ToolbarMenuRequested(command As ToolbarCommand)
 
 Public Sub Construct(hWndIEFrame As Long)
 
@@ -70,7 +71,9 @@ Public Sub Construct(hWndIEFrame As Long)
 
     AttachMessage Me, m_hWndButtonToolbar, TB_ENABLEBUTTON
     AttachMessage Me, m_hWndButtonToolbar, TB_ENABLEBUTTON + TB_IE6YG_SHIFT
+    
     AttachMessage Me, m_hWndReBarWindow32, WM_COMMAND
+    AttachMessage Me, m_hWndReBarWindow32, WM_NOTIFY
 
 End Sub
 
@@ -82,7 +85,9 @@ Public Sub Destroy()
 
     DetachMessage Me, m_hWndButtonToolbar, TB_ENABLEBUTTON
     DetachMessage Me, m_hWndButtonToolbar, TB_ENABLEBUTTON + TB_IE6YG_SHIFT
+    
     DetachMessage Me, m_hWndReBarWindow32, WM_COMMAND
+    DetachMessage Me, m_hWndReBarWindow32, WM_NOTIFY
 
 End Sub
 
@@ -267,10 +272,12 @@ Private Property Let ISubclass_MsgResponse(ByVal RHS As SSubTUP.EMsgResponse)
 
 End Property
 
-Private Function ISubclass_WindowProc(ByVal hWnd As Long, ByVal iMsg As Long, ByVal wParam As Long, ByVal lParam As Long) As Long
+Private Function ISubclass_WindowProc(ByVal hwnd As Long, ByVal iMsg As Long, ByVal wParam As Long, ByVal lParam As Long) As Long
   Dim command As ToolbarCommand
   
-    If hWnd = m_hWndButtonToolbar Then
+    modLogging.WriteLineToLog "imsg:" & iMsg
+  
+    If hwnd = m_hWndButtonToolbar Then
         If iMsg = TB_ENABLEBUTTON Then
             Exit Function
         End If
@@ -279,24 +286,49 @@ Private Function ISubclass_WindowProc(ByVal hWnd As Long, ByVal iMsg As Long, By
             iMsg = iMsg - TB_IE6YG_SHIFT
         End If
         
-        ISubclass_WindowProc = CallOldWindowProc(hWnd, iMsg, wParam, lParam)
+        ISubclass_WindowProc = CallOldWindowProc(hwnd, iMsg, wParam, lParam)
         Exit Function
     End If
 
-    If hWnd = m_hWndReBarWindow32 Then
+    If hwnd = m_hWndReBarWindow32 Then
         If iMsg = WM_COMMAND Then
             command = ToolbarCommandIdToEnum(wParam)
 
             If command <> CommandUnknown Then
                 RaiseEvent ToolbarButtonPressed(command)
             Else
-                ISubclass_WindowProc = CallOldWindowProc(hWnd, iMsg, wParam, lParam)
+                ISubclass_WindowProc = CallOldWindowProc(hwnd, iMsg, wParam, lParam)
             End If
 
             Exit Function
         End If
+        
+        If iMsg = WM_NOTIFY Then
+            ' User clicked the little dropdown button on the back or forward
+            ' button. Luckily forwarding this as an event, so the frontend
+            ' can call the VB6 PopupMenu function, works perfectly. No extra
+            ' effort needed (other than having to implement synced history
+            ' menus *sigh*).
+            
+            Dim nmTB As NMTOOLBAR_SHORT
+            CopyMemory nmTB, ByVal lParam, Len(nmTB)
+            
+            If nmTB.hdr.code = TBN_DROPDOWN Then
+                modLogging.WriteLineToLog CStr(nmTB.iItem)
+                
+                If nmTB.iItem = m_ToolbarIdCommandBACK Then
+                    RaiseEvent ToolbarMenuRequested(ToolbarCommand.CommandBack)
+                    Exit Function
+                End If
+                
+                If nmTB.iItem = m_ToolbarIdCommandFORWARD Then
+                    RaiseEvent ToolbarMenuRequested(ToolbarCommand.CommandForward)
+                    Exit Function
+                End If
+            End If
+        End If
 
-        ISubclass_WindowProc = CallOldWindowProc(hWnd, iMsg, wParam, lParam)
+        ISubclass_WindowProc = CallOldWindowProc(hwnd, iMsg, wParam, lParam)
         Exit Function
     End If
 
@@ -313,7 +345,7 @@ Public Sub SetToolbarCommandState(command As ToolbarCommand, enable As Boolean)
         Exit Sub
     End If
 
-    SendMessage m_hWndButtonToolbar, TB_ENABLEBUTTON + TB_IE6YG_SHIFT, ByVal commandId, ByVal LoWord(IIf(enable, 1, 0))
+    SendMessage m_hWndButtonToolbar, TB_ENABLEBUTTON + TB_IE6YG_SHIFT, ByVal commandId, ByVal loWord(IIf(enable, 1, 0))
     modLogging.WriteLineToLog "SetToolbarCommandState: Command ID " & commandId & " new state: " & enable
 
 End Sub

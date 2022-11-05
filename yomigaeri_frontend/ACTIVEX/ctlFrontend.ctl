@@ -18,6 +18,62 @@ Begin VB.UserControl ctlFrontend
       FullScreen      =   0   'False
       StartConnected  =   0
    End
+   Begin VB.Menu HistoryMenuForward 
+      Caption         =   "Forward"
+      Begin VB.Menu HistoryMenuForwardItem 
+         Caption         =   "Sorry"
+         Enabled         =   0   'False
+         Index           =   1
+      End
+      Begin VB.Menu HistoryMenuForwardItem 
+         Caption         =   "not"
+         Enabled         =   0   'False
+         Index           =   2
+      End
+      Begin VB.Menu HistoryMenuForwardItem 
+         Caption         =   "implemented"
+         Enabled         =   0   'False
+         Index           =   3
+      End
+      Begin VB.Menu HistoryMenuForwardItem 
+         Caption         =   "yet."
+         Enabled         =   0   'False
+         Index           =   4
+      End
+      Begin VB.Menu HistoryMenuForwardItem 
+         Caption         =   "Lame!"
+         Enabled         =   0   'False
+         Index           =   5
+      End
+   End
+   Begin VB.Menu HistoryMenuBack 
+      Caption         =   "Back"
+      Begin VB.Menu HistoryMenuBackItem 
+         Caption         =   "Sorry"
+         Enabled         =   0   'False
+         Index           =   1
+      End
+      Begin VB.Menu HistoryMenuBackItem 
+         Caption         =   "not"
+         Enabled         =   0   'False
+         Index           =   2
+      End
+      Begin VB.Menu HistoryMenuBackItem 
+         Caption         =   "implemented"
+         Enabled         =   0   'False
+         Index           =   3
+      End
+      Begin VB.Menu HistoryMenuBackItem 
+         Caption         =   "yet."
+         Enabled         =   0   'False
+         Index           =   4
+      End
+      Begin VB.Menu HistoryMenuBackItem 
+         Caption         =   "Lame!"
+         Enabled         =   0   'False
+         Index           =   5
+      End
+   End
 End
 Attribute VB_Name = "ctlFrontend"
 Attribute VB_GlobalNameSpace = False
@@ -52,6 +108,31 @@ Private Sub m_IEBrowser_NavigationIntercepted(destinationURL As String)
 
 End Sub
 
+Private Sub m_IEFrame_CommandReceived(command As IECommand)
+
+    Select Case command
+      Case IECommand.CommandEditCut
+        rdpClient.SendOnVirtualChannel VIRTUAL_CHANNEL_NAME, "CLIPCUT"
+      Case IECommand.CommandEditCopy
+        rdpClient.SendOnVirtualChannel VIRTUAL_CHANNEL_NAME, "CLIPCPY"
+      Case IECommand.CommandEditPaste
+        rdpClient.SendOnVirtualChannel VIRTUAL_CHANNEL_NAME, "CLIPPST"
+      Case IECommand.CommandEditRefresh
+        rdpClient.SendOnVirtualChannel VIRTUAL_CHANNEL_NAME, "BTNREFR"
+      Case IECommand.CommandEditStop
+        rdpClient.SendOnVirtualChannel VIRTUAL_CHANNEL_NAME, "BTNSTOP"
+      Case IECommand.CommandFavoritesAdd
+        MsgBox "Not implemented yet.", vbInformation, "Lame!" ' XXX TODO
+      Case IECommand.CommandFileProperties
+        MsgBox "Not implemented yet.", vbInformation, "Lame!" ' XXX TODO
+      Case IECommand.CommandViewSource
+        MsgBox "Not implemented yet.", vbInformation, "Lame!" ' XXX TODO
+      Case Else
+        modLogging.WriteLineToLog "ToolbarButtonPressed: Unknown command ID."
+    End Select
+
+End Sub
+
 Private Sub m_IEFrame_WindowResized()
 
   Dim bWasConnected As Boolean
@@ -80,6 +161,10 @@ End Sub
 
 Private Sub m_IEToolbar_ToolbarButtonPressed(command As ToolbarCommand)
 
+    If rdpClient.Connected <> 1 Then
+        Exit Sub
+    End If
+
     Select Case command
       Case ToolbarCommand.CommandBack
         rdpClient.SendOnVirtualChannel VIRTUAL_CHANNEL_NAME, "BTNBACK"
@@ -89,6 +174,8 @@ Private Sub m_IEToolbar_ToolbarButtonPressed(command As ToolbarCommand)
         rdpClient.SendOnVirtualChannel VIRTUAL_CHANNEL_NAME, "BTNSTOP"
       Case ToolbarCommand.CommandRefresh
         rdpClient.SendOnVirtualChannel VIRTUAL_CHANNEL_NAME, "BTNREFR"
+      Case ToolbarCommand.CommandHome
+        MsgBox "Not implemented yet.", vbInformation, "Lame!"
       Case Else
         modLogging.WriteLineToLog "ToolbarButtonPressed: Unknown command ID."
     End Select
@@ -98,13 +185,25 @@ End Sub
 Private Sub PositionRDPClient()
 
     rdpClient.Move _
-            IIf(m_HideRDP, -3000 * Screen.TwipsPerPixelX, 0), _
-            IIf(m_HideRDP, -3000 * Screen.TwipsPerPixelY, 0), _
-            UserControl.Width, _
-            UserControl.Height
+                   IIf(m_HideRDP, -3000 * Screen.TwipsPerPixelX, 0), _
+                   IIf(m_HideRDP, -3000 * Screen.TwipsPerPixelY, 0), _
+                   UserControl.Width, _
+                   UserControl.Height
 
     DoEvents
 
+End Sub
+
+Private Sub m_IEToolbar_ToolbarMenuRequested(command As ToolbarCommand)
+    If command = CommandBack Then
+        PopupMenu HistoryMenuBack
+        Exit Sub
+    End If
+    
+    If command = CommandForward Then
+        PopupMenu HistoryMenuForward
+        Exit Sub
+    End If
 End Sub
 
 Private Sub rdpClient_OnChannelReceivedData(ByVal chanName As String, ByVal data As String)
@@ -344,7 +443,7 @@ Private Sub UserControl_ReadProperties(PropBag As PropertyBag)
 End Sub
 
 Private Sub UserControl_Resize()
-    Exit Sub
+
     If m_DoInitialConnect Then
         m_DoInitialConnect = False
 
@@ -365,7 +464,7 @@ Private Sub UserControl_Show()
 
     PositionRDPClient
 
-    m_IEFrame.Construct UserControl.hWnd
+    m_IEFrame.Construct UserControl.hwnd
     m_IEAddressBar.Construct m_IEFrame.hWndIEFrame
     m_IEBrowser.Construct m_IEFrame.hWndInternetExplorerServer
     m_IEStatusBar.Construct m_IEFrame.hWndIEFrame
@@ -375,10 +474,10 @@ Private Sub UserControl_Show()
 
     m_IEToolbar.SetToolbarCommandState CommandBack, False
     m_IEToolbar.SetToolbarCommandState CommandForward, False
-    m_IEToolbar.SetToolbarCommandState CommandHome, False
+    m_IEToolbar.SetToolbarCommandState CommandHome, True
     m_IEToolbar.SetToolbarCommandState CommandMedia, False
-    m_IEToolbar.SetToolbarCommandState CommandRefresh, False
-    m_IEToolbar.SetToolbarCommandState CommandStop, False
+    m_IEToolbar.SetToolbarCommandState CommandRefresh, True
+    m_IEToolbar.SetToolbarCommandState CommandStop, True
 
     m_IEStatusBar.ConnectionIcon = ConnectionIconState.None
     m_IEStatusBar.SSLIcon = SSLIconState.None
@@ -406,5 +505,5 @@ Private Sub UserControl_Terminate()
 
 End Sub
 
-':) Ulli's VB Code Formatter V2.24.17 (2022-Nov-03 00:39)  Decl: 12  Code: 368  Total: 380 Lines
-':) CommentOnly: 45 (11,8%)  Commented: 6 (1,6%)  Filled: 283 (74,5%)  Empty: 97 (25,5%)  Max Logic Depth: 3
+':) Ulli's VB Code Formatter V2.24.17 (2022-Nov-05 22:36)  Decl: 12  Code: 403  Total: 415 Lines
+':) CommentOnly: 48 (11,6%)  Commented: 6 (1,4%)  Filled: 307 (74%)  Empty: 108 (26%)  Max Logic Depth: 3
