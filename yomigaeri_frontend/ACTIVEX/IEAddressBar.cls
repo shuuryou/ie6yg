@@ -37,17 +37,28 @@ Private Sub FindAddressBar()
 
     ' ------------------------------------------------------------------------
 
-    ' Now start going down again and find the first "WorkerW"
+    ' Now start going down again and find the first "WorkerA"
 
-    hWnd = FindWindowEx(m_hWndIEFrame, 0&, "WorkerW", vbNullString)
+    hWnd = FindWindowEx(m_hWndIEFrame, 0&, "WorkerA", vbNullString)
 
-    If Err.LastDllError <> 0 Or hWnd = 0 Then
-        modLogging.WriteLineToLog "IEAddressBar: FindWindowEx WorkerW failed. GetLastError returns " & Hex$(Err.LastDllError)
+    If hWnd = 0 Then
+        modLogging.WriteLineToLog "IEAddressBar: FindWindowEx WorkerA failed."
+        
+        hWnd = FindWindowEx(m_hWndIEFrame, 0&, "WorkerW", vbNullString)
+    
+        If hWnd = 0 Then
+            modLogging.WriteLineToLog "IEAddressBar: FindWindowEx WorkerW also failed."
+            m_hWndAddressBar = -1
+            Exit Sub
+        Else
+            modLogging.WriteLineToLog "IEAddressBar: FindWindowEx WorkerW worked."
+        End If
+        
         m_hWndAddressBar = -1
         Exit Sub
     End If
 
-    modLogging.WriteLineToLog "FindAddressBar: WorkerW hWnd is " & Hex$(hWnd)
+    modLogging.WriteLineToLog "FindAddressBar: WorkerA hWnd is " & Hex$(hWnd)
 
     ' ------------------------------------------------------------------------
 
@@ -55,8 +66,8 @@ Private Sub FindAddressBar()
 
     hWnd = FindWindowEx(hWnd, 0&, "ReBarWindow32", vbNullString)
 
-    If Err.LastDllError <> 0 Or hWnd = 0 Then
-        modLogging.WriteLineToLog "IEAddressBar: FindWindowEx ReBarWindow32 failed. GetLastError returns " & Hex$(Err.LastDllError)
+    If hWnd = 0 Then
+        modLogging.WriteLineToLog "IEAddressBar: FindWindowEx ReBarWindow32 failed."
         m_hWndAddressBar = -1
         Exit Sub
     End If
@@ -69,8 +80,8 @@ Private Sub FindAddressBar()
 
     hWnd = FindWindowEx(hWnd, 0&, "ComboBoxEx32", vbNullString)
 
-    If Err.LastDllError <> 0 Or hWnd = 0 Then
-        modLogging.WriteLineToLog "IEAddressBar: FindWindowEx ComboBoxEx32 failed. GetLastError returns " & Hex$(Err.LastDllError)
+    If hWnd = 0 Then
+        modLogging.WriteLineToLog "IEAddressBar: FindWindowEx ComboBoxEx32 failed."
         m_hWndAddressBar = -1
         Exit Sub
     End If
@@ -83,8 +94,8 @@ Private Sub FindAddressBar()
 
     hWnd = FindWindowEx(hWnd, 0&, "ComboBox", vbNullString)
 
-    If Err.LastDllError <> 0 Or hWnd = 0 Then
-        modLogging.WriteLineToLog "IEAddressBar: FindWindowEx ComboBox failed. GetLastError returns " & Hex$(Err.LastDllError)
+    If hWnd = 0 Then
+        modLogging.WriteLineToLog "IEAddressBar: FindWindowEx ComboBox failed."
         m_hWndAddressBar = -1
         Exit Sub
     End If
@@ -97,8 +108,8 @@ Private Sub FindAddressBar()
 
     hWnd = FindWindowEx(hWnd, 0&, "Edit", vbNullString)
 
-    If Err.LastDllError <> 0 Or hWnd = 0 Then
-        modLogging.WriteLineToLog "IEAddressBar: FindWindowEx Edit failed. GetLastError returns " & Hex$(Err.LastDllError)
+    If hWnd = 0 Then
+        modLogging.WriteLineToLog "IEAddressBar: FindWindowEx Edit failed."
         m_hWndAddressBar = -1
         Exit Sub
     End If

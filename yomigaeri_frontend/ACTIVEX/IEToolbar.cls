@@ -138,12 +138,20 @@ Private Sub FindToolbar()
         Exit Sub
     End If
 
-    hWndTemp = FindWindowEx(m_hWndIEFrame, 0&, "WorkerW", vbNullString)
+    hWndTemp = FindWindowEx(m_hWndIEFrame, 0&, "WorkerA", vbNullString)
 
     If hWndTemp = 0 Then
-        modLogging.WriteLineToLog "IEToolbar: WorkerW not found."
-        m_hWndButtonToolbar = -1
-        Exit Sub
+        modLogging.WriteLineToLog "IEToolbar: WorkerA not found."
+        
+        hWndTemp = FindWindowEx(m_hWndIEFrame, 0&, "WorkerW", vbNullString)
+    
+        If hWndTemp = 0 Then
+            modLogging.WriteLineToLog "IEToolbar: WorkerW also not found."
+            m_hWndButtonToolbar = -1
+            Exit Sub
+        Else
+            modLogging.WriteLineToLog "IEToolbar: WorkerW found instead."
+        End If
     End If
 
     hWndTemp = FindWindowEx(hWndTemp, 0&, "ReBarWindow32", vbNullString)
@@ -264,12 +272,10 @@ Private Function ISubclass_WindowProc(ByVal hWnd As Long, ByVal iMsg As Long, By
   
     If hWnd = m_hWndButtonToolbar Then
         If iMsg = TB_ENABLEBUTTON Then
-            modLogging.WriteLineToLog "IEToolbar: Ignore TB_ENABLEBUTTON"
             Exit Function
         End If
         
         If iMsg = TB_ENABLEBUTTON + TB_IE6YG_SHIFT Then
-            modLogging.WriteLineToLog "IEToolbar: Process TB_ENABLEBUTTON with TB_IE6YG_SHIFT (wParam=" & wParam & ", lParam=" & lParam & ")"
             iMsg = iMsg - TB_IE6YG_SHIFT
         End If
         

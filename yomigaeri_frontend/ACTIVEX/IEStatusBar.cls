@@ -69,6 +69,8 @@ Private m_CurrentStatusText As String
 Private m_StateConnectionIcon As ConnectionIconState
 Private m_StateSSLIcon As SSLIconState
 
+Private m_IsStatusBarCurrentlySimple As Boolean
+
 Public Property Let ConnectionIcon(newState As ConnectionIconState)
 
   Dim lngIcon As Long
@@ -116,6 +118,7 @@ Public Sub Construct(hWndIEFrame As Long)
     AttachMessage Me, m_hWndStatusBar, SB_SETPARTS
     AttachMessage Me, m_hWndStatusBar, SB_SETMINHEIGHT
     AttachMessage Me, m_hWndStatusBar, SB_SETICON
+    AttachMessage Me, m_hWndStatusBar, SB_SIMPLE
 
     AttachMessage Me, m_hWndStatusBar, WM_SIZE
     AttachMessage Me, m_hWndStatusBar, WM_WINDOWPOSCHANGING
@@ -167,6 +170,7 @@ Public Sub Destroy()
     DetachMessage Me, m_hWndStatusBar, SB_SETPARTS
     DetachMessage Me, m_hWndStatusBar, SB_SETMINHEIGHT
     DetachMessage Me, m_hWndStatusBar, SB_SETICON
+    DetachMessage Me, m_hWndStatusBar, SB_SIMPLE
 
     DetachMessage Me, m_hWndStatusBar, WM_SIZE
     DetachMessage Me, m_hWndStatusBar, WM_WINDOWPOSCHANGING
@@ -217,8 +221,6 @@ Public Sub FixStatusBar()
     If m_hWndStatusBar = -1 Or m_hWndProgressBar = -1 Then
         Exit Sub
     End If
-
-    Rem Mark Off Silent
 
     ' Following code adapted from leaked WinXP code available at:
     ' http://<removed>/download/developer/xpsource/XPSP1/NT/shell/shdocvw/dochost.cpp
@@ -305,8 +307,6 @@ Public Sub FixStatusBar()
 
     SendMessage m_hWndProgressBar, PBM_SETRANGE, 0&, ByVal MAKELPARAM(0, 100)
 
-    Rem Mark On
-
 End Sub
 
 Public Property Get hWndProgressBar() As Long
@@ -333,14 +333,25 @@ Private Property Let ISubclass_MsgResponse(ByVal RHS As SSubTUP.EMsgResponse)
 
 End Property ':( No executable Code
 
-Private Function ISubclass_WindowProc(ByVal hWnd As Long, ByVal iMsg As Long, ByVal wParam As Long, ByVal lParam As Long) As Long
+Private Function ISubclass_WindowProc(ByVal hwnd As Long, ByVal iMsg As Long, ByVal wParam As Long, ByVal lParam As Long) As Long
+
+    If iMsg = SB_SIMPLE Then
+        m_IsStatusBarCurrentlySimple = (wParam > 0)
+        ISubclass_WindowProc = CallOldWindowProc(hwnd, iMsg, wParam, lParam)
+        Exit Function
+    End If
 
     If iMsg = WM_SIZE Or iMsg = WM_WINDOWPOSCHANGING Or iMsg = WM_WINDOWPOSCHANGED Then
         FixStatusBar
     End If
 
-    If iMsg = SB_SETTEXTA Or iMsg = SB_SETTEXTW Or iMsg = SB_SETPARTS _
-       Or iMsg = SB_SETMINHEIGHT Or iMsg = SB_SETICON Then
+    If (iMsg = SB_SETTEXTA Or iMsg = SB_SETTEXTW Or iMsg = SB_SETPARTS _
+       Or iMsg = SB_SETMINHEIGHT Or iMsg = SB_SETICON) Then
+       
+        If m_IsStatusBarCurrentlySimple Then
+            ISubclass_WindowProc = CallOldWindowProc(hwnd, iMsg, wParam, lParam)
+        End If
+       
         Exit Function
     End If
 
@@ -349,7 +360,7 @@ Private Function ISubclass_WindowProc(ByVal hWnd As Long, ByVal iMsg As Long, By
         iMsg = iMsg - SB_IE6YG_SHIFT
     End If
 
-    ISubclass_WindowProc = CallOldWindowProc(hWnd, iMsg, wParam, lParam)
+    ISubclass_WindowProc = CallOldWindowProc(hwnd, iMsg, wParam, lParam)
 
 End Function
 
