@@ -43,19 +43,16 @@ Private Sub FindAddressBar()
 
     If hWnd = 0 Then
         modLogging.WriteLineToLog "IEAddressBar: FindWindowEx WorkerA failed."
-        
+
         hWnd = FindWindowEx(m_hWndIEFrame, 0&, "WorkerW", vbNullString)
-    
+
         If hWnd = 0 Then
             modLogging.WriteLineToLog "IEAddressBar: FindWindowEx WorkerW also failed."
             m_hWndAddressBar = -1
             Exit Sub
-        Else
+          Else
             modLogging.WriteLineToLog "IEAddressBar: FindWindowEx WorkerW worked."
         End If
-        
-        m_hWndAddressBar = -1
-        Exit Sub
     End If
 
     modLogging.WriteLineToLog "FindAddressBar: WorkerA hWnd is " & Hex$(hWnd)
@@ -117,6 +114,8 @@ Private Sub FindAddressBar()
     modLogging.WriteLineToLog "IEAddressBar: Edit hWnd is " & Hex$(hWnd)
 
     m_hWndAddressBar = hWnd
+    
+    modLogging.WriteLineToLog "IEAddressBar: Success!"
 
 End Sub
 
@@ -148,6 +147,8 @@ Public Property Get Text() As String
     SendMessage m_hWndAddressBar, WM_GETTEXT, ByVal (lngLength + 1), bytText(0)
 
     Text = TrimNull(StrConv(bytText, vbUnicode))
+    
+    modLogging.WriteLineToLog "IEAddressBar: Get text result: " & Text
 
 End Property
 
@@ -162,8 +163,10 @@ Public Property Let Text(newText As String)
     Text = StrConv(newText, vbFromUnicode) & Chr$(0)
 
     SendMessage m_hWndAddressBar, WM_SETTEXT, 0&, Text(0)
+    
+    modLogging.WriteLineToLog "IEAddressBar: Set text to: " & newText
 
 End Property
 
-':) Ulli's VB Code Formatter V2.24.17 (2022-Nov-03 00:39)  Decl: 4  Code: 141  Total: 145 Lines
-':) CommentOnly: 13 (9%)  Commented: 0 (0%)  Filled: 90 (62,1%)  Empty: 55 (37,9%)  Max Logic Depth: 2
+':) Ulli's VB Code Formatter V2.24.17 (2022-Nov-06 08:05)  Decl: 4  Code: 152  Total: 156 Lines
+':) CommentOnly: 13 (8.3%)  Commented: 0 (0%)  Filled: 98 (62.8%)  Empty: 58 (37.2%)  Max Logic Depth: 3

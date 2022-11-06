@@ -182,6 +182,20 @@ Private Sub m_IEToolbar_ToolbarButtonPressed(command As ToolbarCommand)
 
 End Sub
 
+Private Sub m_IEToolbar_ToolbarMenuRequested(command As ToolbarCommand)
+
+    If command = CommandBack Then
+        PopupMenu HistoryMenuBack
+        Exit Sub
+    End If
+
+    If command = CommandForward Then
+        PopupMenu HistoryMenuForward
+        Exit Sub
+    End If
+
+End Sub
+
 Private Sub PositionRDPClient()
 
     rdpClient.Move _
@@ -192,18 +206,6 @@ Private Sub PositionRDPClient()
 
     DoEvents
 
-End Sub
-
-Private Sub m_IEToolbar_ToolbarMenuRequested(command As ToolbarCommand)
-    If command = CommandBack Then
-        PopupMenu HistoryMenuBack
-        Exit Sub
-    End If
-    
-    If command = CommandForward Then
-        PopupMenu HistoryMenuForward
-        Exit Sub
-    End If
 End Sub
 
 Private Sub rdpClient_OnChannelReceivedData(ByVal chanName As String, ByVal data As String)
@@ -242,6 +244,12 @@ Private Sub rdpClient_OnChannelReceivedData(ByVal chanName As String, ByVal data
     ' SSLICOF: Make the SSL icon invisible
     ' PROGRES: Set the value of the progress bar (value 0-100 follows after "PROGRES")
     ' STATUST: Set IE status bar text to content following after "STATUST"
+    ' M_CUTON: Enable menu item Edit>Cut
+    ' M_CUTOF: Disable menu item Edit>Cut
+    ' MCOPYON: Enable menu item Edit>Copy
+    ' MCOPYOF: Disable menu item Edit>Copy
+    ' MPASTON: Enable menu item Edit>Paste
+    ' MPASTOF: Disable menu item Edit>Paste
 
     Select Case Left$(UCase$(data), 7)
       Case "STYLING"
@@ -283,64 +291,49 @@ Private Sub rdpClient_OnChannelReceivedData(ByVal chanName As String, ByVal data
       Case "VISIBLE"
         m_HideRDP = False
         PositionRDPClient
-
-      Case "INVISIBLE"
+      Case "INVISIB"
         m_HideRDP = True
         PositionRDPClient
-
       Case "BBACKON"
-
         m_IEToolbar.SetToolbarCommandState CommandBack, True
       Case "BBACKOF"
-
         m_IEToolbar.SetToolbarCommandState CommandBack, False
       Case "BFORWON"
-
         m_IEToolbar.SetToolbarCommandState CommandForward, True
       Case "BFORWOF"
-
         m_IEToolbar.SetToolbarCommandState CommandForward, False
       Case "BSTOPON"
-
         m_IEToolbar.SetToolbarCommandState CommandStop, True
+        m_IEFrame.MenuEditStopEnabled = True
       Case "BSTOPOF"
-
         m_IEToolbar.SetToolbarCommandState CommandStop, False
+        m_IEFrame.MenuEditStopEnabled = True
       Case "BREFRON"
-
         m_IEToolbar.SetToolbarCommandState CommandRefresh, True
+        m_IEFrame.MenuEditRefreshEnabled = True
       Case "BREFROF"
-
         m_IEToolbar.SetToolbarCommandState CommandRefresh, False
-
+        m_IEFrame.MenuEditRefreshEnabled = False
       Case "BHOMEON"
-
         m_IEToolbar.SetToolbarCommandState CommandHome, True
       Case "BHOMEOF"
-
         m_IEToolbar.SetToolbarCommandState CommandHome, False
-
       Case "BMEDION"
-
         m_IEToolbar.SetToolbarCommandState CommandMedia, True
       Case "BMEDIOF"
-
         m_IEToolbar.SetToolbarCommandState CommandMedia, False
       Case "PGTITLE"
         If Len(data) < 8 Then
-            modLogging.WriteLineToLog "Cannot set address because data is too short."
+            modLogging.WriteLineToLog "Cannot set page title because data is too short."
             Exit Sub
         End If
 
         m_IEBrowser.SetTitle Mid$(data, 8)
       Case "SSLICON"
-
         m_IEStatusBar.SSLIcon = SSLIconState.OK
       Case "SSLICBD"
-
         m_IEStatusBar.SSLIcon = SSLIconState.Bad
       Case "SSLICOF"
-
         m_IEStatusBar.SSLIcon = SSLIconState.None
       Case "PROGRES"
         If Len(data) < 8 Then
@@ -354,16 +347,25 @@ Private Sub rdpClient_OnChannelReceivedData(ByVal chanName As String, ByVal data
         On Error GoTo 0
       Case "STATUST"
         If Len(data) < 8 Then
-            modLogging.WriteLineToLog "Cannot set status because data is too short."
+            ' Show what IE would show when there's no status
+            m_IEStatusBar.Text = LoadResString(108) ' Done
             Exit Sub
         End If
-
         m_IEStatusBar.Text = Mid$(data, 8)
-
+      Case "M_CUTON":
+        m_IEFrame.MenuEditCutEnabled = True
+      Case "M_CUTOF":
+        m_IEFrame.MenuEditCutEnabled = False
+      Case "MCOPYON":
+        m_IEFrame.MenuEditCopyEnabled = True
+      Case "MCOPYOF":
+        m_IEFrame.MenuEditCopyEnabled = False
+      Case "MPASTON":
+        m_IEFrame.MenuEditPasteEnabled = True
+      Case "MPASTOF":
+        m_IEFrame.MenuEditPasteEnabled = False
       Case Else
-        rdpClient.SendOnVirtualChannel VIRTUAL_CHANNEL_NAME, "UNSUPPORTED"
-
-        modLogging.WriteLineToLog "Sent UNSUPPORTED response."
+        modLogging.WriteLineToLog "Unknown command ignored."
     End Select
 
 End Sub
@@ -410,13 +412,14 @@ Private Sub UserControl_Initialize()
     rdpClient.AdvancedSettings3.EnableWindowsKey = False
     rdpClient.AdvancedSettings3.keepAliveInterval = 5000
     rdpClient.AdvancedSettings3.MaximizeShell = False
-    rdpClient.AdvancedSettings3.PerformanceFlags = &H1F
-    ' &H1F =
+    rdpClient.AdvancedSettings3.PerformanceFlags = &H9F
+    ' &H9F =
     ' TS_PERF_DISABLE_WALLPAPER |
     ' TS_PERF_DISABLE_FULLWINDOWDRAG |
     ' TS_PERF_DISABLE_MENUANIMATIONS |
     ' TS_PERF_DISABLE_THEMING |
-    ' TS_PERF_ENABLE_ENHANCED
+    ' TS_PERF_ENABLE_ENHANCED GRAPHICS |
+    ' TS_PERF_ENABLE_FONT_SMOOTHING
     rdpClient.ColorDepth = 24
 
     'rdpClient.Visible = False
@@ -505,5 +508,5 @@ Private Sub UserControl_Terminate()
 
 End Sub
 
-':) Ulli's VB Code Formatter V2.24.17 (2022-Nov-05 22:36)  Decl: 12  Code: 403  Total: 415 Lines
-':) CommentOnly: 48 (11,6%)  Commented: 6 (1,4%)  Filled: 307 (74%)  Empty: 108 (26%)  Max Logic Depth: 3
+':) Ulli's VB Code Formatter V2.24.17 (2022-Nov-06 22:42)  Decl: 12  Code: 442  Total: 454 Lines
+':) CommentOnly: 52 (11.5%)  Commented: 10 (2.2%)  Filled: 341 (75.1%)  Empty: 113 (24.9%)  Max Logic Depth: 3

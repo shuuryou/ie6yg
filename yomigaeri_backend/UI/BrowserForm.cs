@@ -2,19 +2,22 @@
 using CefSharp.WinForms;
 using Microsoft.Win32;
 using System;
-using System.Drawing;
 using System.Globalization;
 using System.Windows.Forms;
 
-namespace yomigaeri_backend
+namespace yomigaeri_backend.UI
 {
 	public partial class BrowserForm : Form
 	{
+		private SynchronizerState m_SyncState;
+		private SynchronizerState? m_PrevSyncState;
+
 		public BrowserForm()
 		{
 			InitializeComponent();
 
-			//this.BackColor = Color.Red;
+			m_SyncState = new SynchronizerState();
+			m_PrevSyncState = null;
 
 			Program.WebBrowser.Dock = DockStyle.Fill;
 			Controls.Add(Program.WebBrowser);
@@ -24,7 +27,7 @@ namespace yomigaeri_backend
 			Program.WebBrowser.StatusMessage += WebBrowser_StatusMessage;
 			Program.WebBrowser.TitleChanged += WebBrowser_TitleChanged;
 			Program.WebBrowser.AddressChanged += WebBrowser_AddressChanged;
-			Program.WebBrowser.DisplayHandler = new MyTestDisplayHandler();
+			Program.WebBrowser.DisplayHandler = new MyDisplayHandler(m_SyncState, SynchronizeWithFrontend);
 
 			SystemEvents.SessionSwitch += SystemEvents_SessionSwitch;
 		}
@@ -36,14 +39,6 @@ namespace yomigaeri_backend
 			this.InvokeOnUiThreadIfRequired(() => b.Focus());
 		}
 
-		private class MyTestDisplayHandler : CefSharp.Handler.DisplayHandler
-		{
-			protected override void OnLoadingProgressChange(IWebBrowser chromiumWebBrowser, IBrowser browser, double progress)
-			{
-				RDPVirtualChannel.WriteChannel("PROGRES" + (progress * 100).ToString(CultureInfo.InvariantCulture));
-				base.OnLoadingProgressChange(chromiumWebBrowser, browser, progress);
-			}
-		}
 
 		protected override void Dispose(bool disposing)
 		{
@@ -68,49 +63,38 @@ namespace yomigaeri_backend
 
 			if (e.Reason == SessionSwitchReason.RemoteConnect)
 			{
-				this.WindowState = FormWindowState.Normal;
-				this.WindowState = FormWindowState.Maximized;
+				m_PrevSyncState = null;
 				StartRDPProcessing();
 				return;
 			}
 		}
 
-		private void WebBrowser_LoadingStateChanged(object sender, CefSharp.LoadingStateChangedEventArgs e)
+		private void WebBrowser_LoadingStateChanged(object sender, LoadingStateChangedEventArgs e)
 		{
-			if (e.CanGoBack)
-				RDPVirtualChannel.WriteChannel("BBACKON");
-			else
-				RDPVirtualChannel.WriteChannel("BBACKOF");
+			m_SyncState.CanGoBack = e.CanGoBack;
+			m_SyncState.CanGoForward = e.CanGoForward;
+			m_SyncState.CanReload = e.CanReload;
+			m_SyncState.IsLoading = e.IsLoading;
 
-			if (e.CanGoForward)
-				RDPVirtualChannel.WriteChannel("BFORWON");
-			else
-				RDPVirtualChannel.WriteChannel("BFORWOF");
-
-			if (e.CanReload)
-				RDPVirtualChannel.WriteChannel("BREFRON");
-			else
-				RDPVirtualChannel.WriteChannel("BREFROF");
-
-			if (e.IsLoading)
-				RDPVirtualChannel.WriteChannel("BSTOPON");
-			else
-				RDPVirtualChannel.WriteChannel("BSTOPOF");
+			SynchronizeWithFrontend();
 		}
 
-		private void WebBrowser_StatusMessage(object sender, CefSharp.StatusMessageEventArgs e)
+		private void WebBrowser_StatusMessage(object sender, StatusMessageEventArgs e)
 		{
-			RDPVirtualChannel.WriteChannel("STATUST" + e.Value);
+			m_SyncState.StatusText = e.Value;
+			SynchronizeWithFrontend();
 		}
 
-		private void WebBrowser_TitleChanged(object sender, CefSharp.TitleChangedEventArgs e)
+		private void WebBrowser_TitleChanged(object sender, TitleChangedEventArgs e)
 		{
-			RDPVirtualChannel.WriteChannel("PGTITLE" + e.Title);
+			m_SyncState.PageTitle = e.Title;
+			SynchronizeWithFrontend();
 		}
 
-		private void WebBrowser_AddressChanged(object sender, CefSharp.AddressChangedEventArgs e)
+		private void WebBrowser_AddressChanged(object sender, AddressChangedEventArgs e)
 		{
-			RDPVirtualChannel.WriteChannel("ADDRESS" + e.Address);
+			m_SyncState.Address = e.Address;
+			SynchronizeWithFrontend();
 		}
 
 
@@ -122,11 +106,13 @@ namespace yomigaeri_backend
 
 			try
 			{
-				 message = RDPVirtualChannel.ReadChannel(true);
-			} catch (Exception ex)
+				message = RDPVirtualChannel.ReadChannel(true);
+			}
+			catch (Exception ex)
 			{
 				Logging.WriteLineToLog("VirtualChannelTimer: Failed in ReadChannel: {0}", ex.ToString());
 				StopRDPProcessing();
+				// XXX should probably crash here or at least show a message?
 			}
 
 			if (string.IsNullOrEmpty(message))
@@ -145,19 +131,17 @@ namespace yomigaeri_backend
 		private void StopRDPProcessing()
 		{
 			VirtualChannelTimer.Enabled = false;
+			m_SyncState.Visible = false;
+			m_PrevSyncState = null;
 			RDPVirtualChannel.Reset();
 		}
 
 		private void StartRDPProcessing()
 		{
-			Logging.WriteLineToLog("Attempting to make window visible on frontend.");
-
 			RDPVirtualChannel.OpenChannel(); // In case frontend is reconnecting, otherwise a no-op.
-
-			RDPVirtualChannel.WriteChannel("VISIBLE");
-			RDPVirtualChannel.WriteChannel("STATUSTReady.");
-
+			m_SyncState.Visible = true;
 			VirtualChannelTimer.Enabled = true;
+			SynchronizeWithFrontend();
 		}
 
 		private void BrowserForm_ResizeBegin(object sender, EventArgs e)
@@ -174,5 +158,6 @@ namespace yomigaeri_backend
 		{
 			StartRDPProcessing();
 		}
+
 	}
 }

@@ -246,5 +246,5 @@ Public Function MakeStyling(ByRef hDC As Long) As String
 
 End Function
 
-':) Ulli's VB Code Formatter V2.24.17 (2022-Nov-03 00:39)  Decl: 70  Code: 179  Total: 249 Lines
-':) CommentOnly: 15 (6%)  Commented: 0 (0%)  Filled: 199 (79,9%)  Empty: 50 (20,1%)  Max Logic Depth: 2
+':) Ulli's VB Code Formatter V2.24.17 (2022-Nov-06 08:05)  Decl: 70  Code: 179  Total: 249 Lines
+':) CommentOnly: 15 (6%)  Commented: 0 (0%)  Filled: 199 (79.9%)  Empty: 50 (20.1%)  Max Logic Depth: 2

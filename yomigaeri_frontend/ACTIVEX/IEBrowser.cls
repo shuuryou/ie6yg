@@ -110,5 +110,5 @@ Public Sub SetTitle(newTitle As String)
 
 End Sub
 
-':) Ulli's VB Code Formatter V2.24.17 (2022-Nov-05 22:36)  Decl: 7  Code: 91  Total: 98 Lines
-':) CommentOnly: 9 (9,2%)  Commented: 0 (0%)  Filled: 61 (62,2%)  Empty: 37 (37,8%)  Max Logic Depth: 2
+':) Ulli's VB Code Formatter V2.24.17 (2022-Nov-06 08:05)  Decl: 7  Code: 91  Total: 98 Lines
+':) CommentOnly: 9 (9.2%)  Commented: 0 (0%)  Filled: 61 (62.2%)  Empty: 37 (37.8%)  Max Logic Depth: 2

@@ -304,7 +304,7 @@ namespace yomigaeri_backend
 			}
 			#endregion
 
-			Application.Run(new BrowserForm());
+			Application.Run(new UI.BrowserForm());
 
 			return 0;
 		}

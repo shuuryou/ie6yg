@@ -132,5 +132,5 @@ Public Function TrimNull(ByVal Text As String) As String
 
 End Function
 
-':) Ulli's VB Code Formatter V2.24.17 (2022-Nov-03 00:39)  Decl: 60  Code: 50  Total: 110 Lines
-':) CommentOnly: 4 (3,6%)  Commented: 0 (0%)  Filled: 76 (69,1%)  Empty: 34 (30,9%)  Max Logic Depth: 2
+':) Ulli's VB Code Formatter V2.24.17 (2022-Nov-06 08:04)  Decl: 85  Code: 50  Total: 135 Lines
+':) CommentOnly: 5 (3.7%)  Commented: 0 (0%)  Filled: 91 (67.4%)  Empty: 44 (32.6%)  Max Logic Depth: 2

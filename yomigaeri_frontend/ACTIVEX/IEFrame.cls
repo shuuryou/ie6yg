@@ -45,8 +45,16 @@ Public Enum IECommand
     CommandViewSource = 8
     CommandFavoritesAdd = 9
 End Enum
+#If False Then ':) Line inserted by Formatter
+Private CommandNone, CommandFileProperties, CommandEditCut, CommandEditCopy, CommandEditPaste, CommandEditStop, CommandEditRefresh, CommandEditFind, _
+        CommandViewSource, CommandFavoritesAdd ':) Line inserted by Formatter
+#End If ':) Line inserted by Formatter
 
-Private m_IEMenuEnabledStates(9) As Boolean
+Private m_MenuEditCutEnabled As Boolean
+Private m_MenuEditCopyEnabled As Boolean
+Private m_MenuEditPasteEnabled As Boolean
+Private m_MenuEditStopEnabled As Boolean
+Private m_MenuEditRefreshEnabled As Boolean
 
 Public Event WindowResized()
 Public Event CommandReceived(command As IECommand)
@@ -62,7 +70,7 @@ Public Sub Construct(hWndUserControl As Long)
     If m_hWndIEFrame = -1 Then
         Exit Sub
     End If
-    
+
     AttachMessage Me, m_hWndIEFrame, WM_EXITSIZEMOVE
     AttachMessage Me, m_hWndIEFrame, WM_SIZE
     AttachMessage Me, m_hWndIEFrame, WM_COMMAND
@@ -72,12 +80,52 @@ End Sub
 
 Public Sub Destroy()
 
-    detachMessage Me, m_hWndIEFrame, WM_EXITSIZEMOVE
-    detachMessage Me, m_hWndIEFrame, WM_SIZE
-    detachMessage Me, m_hWndIEFrame, WM_COMMAND
-    detachMessage Me, m_hWndIEFrame, WM_INITMENUPOPUP
-    
+    DetachMessage Me, m_hWndIEFrame, WM_EXITSIZEMOVE
+    DetachMessage Me, m_hWndIEFrame, WM_SIZE
+    DetachMessage Me, m_hWndIEFrame, WM_COMMAND
+    DetachMessage Me, m_hWndIEFrame, WM_INITMENUPOPUP
+
 End Sub
+
+Public Property Get MenuEditCutEnabled() As Boolean
+    MenuEditCutEnabled = m_MenuEditCutEnabled
+End Property
+
+Public Property Let MenuEditCutEnabled(enabled As Boolean)
+    m_MenuEditCutEnabled = enabled
+End Property
+
+Public Property Get MenuEditCopyEnabled() As Boolean
+    MenuEditCopyEnabled = m_MenuEditCopyEnabled
+End Property
+
+Public Property Let MenuEditCopyEnabled(enabled As Boolean)
+    m_MenuEditCopyEnabled = enabled
+End Property
+
+Public Property Get MenuEditPasteEnabled() As Boolean
+    MenuEditPasteEnabled = m_MenuEditPasteEnabled
+End Property
+
+Public Property Let MenuEditPasteEnabled(enabled As Boolean)
+    m_MenuEditPasteEnabled = enabled
+End Property
+
+Public Property Get MenuEditStopEnabled() As Boolean
+    MenuEditStopEnabled = m_MenuEditStopEnabled
+End Property
+
+Public Property Let MenuEditStopEnabled(enabled As Boolean)
+    m_MenuEditStopEnabled = enabled
+End Property
+
+Public Property Get MenuEditRefreshEnabled() As Boolean
+    MenuEditRefreshEnabled = m_MenuEditRefreshEnabled
+End Property
+
+Public Property Let MenuEditRefreshEnabled(enabled As Boolean)
+    m_MenuEditRefreshEnabled = enabled
+End Property
 
 Private Sub FindIEFrame()
 
@@ -123,6 +171,7 @@ Private Sub FindIEFrame()
     End If
 
     modLogging.WriteLineToLog "IEFrame: IEFrame hWnd is " & Hex$(m_hWndIEFrame)
+    modLogging.WriteLineToLog "IEFrame: Success!"
 
 End Sub
 
@@ -235,58 +284,59 @@ Private Property Let ISubclass_MsgResponse(ByVal RHS As SSubTUP.EMsgResponse)
 End Property
 
 Private Function ISubclass_WindowProc(ByVal hwnd As Long, ByVal iMsg As Long, ByVal wParam As Long, ByVal lParam As Long) As Long
-    ' WM_INITMENUPOPUP seems to be the most sane way to get hMenu.
-    ' IE6's menu bar is actually a ReBar and the menu buttons are
-    ' toolbar buttons that pop up menus at the right coordinates.
-    ' IE uses an elaborate procedure to dynamically build the menu
-    ' from several menu fragments, depending on whether it's being
-    ' used as part of Explorer to show the filesystem or whether
-    ' it's being used as a web browser.
-    ' ref. https://learn.microsoft.com/en-us/windows/win32/controls/cc-faq-iemenubar
-    
+
+  ' WM_INITMENUPOPUP seems to be the most sane way to get hMenu.
+  ' IE6's menu bar is actually a ReBar and the menu buttons are
+  ' toolbar buttons that pop up menus at the right coordinates.
+  ' IE uses an elaborate procedure to dynamically build the menu
+  ' from several menu fragments, depending on whether it's being
+  ' used as part of Explorer to show the filesystem or whether
+  ' it's being used as a web browser.
+  ' ref. https://learn.microsoft.com/en-us/windows/win32/controls/cc-faq-iemenubar
+
     If iMsg = WM_INITMENUPOPUP Then
         'ISubclass_WindowProc = SSubTUP.CallOldWindowProc(hwnd, iMsg, wParam, lParam)
         ModifyIEMenu wParam
         Exit Function
     End If
-    
+
     ' The WM_COMMAND processing takes care of redirecting menu
     ' item clicks and keyboard accelerators and forwards them
     ' to events that reach the frontend.
 
     If iMsg = WM_COMMAND Then
-        Dim intHiWord As Integer
-        Dim intLoWord As Integer
-        
+  Dim intHiWord As Integer
+  Dim intLoWord As Integer
+
         intHiWord = HiWord(wParam) ' Menu: 0; Keyboard accelerator: 1
-        intLoWord = loWord(wParam) ' Specifies the identifier
-        
+        intLoWord = LoWord(wParam) ' Specifies the identifier
+
         If intHiWord = 0 Then
             modLogging.WriteLineToLog "IEFrame: Intercept menu WM_COMMAND. ID is:" & Hex$(intLoWord)
-            
-            Dim command As IECommand
-            
+
+  Dim command As IECommand
+
             command = TranslateToIECommand(intLoWord)
-            
+
             If command <> IECommand.CommandNone Then
                 RaiseEvent CommandReceived(command)
                 Exit Function
             End If
-            
-           ISubclass_WindowProc = SSubTUP.CallOldWindowProc(hwnd, iMsg, wParam, lParam)
-           Exit Function
+
+            ISubclass_WindowProc = SSubTUP.CallOldWindowProc(hwnd, iMsg, wParam, lParam)
+            Exit Function
         End If
-        
+
         ISubclass_WindowProc = SSubTUP.CallOldWindowProc(hwnd, iMsg, wParam, lParam)
     End If
 
-  ' The idea of the following exercise is to get WindowResized event
-  ' to trigger only when the size of the window has actually changed.
-  ' That is to say, *only* after the fact. Not before. Not during.
+    ' The idea of the following exercise is to get WindowResized event
+    ' to trigger only when the size of the window has actually changed.
+    ' That is to say, *only* after the fact. Not before. Not during.
 
     If iMsg = WM_EXITSIZEMOVE Then
         ISubclass_WindowProc = SSubTUP.CallOldWindowProc(hwnd, iMsg, wParam, lParam)
-        
+
         If m_GotSizeMessage Then
             ' This way, because WM_EXITSIZEMOVE won't tell you whether
             ' it was a window sizing or window moving operation that
@@ -299,7 +349,7 @@ Private Function ISubclass_WindowProc(ByVal hwnd As Long, ByVal iMsg As Long, By
 
     If iMsg = WM_SIZE Then
         ISubclass_WindowProc = SSubTUP.CallOldWindowProc(hwnd, iMsg, wParam, lParam)
-        
+
         m_GotSizeMessage = True
 
         ' Window was minimized
@@ -339,22 +389,22 @@ End Function
 
 Private Sub ModifyIEMenu(ByVal hMenu As Long)
 
-    ' These need to be turned off. Stuff like "Java Console" makes no sense.
-    ' Other stuff I just have no time for right now. :-(
-    '
-    ' MENUITEM "&Open...\tCtrl+O", 256, MFT_STRING, MFS_ENABLED
-    ' MENUITEM "E&dit", 41030, MFT_STRING, MFS_ENABLED
-    ' MENUITEM "&Save\tCtrl+S", 257, MFT_STRING, MFS_GRAYED
-    ' MENUITEM "Save &As...", 258, MFT_STRING, MFS_ENABLED
-    ' MENUITEM "Page Set&up...", 259, MFT_STRING, MFS_GRAYED
-    ' MENUITEM "&Print...\tCtrl+P", 260, MFT_STRING, MFS_GRAYED
-    ' MENUITEM "Print Pre&view...", 277, MFT_STRING, MFS_GRAYED
-    ' Popup "S&end", 281, MFT_STRING, MFS_ENABLED, 0
-    ' MENUITEM "&Work Offline", 40998, MFT_STRING, MFS_ENABLED
-    ' Popup "Te&xt Size", 41497, MFT_STRING, MFS_ENABLED, 0
-    ' Popup "Enco&ding", 41502, MFT_STRING, MFS_ENABLED, 0
-    ' MENUITEM "Pri&vacy Report...", 41507, MFT_STRING, MFS_ENABLED
-    ' MENUITEM "&Java Console", 41500, MFT_STRING, MFS_ENABLED
+  ' These need to be turned off. Stuff like "Java Console" makes no sense.
+  ' Other stuff I just have no time for right now. :-(
+
+  ' MENUITEM "&Open...\tCtrl+O", 256, MFT_STRING, MFS_ENABLED
+  ' MENUITEM "E&dit", 41030, MFT_STRING, MFS_ENABLED
+  ' MENUITEM "&Save\tCtrl+S", 257, MFT_STRING, MFS_GRAYED
+  ' MENUITEM "Save &As...", 258, MFT_STRING, MFS_ENABLED
+  ' MENUITEM "Page Set&up...", 259, MFT_STRING, MFS_GRAYED
+  ' MENUITEM "&Print...\tCtrl+P", 260, MFT_STRING, MFS_GRAYED
+  ' MENUITEM "Print Pre&view...", 277, MFT_STRING, MFS_GRAYED
+  ' Popup "S&end", 281, MFT_STRING, MFS_ENABLED, 0
+  ' MENUITEM "&Work Offline", 40998, MFT_STRING, MFS_ENABLED
+  ' Popup "Te&xt Size", 41497, MFT_STRING, MFS_ENABLED, 0
+  ' Popup "Enco&ding", 41502, MFT_STRING, MFS_ENABLED, 0
+  ' MENUITEM "Pri&vacy Report...", 41507, MFT_STRING, MFS_ENABLED
+  ' MENUITEM "&Java Console", 41500, MFT_STRING, MFS_ENABLED
 
     EnableMenuItem hMenu, 256, MF_BYCOMMAND Or MF_GRAYED
     EnableMenuItem hMenu, 41030, MF_BYCOMMAND Or MF_GRAYED
@@ -369,59 +419,68 @@ Private Sub ModifyIEMenu(ByVal hMenu As Long)
     EnableMenuItem hMenu, 41502, MF_BYCOMMAND Or MF_GRAYED
     EnableMenuItem hMenu, 41507, MF_BYCOMMAND Or MF_GRAYED
     EnableMenuItem hMenu, 41500, MF_BYCOMMAND Or MF_GRAYED
-
+    
+    ' Select menu items can be enabled/disabled
+    EnableMenuItem hMenu, IE_MENU_COMMAND_EDIT_CUT, IIf(m_MenuEditCutEnabled, MF_BYCOMMAND Or MF_ENABLED, MF_BYCOMMAND Or MF_GRAYED)
+    EnableMenuItem hMenu, IE_MENU_COMMAND_EDIT_COPY, IIf(m_MenuEditCopyEnabled, MF_BYCOMMAND Or MF_ENABLED, MF_BYCOMMAND Or MF_GRAYED)
+    EnableMenuItem hMenu, IE_MENU_COMMAND_EDIT_PASTE, IIf(m_MenuEditPasteEnabled, MF_BYCOMMAND Or MF_ENABLED, MF_BYCOMMAND Or MF_GRAYED)
+    EnableMenuItem hMenu, IE_MENU_COMMAND_EDIT_STOP, IIf(m_MenuEditStopEnabled, MF_BYCOMMAND Or MF_ENABLED, MF_BYCOMMAND Or MF_GRAYED)
+    EnableMenuItem hMenu, IE_MENU_COMMAND_EDIT_REFRESH, IIf(m_MenuEditRefreshEnabled, MF_BYCOMMAND Or MF_ENABLED, MF_BYCOMMAND Or MF_GRAYED)
 End Sub
 
-Private Function TranslateToIECommand(loWord As Integer) As IECommand
-    Select Case loWord
-        Case IE_MENU_COMMAND_FILE_PROPERTIES
-            TranslateToIECommand = IECommand.CommandFileProperties
-        Case IE_MENU_COMMAND_EDIT_CUT
-            TranslateToIECommand = IECommand.CommandEditCut
-        Case IE_MENU_COMMAND_EDIT_COPY
-            TranslateToIECommand = IECommand.CommandEditCopy
-        Case IE_MENU_COMMAND_EDIT_PASTE
-            TranslateToIECommand = IECommand.CommandEditPaste
-        Case IE_MENU_COMMAND_EDIT_STOP
-            TranslateToIECommand = IECommand.CommandEditStop
-        Case IE_MENU_COMMAND_EDIT_REFRESH
-            TranslateToIECommand = IECommand.CommandEditRefresh
-        Case IE_MENU_COMMAND_EDIT_FIND
-            TranslateToIECommand = IECommand.CommandEditFind
-        Case IE_MENU_COMMAND_VIEW_SOURCE
-            TranslateToIECommand = IECommand.CommandViewSource
-        Case IE_MENU_COMMAND_FAVORITES_ADD
-            TranslateToIECommand = IECommand.CommandFavoritesAdd
-        Case Else
-            TranslateToIECommand = IECommand.CommandNone
-    End Select
-End Function
-
 Private Function TranslateFromIECommand(command As IECommand) As Long
+
     Select Case command
-        Case IECommand.CommandFileProperties
-            TranslateFromIECommand = IE_MENU_COMMAND_FILE_PROPERTIES
-        Case IECommand.CommandEditCut
-            TranslateFromIECommand = IE_MENU_COMMAND_EDIT_CUT
-        Case IECommand.CommandEditCopy
-            TranslateFromIECommand = IE_MENU_COMMAND_EDIT_COPY
-        Case IECommand.CommandEditPaste
-            TranslateFromIECommand = IE_MENU_COMMAND_EDIT_PASTE
-        Case IECommand.CommandEditFind
-            TranslateFromIECommand = IE_MENU_COMMAND_EDIT_STOP
-        Case IECommand.CommandEditStop
-            TranslateFromIECommand = IE_MENU_COMMAND_EDIT_REFRESH
-        Case IECommand.CommandEditRefresh
-            TranslateFromIECommand = IE_MENU_COMMAND_EDIT_FIND
-        Case IECommand.CommandViewSource
-            TranslateFromIECommand = IE_MENU_COMMAND_VIEW_SOURCE
-        Case IECommand.CommandFavoritesAdd
-            TranslateFromIECommand = IE_MENU_COMMAND_FAVORITES_ADD
-        Case Else
-            TranslateFromIECommand = -1
+      Case IECommand.CommandFileProperties
+        TranslateFromIECommand = IE_MENU_COMMAND_FILE_PROPERTIES
+      Case IECommand.CommandEditCut
+        TranslateFromIECommand = IE_MENU_COMMAND_EDIT_CUT
+      Case IECommand.CommandEditCopy
+        TranslateFromIECommand = IE_MENU_COMMAND_EDIT_COPY
+      Case IECommand.CommandEditPaste
+        TranslateFromIECommand = IE_MENU_COMMAND_EDIT_PASTE
+      Case IECommand.CommandEditFind
+        TranslateFromIECommand = IE_MENU_COMMAND_EDIT_STOP
+      Case IECommand.CommandEditStop
+        TranslateFromIECommand = IE_MENU_COMMAND_EDIT_REFRESH
+      Case IECommand.CommandEditRefresh
+        TranslateFromIECommand = IE_MENU_COMMAND_EDIT_FIND
+      Case IECommand.CommandViewSource
+        TranslateFromIECommand = IE_MENU_COMMAND_VIEW_SOURCE
+      Case IECommand.CommandFavoritesAdd
+        TranslateFromIECommand = IE_MENU_COMMAND_FAVORITES_ADD
+      Case Else
+        TranslateFromIECommand = -1
     End Select
+
 End Function
 
+Private Function TranslateToIECommand(LoWord As Integer) As IECommand
 
-':) Ulli's VB Code Formatter V2.24.17 (2022-Nov-03 00:39)  Decl: 14  Code: 238  Total: 252 Lines
-':) CommentOnly: 15 (6%)  Commented: 0 (0%)  Filled: 176 (69,8%)  Empty: 76 (30,2%)  Max Logic Depth: 3
+    Select Case LoWord
+      Case IE_MENU_COMMAND_FILE_PROPERTIES
+        TranslateToIECommand = IECommand.CommandFileProperties
+      Case IE_MENU_COMMAND_EDIT_CUT
+        TranslateToIECommand = IECommand.CommandEditCut
+      Case IE_MENU_COMMAND_EDIT_COPY
+        TranslateToIECommand = IECommand.CommandEditCopy
+      Case IE_MENU_COMMAND_EDIT_PASTE
+        TranslateToIECommand = IECommand.CommandEditPaste
+      Case IE_MENU_COMMAND_EDIT_STOP
+        TranslateToIECommand = IECommand.CommandEditStop
+      Case IE_MENU_COMMAND_EDIT_REFRESH
+        TranslateToIECommand = IECommand.CommandEditRefresh
+      Case IE_MENU_COMMAND_EDIT_FIND
+        TranslateToIECommand = IECommand.CommandEditFind
+      Case IE_MENU_COMMAND_VIEW_SOURCE
+        TranslateToIECommand = IECommand.CommandViewSource
+      Case IE_MENU_COMMAND_FAVORITES_ADD
+        TranslateToIECommand = IECommand.CommandFavoritesAdd
+      Case Else
+        TranslateToIECommand = IECommand.CommandNone
+    End Select
+
+End Function
+
+':) Ulli's VB Code Formatter V2.24.17 (2022-Nov-06 08:05)  Decl: 43  Code: 379  Total: 422 Lines
+':) CommentOnly: 42 (10%)  Commented: 5 (1.2%)  Filled: 321 (76.1%)  Empty: 101 (23.9%)  Max Logic Depth: 4

@@ -1,5 +1,5 @@
 ﻿
-namespace yomigaeri_backend
+namespace yomigaeri_backend.UI
 {
 	partial class BrowserForm
 	{

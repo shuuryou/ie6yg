@@ -71,7 +71,7 @@ Public Sub Construct(hWndIEFrame As Long)
 
     AttachMessage Me, m_hWndButtonToolbar, TB_ENABLEBUTTON
     AttachMessage Me, m_hWndButtonToolbar, TB_ENABLEBUTTON + TB_IE6YG_SHIFT
-    
+
     AttachMessage Me, m_hWndReBarWindow32, WM_COMMAND
     AttachMessage Me, m_hWndReBarWindow32, WM_NOTIFY
 
@@ -85,7 +85,7 @@ Public Sub Destroy()
 
     DetachMessage Me, m_hWndButtonToolbar, TB_ENABLEBUTTON
     DetachMessage Me, m_hWndButtonToolbar, TB_ENABLEBUTTON + TB_IE6YG_SHIFT
-    
+
     DetachMessage Me, m_hWndReBarWindow32, WM_COMMAND
     DetachMessage Me, m_hWndReBarWindow32, WM_NOTIFY
 
@@ -147,14 +147,14 @@ Private Sub FindToolbar()
 
     If hWndTemp = 0 Then
         modLogging.WriteLineToLog "IEToolbar: WorkerA not found."
-        
+
         hWndTemp = FindWindowEx(m_hWndIEFrame, 0&, "WorkerW", vbNullString)
-    
+
         If hWndTemp = 0 Then
             modLogging.WriteLineToLog "IEToolbar: WorkerW also not found."
             m_hWndButtonToolbar = -1
             Exit Sub
-        Else
+          Else
             modLogging.WriteLineToLog "IEToolbar: WorkerW found instead."
         End If
     End If
@@ -239,7 +239,9 @@ NextToolbar:
 
                 End Select
             Next j
-
+            
+            modLogging.WriteLineToLog "IEToolbar: Success!"
+            
             Exit Sub
         End If
     Next i
@@ -268,24 +270,23 @@ End Property
 
 Private Property Let ISubclass_MsgResponse(ByVal RHS As SSubTUP.EMsgResponse)
 
-    ' Unused
+  ' Unused
 
 End Property
 
 Private Function ISubclass_WindowProc(ByVal hwnd As Long, ByVal iMsg As Long, ByVal wParam As Long, ByVal lParam As Long) As Long
+
   Dim command As ToolbarCommand
-  
-    modLogging.WriteLineToLog "imsg:" & iMsg
-  
+
     If hwnd = m_hWndButtonToolbar Then
         If iMsg = TB_ENABLEBUTTON Then
             Exit Function
         End If
-        
+
         If iMsg = TB_ENABLEBUTTON + TB_IE6YG_SHIFT Then
             iMsg = iMsg - TB_IE6YG_SHIFT
         End If
-        
+
         ISubclass_WindowProc = CallOldWindowProc(hwnd, iMsg, wParam, lParam)
         Exit Function
     End If
@@ -296,31 +297,31 @@ Private Function ISubclass_WindowProc(ByVal hwnd As Long, ByVal iMsg As Long, By
 
             If command <> CommandUnknown Then
                 RaiseEvent ToolbarButtonPressed(command)
-            Else
+              Else
                 ISubclass_WindowProc = CallOldWindowProc(hwnd, iMsg, wParam, lParam)
             End If
 
             Exit Function
         End If
-        
+
         If iMsg = WM_NOTIFY Then
             ' User clicked the little dropdown button on the back or forward
             ' button. Luckily forwarding this as an event, so the frontend
             ' can call the VB6 PopupMenu function, works perfectly. No extra
             ' effort needed (other than having to implement synced history
             ' menus *sigh*).
-            
-            Dim nmTB As NMTOOLBAR_SHORT
+
+  Dim nmTB As NMTOOLBAR_SHORT
             CopyMemory nmTB, ByVal lParam, Len(nmTB)
-            
+
             If nmTB.hdr.code = TBN_DROPDOWN Then
                 modLogging.WriteLineToLog CStr(nmTB.iItem)
-                
+
                 If nmTB.iItem = m_ToolbarIdCommandBACK Then
                     RaiseEvent ToolbarMenuRequested(ToolbarCommand.CommandBack)
                     Exit Function
                 End If
-                
+
                 If nmTB.iItem = m_ToolbarIdCommandFORWARD Then
                     RaiseEvent ToolbarMenuRequested(ToolbarCommand.CommandForward)
                     Exit Function
@@ -345,7 +346,7 @@ Public Sub SetToolbarCommandState(command As ToolbarCommand, enable As Boolean)
         Exit Sub
     End If
 
-    SendMessage m_hWndButtonToolbar, TB_ENABLEBUTTON + TB_IE6YG_SHIFT, ByVal commandId, ByVal loWord(IIf(enable, 1, 0))
+    SendMessage m_hWndButtonToolbar, TB_ENABLEBUTTON + TB_IE6YG_SHIFT, ByVal commandId, ByVal LoWord(IIf(enable, 1, 0))
     modLogging.WriteLineToLog "SetToolbarCommandState: Command ID " & commandId & " new state: " & enable
 
 End Sub
@@ -386,5 +387,5 @@ Private Function ToolbarCommandIdToEnum(idCommand As Long) As ToolbarCommand
 
 End Function
 
-':) Ulli's VB Code Formatter V2.24.17 (2022-Nov-03 00:39)  Decl: 51  Code: 298  Total: 349 Lines
-':) CommentOnly: 24 (6,9%)  Commented: 3 (0,9%)  Filled: 259 (74,2%)  Empty: 90 (25,8%)  Max Logic Depth: 5
+':) Ulli's VB Code Formatter V2.24.17 (2022-Nov-06 08:04)  Decl: 45  Code: 331  Total: 376 Lines
+':) CommentOnly: 29 (7.7%)  Commented: 3 (0.8%)  Filled: 277 (73.7%)  Empty: 99 (26.3%)  Max Logic Depth: 5

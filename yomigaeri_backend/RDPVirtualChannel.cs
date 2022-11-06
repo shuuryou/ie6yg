@@ -53,6 +53,9 @@ namespace yomigaeri_backend
 		#endregion
 
 		private static IntPtr s_hChannel;
+
+		private static readonly object s_LockObj = new object();
+
 		static RDPVirtualChannel()
 		{
 			s_hChannel = IntPtr.Zero;
@@ -128,8 +131,14 @@ namespace yomigaeri_backend
 
 			byte[] buffer = new byte[CHANNEL_CHUNK_LENGTH];
 
-			bool ok = WTSVirtualChannelRead(s_hChannel, noDelay ? 0U : 1000U,
-				buffer, CHANNEL_CHUNK_LENGTH, out uint bytesRead);
+			uint bytesRead;
+			bool ok;
+
+			lock (s_LockObj)
+			{
+				ok = WTSVirtualChannelRead(s_hChannel, noDelay ? 0U : 1000U,
+					buffer, CHANNEL_CHUNK_LENGTH, out bytesRead);
+			}
 
 			if (!ok)
 				throw new Win32Exception();
@@ -158,8 +167,14 @@ namespace yomigaeri_backend
 				throw new InvalidOperationException("RDP virtual channel is closed.");
 
 			byte[] buf = Encoding.Unicode.GetBytes(message);
+
+			bool ok;
 			uint written = 0;
-			bool ok = WTSVirtualChannelWrite(s_hChannel, buf, (uint)buf.Length, ref written);
+
+			lock (s_LockObj)
+			{
+				ok = WTSVirtualChannelWrite(s_hChannel, buf, (uint)buf.Length, ref written);
+			}
 
 			if (!ok)
 				throw new Win32Exception();

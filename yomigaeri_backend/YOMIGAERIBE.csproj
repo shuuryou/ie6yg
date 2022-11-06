@@ -120,10 +120,10 @@
     <Compile Include="ControlExtensions.cs" />
     <Compile Include="FrontendStyling.cs" />
     <Compile Include="AdBlock.cs" />
-    <Compile Include="BrowserForm.cs">
+    <Compile Include="UI\BrowserForm.cs">
       <SubType>Form</SubType>
     </Compile>
-    <Compile Include="BrowserForm.Designer.cs">
+    <Compile Include="UI\BrowserForm.Designer.cs">
       <DependentUpon>BrowserForm.cs</DependentUpon>
     </Compile>
     <Compile Include="FuckINI.cs" />
@@ -135,6 +135,12 @@
       <AutoGen>True</AutoGen>
       <DesignTime>True</DesignTime>
       <DependentUpon>Strings.resx</DependentUpon>
+    </Compile>
+    <Compile Include="UI\BrowserForm.Synchronizer.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="UI\BrowserForm.DisplayHandler.cs">
+      <SubType>Form</SubType>
     </Compile>
     <None Include="app.config" />
     <None Include="backend.ini">
@@ -164,7 +170,7 @@
     </Content>
   </ItemGroup>
   <ItemGroup>
-    <EmbeddedResource Include="BrowserForm.resx">
+    <EmbeddedResource Include="UI\BrowserForm.resx">
       <DependentUpon>BrowserForm.cs</DependentUpon>
     </EmbeddedResource>
     <EmbeddedResource Include="Resources\Strings.resx">

@@ -25,5 +25,5 @@ eh:
 
 End Sub
 
-':) Ulli's VB Code Formatter V2.24.17 (2022-Nov-03 00:39)  Decl: 3  Code: 25  Total: 28 Lines
-':) CommentOnly: 2 (7,1%)  Commented: 0 (0%)  Filled: 17 (60,7%)  Empty: 11 (39,3%)  Max Logic Depth: 2
+':) Ulli's VB Code Formatter V2.24.17 (2022-Nov-06 08:05)  Decl: 3  Code: 25  Total: 28 Lines
+':) CommentOnly: 2 (7.1%)  Commented: 0 (0%)  Filled: 17 (60.7%)  Empty: 11 (39.3%)  Max Logic Depth: 2

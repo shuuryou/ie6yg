@@ -71,6 +71,12 @@ Private m_StateSSLIcon As SSLIconState
 
 Private m_IsStatusBarCurrentlySimple As Boolean
 
+Public Property Get ConnectionIcon() As ConnectionIconState
+
+    ConnectionIcon = m_StateConnectionIcon
+
+End Property
+
 Public Property Let ConnectionIcon(newState As ConnectionIconState)
 
   Dim lngIcon As Long
@@ -88,12 +94,6 @@ Public Property Let ConnectionIcon(newState As ConnectionIconState)
     End If
 
     SendMessage m_hWndStatusBar, SB_SETICON + SB_IE6YG_SHIFT, STATUS_PANE_CONNECTION, ByVal lngIcon
-
-End Property
-
-Public Property Get ConnectionIcon() As ConnectionIconState
-
-    ConnectionIcon = m_StateConnectionIcon
 
 End Property
 
@@ -213,7 +213,8 @@ Private Sub FindStatusBar()
     m_hWndProgressBar = hWndTemp
 
     modLogging.WriteLineToLog "IEStatusBar: Found msctls_statusbar32: " & Hex$(m_hWndStatusBar) & " and msctls_progress32: " & Hex$(m_hWndProgressBar)
-
+    modLogging.WriteLineToLog "IEStatusBar: Success!"
+    
 End Sub
 
 Public Sub FixStatusBar()
@@ -331,7 +332,7 @@ Private Property Let ISubclass_MsgResponse(ByVal RHS As SSubTUP.EMsgResponse)
 
   ' Unused
 
-End Property ':( No executable Code
+End Property
 
 Private Function ISubclass_WindowProc(ByVal hwnd As Long, ByVal iMsg As Long, ByVal wParam As Long, ByVal lParam As Long) As Long
 
@@ -346,12 +347,12 @@ Private Function ISubclass_WindowProc(ByVal hwnd As Long, ByVal iMsg As Long, By
     End If
 
     If (iMsg = SB_SETTEXTA Or iMsg = SB_SETTEXTW Or iMsg = SB_SETPARTS _
-       Or iMsg = SB_SETMINHEIGHT Or iMsg = SB_SETICON) Then
-       
+        Or iMsg = SB_SETMINHEIGHT Or iMsg = SB_SETICON) Then
+
         If m_IsStatusBarCurrentlySimple Then
             ISubclass_WindowProc = CallOldWindowProc(hwnd, iMsg, wParam, lParam)
         End If
-       
+
         Exit Function
     End If
 
@@ -476,5 +477,5 @@ Private Function ZoneComputePaneSize() As Long
 
 End Function
 
-':) Ulli's VB Code Formatter V2.24.17 (2022-Nov-03 00:39)  Decl: 55  Code: 399  Total: 454 Lines
-':) CommentOnly: 15 (3,3%)  Commented: 8 (1,8%)  Filled: 308 (67,8%)  Empty: 146 (32,2%)  Max Logic Depth: 3
+':) Ulli's VB Code Formatter V2.24.17 (2022-Nov-06 08:04)  Decl: 57  Code: 408  Total: 465 Lines
+':) CommentOnly: 13 (2.8%)  Commented: 8 (1.7%)  Filled: 317 (68.2%)  Empty: 148 (31.8%)  Max Logic Depth: 3
