@@ -8,6 +8,12 @@ Begin VB.UserControl ctlFrontend
    ClientWidth     =   3975
    ScaleHeight     =   2955
    ScaleWidth      =   3975
+   Begin VB.Timer tmrResize 
+      Enabled         =   0   'False
+      Interval        =   500
+      Left            =   3480
+      Top             =   2400
+   End
    Begin MSTSCLibCtl.MsRdpClient2 rdpClient 
       Height          =   2655
       Left            =   0
@@ -101,7 +107,6 @@ Private m_IEStatusBar As IEStatusBar
 Private WithEvents m_IEToolbar As IEToolbar
 Attribute m_IEToolbar.VB_VarHelpID = -1
 
-Private m_DoInitialConnect As Boolean
 Private m_HideRDP As Boolean
 
 Private Sub m_IEBrowser_NavigationIntercepted(destinationURL As String)
@@ -143,27 +148,7 @@ End Sub
 
 Private Sub m_IEFrame_WindowResized()
 
-  Dim bWasConnected As Boolean
-
-    m_HideRDP = True
-    PositionRDPClient
-
-    bWasConnected = (rdpClient.Connected = 1)
-
-    If bWasConnected Then
-        rdpClient.Disconnect
-
-        Do Until rdpClient.Connected = False
-            DoEvents
-        Loop
-    End If
-
-    If bWasConnected Then
-        m_IEStatusBar.ConnectionIcon = ConnectionIconState.Connecting
-        m_IEStatusBar.Text = LoadResString(104)  ' Reconnecting to rendering engine...
-        Sleep 1000 ' XXX Fix this
-        rdpClient.Connect
-    End If
+    SendResize
 
 End Sub
 
@@ -220,8 +205,8 @@ Private Sub PositionRDPClient()
     rdpClient.Move _
                    IIf(m_HideRDP, -3000 * Screen.TwipsPerPixelX, 0), _
                    IIf(m_HideRDP, -3000 * Screen.TwipsPerPixelY, 0), _
-                   UserControl.Width, _
-                   UserControl.Height
+                   rdpClient.Width, _
+                   rdpClient.Height
 
     DoEvents
 
@@ -423,6 +408,18 @@ Private Sub rdpClient_OnDisconnected(ByVal discReason As Long)
 
 End Sub
 
+Private Sub SendResize()
+
+    If rdpClient.Connected <> 1 Then
+        Exit Sub
+    End If
+
+    rdpClient.SendOnVirtualChannel VIRTUAL_CHANNEL_NAME, "WINSIZE" & _
+                                   (UserControl.Width / Screen.TwipsPerPixelX) & "," & _
+                                   (UserControl.Height / Screen.TwipsPerPixelY)
+
+End Sub
+
 Private Sub SetHistoryMenu(back As Boolean, backend_data As String)
 
   Dim items() As String
@@ -477,6 +474,14 @@ Private Sub SetHistoryMenu(back As Boolean, backend_data As String)
 
 End Sub
 
+Private Sub tmrResize_Timer()
+
+    tmrResize.enabled = False
+
+    SendResize
+
+End Sub
+
 Private Sub UserControl_EnterFocus()
 
     rdpClient.SetFocus
@@ -484,6 +489,14 @@ Private Sub UserControl_EnterFocus()
 End Sub
 
 Private Sub UserControl_Initialize()
+
+  Dim lngWidth As Long, lngHeight As Long
+
+    lngWidth = GetSystemMetrics(SM_CXSCREEN) * Screen.TwipsPerPixelX
+    lngHeight = GetSystemMetrics(SM_CYSCREEN) * Screen.TwipsPerPixelY
+
+    rdpClient.Width = lngWidth
+    rdpClient.Height = lngHeight
 
     m_HideRDP = True
     PositionRDPClient
@@ -525,9 +538,7 @@ Private Sub UserControl_ReadProperties(PropBag As PropertyBag)
     rdpClient.AdvancedSettings3.ClearTextPassword = CStr(PropBag.ReadProperty("RDP_Password", vbNullString))
     rdpClient.SecuredSettings2.StartProgram = CStr(PropBag.ReadProperty("RDP_Backend", vbNullString))
 
-    If rdpClient.Server <> "" And rdpClient.UserName <> "" And CStr(PropBag.ReadProperty("RDP_Password", vbNullString)) <> "" And rdpClient.SecuredSettings2.StartProgram <> "" Then
-        m_DoInitialConnect = True
-      Else
+    If rdpClient.Server = "" Or rdpClient.UserName = "" Or CStr(PropBag.ReadProperty("RDP_Password", vbNullString)) = "" Or rdpClient.SecuredSettings2.StartProgram = "" Then
         Err.Raise -1, "YOMIGAERI", LoadResString(103) ' The parameters for the frontend are incorrect.
     End If
 
@@ -535,16 +546,11 @@ End Sub
 
 Private Sub UserControl_Resize()
 
-    If m_DoInitialConnect Then
-        m_DoInitialConnect = False
-
-        ' This way it triggers just once when Trident has put the ActiveX
-        ' control in its final place (filling up the document view).
-
-        PositionRDPClient
-        m_IEStatusBar.Text = LoadResString(101)  ' Connecting to rendering engine....
-        rdpClient.Connect
+    If rdpClient.Connected <> 1 Then
+        Exit Sub
     End If
+
+    tmrResize.enabled = True
 
 End Sub
 
@@ -553,9 +559,7 @@ Private Sub UserControl_Show()
   ' Will be fired when the control is actually shown on the website.
   ' UserControl_Initialize still has the control floating in space.
 
-    PositionRDPClient
-
-    m_IEFrame.Construct UserControl.hWnd
+    m_IEFrame.Construct UserControl.hwnd
     m_IEAddressBar.Construct m_IEFrame.hWndIEFrame
     m_IEBrowser.Construct m_IEFrame.hWndInternetExplorerServer
     m_IEStatusBar.Construct m_IEFrame.hWndIEFrame
@@ -573,6 +577,9 @@ Private Sub UserControl_Show()
     m_IEStatusBar.ConnectionIcon = ConnectionIconState.None
     m_IEStatusBar.SSLIcon = SSLIconState.None
 
+    m_IEStatusBar.Text = LoadResString(101)  ' Connecting to rendering engine....
+    rdpClient.Connect
+
 End Sub
 
 Private Sub UserControl_Terminate()
@@ -589,5 +596,5 @@ Private Sub UserControl_Terminate()
 
 End Sub
 
-':) Ulli's VB Code Formatter V2.24.17 (2022-Nov-11 04:01)  Decl: 12  Code: 488  Total: 500 Lines
-':) CommentOnly: 59 (11.8%)  Commented: 10 (2%)  Filled: 396 (79.2%)  Empty: 104 (20.8%)  Max Logic Depth: 3
+':) Ulli's VB Code Formatter V2.24.17 (2022-Nov-11 06:25)  Decl: 11  Code: 490  Total: 501 Lines
+':) CommentOnly: 56 (11.2%)  Commented: 8 (1.6%)  Filled: 394 (78.6%)  Empty: 107 (21.4%)  Max Logic Depth: 3

@@ -347,27 +347,27 @@ Private Function ISubclass_WindowProc(ByVal hwnd As Long, ByVal iMsg As Long, By
 
 End Function
 
-Public Property Let MenuEditCopyEnabled(enabled As Boolean)
-
-    m_MenuEditCopyEnabled = enabled
-
-End Property
-
 Public Property Get MenuEditCopyEnabled() As Boolean
 
     MenuEditCopyEnabled = m_MenuEditCopyEnabled
 
 End Property
 
-Public Property Let MenuEditCutEnabled(enabled As Boolean)
+Public Property Let MenuEditCopyEnabled(enabled As Boolean)
 
-    m_MenuEditCutEnabled = enabled
+    m_MenuEditCopyEnabled = enabled
 
 End Property
 
 Public Property Get MenuEditCutEnabled() As Boolean
 
     MenuEditCutEnabled = m_MenuEditCutEnabled
+
+End Property
+
+Public Property Let MenuEditCutEnabled(enabled As Boolean)
+
+    m_MenuEditCutEnabled = enabled
 
 End Property
 
@@ -503,5 +503,5 @@ Private Function TranslateToIECommand(LoWord As Integer) As IECommand
 
 End Function
 
-':) Ulli's VB Code Formatter V2.24.17 (2022-Nov-11 04:01)  Decl: 47  Code: 447  Total: 494 Lines
-':) CommentOnly: 43 (8.7%)  Commented: 5 (1%)  Filled: 371 (75.1%)  Empty: 123 (24.9%)  Max Logic Depth: 4
+':) Ulli's VB Code Formatter V2.24.17 (2022-Nov-11 06:25)  Decl: 47  Code: 447  Total: 494 Lines
+':) CommentOnly: 43 (8.7%)  Commented: 5 (1%)  Filled: 360 (72.9%)  Empty: 134 (27.1%)  Max Logic Depth: 4
