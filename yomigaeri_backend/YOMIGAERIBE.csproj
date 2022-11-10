@@ -136,10 +136,22 @@
       <DesignTime>True</DesignTime>
       <DependentUpon>Strings.resx</DependentUpon>
     </Compile>
+    <Compile Include="UI\BrowserForm.TravelLog.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="UI\BrowserForm.RequestHandler.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="UI\BrowserForm.MessageProcessing.cs">
+      <SubType>Form</SubType>
+    </Compile>
     <Compile Include="UI\BrowserForm.Synchronizer.cs">
       <SubType>Form</SubType>
     </Compile>
     <Compile Include="UI\BrowserForm.DisplayHandler.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="UI\BrowserForm.WebBrowserEvents.cs">
       <SubType>Form</SubType>
     </Compile>
     <None Include="app.config" />

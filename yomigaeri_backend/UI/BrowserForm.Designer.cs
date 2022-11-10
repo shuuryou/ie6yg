@@ -38,8 +38,8 @@ namespace yomigaeri_backend.UI
 			this.Name = "BrowserForm";
 			this.ShowIcon = false;
 			this.ShowInTaskbar = false;
+			this.StartPosition = System.Windows.Forms.FormStartPosition.Manual;
 			this.Text = "IE6YG Browser Window";
-			this.WindowState = System.Windows.Forms.FormWindowState.Maximized;
 			this.Shown += new System.EventHandler(this.BrowserForm_Shown);
 			this.ResizeBegin += new System.EventHandler(this.BrowserForm_ResizeBegin);
 			this.ResizeEnd += new System.EventHandler(this.BrowserForm_ResizeEnd);

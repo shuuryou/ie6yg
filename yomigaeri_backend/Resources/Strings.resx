@@ -143,4 +143,7 @@
   <data name="E_InitErrorTitle" xml:space="preserve">
     <value>Initialization Error</value>
   </data>
+  <data name="StatusConnecting" xml:space="preserve">
+    <value>Connecting to "{0}"...</value>
+  </data>
 </root>

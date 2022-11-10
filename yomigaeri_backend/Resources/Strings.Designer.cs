@@ -127,5 +127,14 @@ namespace yomigaeri_backend.Resources {
                 return ResourceManager.GetString("E_InitErrorTitle", resourceCulture);
             }
         }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Connecting to &quot;{0}&quot;....
+        /// </summary>
+        internal static string StatusConnecting {
+            get {
+                return ResourceManager.GetString("StatusConnecting", resourceCulture);
+            }
+        }
     }
 }

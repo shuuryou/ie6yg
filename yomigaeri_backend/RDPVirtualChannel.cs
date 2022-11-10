@@ -63,8 +63,6 @@ namespace yomigaeri_backend
 
 		public static void OpenChannel()
 		{
-			Logging.WriteLineToLog("RDPVirtualChannel OPEN: ENTRY");
-
 			if (s_hChannel != IntPtr.Zero)
 				return;
 
@@ -78,13 +76,11 @@ namespace yomigaeri_backend
 
 			s_hChannel = hChannel;
 
-			Logging.WriteLineToLog("RDPVirtualChannel OPEN: s_hChannel becomes 0x{0:x}", s_hChannel);
+			Logging.WriteLineToLog("RDPVirtualChannel handle is 0x{0:x}", s_hChannel);
 		}
 
 		public static void CloseChannel()
 		{
-			Logging.WriteLineToLog("RDPVirtualChannel CLOSE: ENTRY");
-
 			if (s_hChannel == IntPtr.Zero)
 				return;
 
@@ -92,8 +88,6 @@ namespace yomigaeri_backend
 
 			if (!ok)
 				throw new Win32Exception();
-
-			Logging.WriteLineToLog("RDPVirtualChannel CLOSE: END");
 		}
 
 		public static void Reset()
@@ -124,8 +118,6 @@ namespace yomigaeri_backend
 
 		public static string ReadChannel(bool noDelay = false)
 		{
-			Logging.WriteLineToLog("RDPVirtualChannel READ: ENTRY");
-
 			if (s_hChannel == IntPtr.Zero)
 				throw new InvalidOperationException("RDP virtual channel is closed.");
 
@@ -156,13 +148,13 @@ namespace yomigaeri_backend
 			ret = Encoding.Unicode.GetString(buffer, 0, (int)bytesRead);
 
 		done:
-			Logging.WriteLineToLog("RDPVirtualChannel READ: \"{0}\"", ret);
+			if (!string.IsNullOrEmpty(ret))
+				Logging.WriteLineToLog("RDPVirtualChannel read: \"{0}\"", ret);
+
 			return ret;
 		}
 		public static void WriteChannel(string message)
 		{
-			Logging.WriteLineToLog("RDPVirtualChannel WRITE: ENTRY");
-
 			if (s_hChannel == IntPtr.Zero)
 				throw new InvalidOperationException("RDP virtual channel is closed.");
 
@@ -183,7 +175,7 @@ namespace yomigaeri_backend
 				throw new IOException(string.Format(CultureInfo.InvariantCulture,
 					"Operation failed. Should write {0:n0} bytes, but wrote {1:n0} bytes.", buf.Length, written));
 
-			Logging.WriteLineToLog("RDPVirtualChannel WRITE: \"{0}\"", message);
+			Logging.WriteLineToLog("RDPVirtualChannel wrote: \"{0}\"", message);
 		}
 	}
 }

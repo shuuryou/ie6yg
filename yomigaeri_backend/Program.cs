@@ -77,127 +77,128 @@ namespace yomigaeri_backend
 			#endregion
 
 			#region Initialize RDP Virtual Channel
-						Logging.WriteLineToLog("This is a Terminal Server session? {0}", SystemInformation.TerminalServerSession);
+			{
+				Logging.WriteLineToLog("This is a Terminal Server session? {0}", SystemInformation.TerminalServerSession);
 
-						if (!SystemInformation.TerminalServerSession)
-						{
-							MessageBox.Show(Resources.Strings.E_InitErrorNotTerminalSession,
-								Resources.Strings.E_InitErrorTitle, MessageBoxButtons.OK,
-								MessageBoxIcon.None);
+				if (!SystemInformation.TerminalServerSession)
+				{
+					MessageBox.Show(Resources.Strings.E_InitErrorNotTerminalSession,
+						Resources.Strings.E_InitErrorTitle, MessageBoxButtons.OK,
+						MessageBoxIcon.None);
 
-							return 1;
-						}
+					return 1;
+				}
 
-						Logging.WriteLineToLog("Opening RDP virtual channel to frontend.");
+				Logging.WriteLineToLog("Opening RDP virtual channel to frontend.");
 
-						try
-						{
-							RDPVirtualChannel.OpenChannel();
-						}
-						catch (Win32Exception e)
-						{
-							string err = string.Format(CultureInfo.CurrentUICulture,
-								Resources.Strings.E_InitErrorCouldNotOpenRDPVC,
-								 e.Message);
+				try
+				{
+					RDPVirtualChannel.OpenChannel();
+				}
+				catch (Win32Exception e)
+				{
+					string err = string.Format(CultureInfo.CurrentUICulture,
+						Resources.Strings.E_InitErrorCouldNotOpenRDPVC,
+						 e.Message);
 
-							Logging.WriteLineToLog("Error opening virtual channel: {0}", e);
+					Logging.WriteLineToLog("Error opening virtual channel: {0}", e);
 
-							MessageBox.Show(err, Resources.Strings.E_InitErrorTitle,
-								MessageBoxButtons.OK, MessageBoxIcon.Error);
+					MessageBox.Show(err, Resources.Strings.E_InitErrorTitle,
+						MessageBoxButtons.OK, MessageBoxIcon.Error);
 #if !DEBUG
 							return 1;
 #endif
-						}
-
+				}
+			}
 			#endregion
 
 			#region Request and Apply Styling from Frontend
 			{
 				Logging.WriteLineToLog("Request styling from frontend.");
 
-							RDPVirtualChannel.WriteChannel("STYLING");
+				RDPVirtualChannel.WriteChannel("STYLING");
 
-							string response = null;
+				string response = null;
 
-							try
-							{
-								response = RDPVirtualChannel.ReadChannelUntilResponse();
-							}
-							catch (TimeoutException)
-							{
-								Logging.WriteLineToLog("Time out getting styling from frontend.");
-							}
+				try
+				{
+					response = RDPVirtualChannel.ReadChannelUntilResponse();
+				}
+				catch (TimeoutException)
+				{
+					Logging.WriteLineToLog("Time out getting styling from frontend.");
+				}
 
-							if (response == null)
-								goto skipStyling;
+				if (string.IsNullOrEmpty(response))
+					goto skipStyling;
 
-							Logging.WriteLineToLog("Frontend styling response is: \"{0}\".", response);
+				Logging.WriteLineToLog("Frontend styling response is: \"{0}\".", response);
 
-							if (response == "ERROR" || response == "UNSUPPORTED")
-								goto skipStyling;
+				if (response == "ERROR" || response == "UNSUPPORTED")
+					goto skipStyling;
 
-							Logging.WriteLineToLog("Apply frontend styling to this session.");
+				Logging.WriteLineToLog("Apply frontend styling to this session.");
 
-							try
-							{
-								FrontendStyling.ApplyStyling(response);
-							}
-							catch (Exception e)
-							{
-								Logging.WriteLineToLog("Error applying styling: {0}", e);
-							}
+				try
+				{
+					FrontendStyling.ApplyStyling(response);
+				}
+				catch (Exception e)
+				{
+					Logging.WriteLineToLog("Error applying styling: {0}", e);
+				}
 
 
-						skipStyling:
-							;
-						}
+			skipStyling:
+				;
+			}
 			#endregion
 
 			#region Request and Apply Cursors from Frontend
-						{
-							Logging.WriteLineToLog("Request cursors from frontend.");
+			{
+				Logging.WriteLineToLog("Request cursors from frontend.");
 
-							RDPVirtualChannel.WriteChannel("CURSORS");
+				RDPVirtualChannel.WriteChannel("CURSORS");
 
-							string response = null;
+				string response = null;
 
-							try
-							{
-								response = RDPVirtualChannel.ReadChannelUntilResponse();
-							}
-							catch (TimeoutException)
-							{
-								Logging.WriteLineToLog("Time out getting curors from frontend.");
-							}
+				try
+				{
+					response = RDPVirtualChannel.ReadChannelUntilResponse();
+				}
+				catch (TimeoutException)
+				{
+					Logging.WriteLineToLog("Time out getting curors from frontend.");
+				}
 
-							if (response == null)
-								goto skipStyling;
+				if (string.IsNullOrEmpty(response))
+					goto skipStyling;
 
-							Logging.WriteLineToLog("Frontend curors response is: \"{0}\".", response);
+				Logging.WriteLineToLog("Frontend curors response is: \"{0}\".", response);
 
-							if (response == "ERROR" || response == "UNSUPPORTED")
-								goto skipStyling;
+				if (response == "ERROR" || response == "UNSUPPORTED")
+					goto skipStyling;
 
-							Logging.WriteLineToLog("Apply frontend curors to this session.");
+				Logging.WriteLineToLog("Apply frontend curors to this session.");
 
-							try
-							{
-								FrontendStyling.ApplyCursors(response);
-							}
-							catch (Exception e)
-							{
-								Logging.WriteLineToLog("Error applying curors: {0}", e);
-							}
+				try
+				{
+					FrontendStyling.ApplyCursors(response);
+				}
+				catch (Exception e)
+				{
+					Logging.WriteLineToLog("Error applying curors: {0}", e);
+				}
 
 
-						skipStyling:
-							;
-						}
+			skipStyling:
+				;
+			}
 			#endregion
 
 			string frontendLanguageList = string.Empty;
 
-			#region Request and Accept-Language List from Frontend
+			#region Request Accept-Language List from Frontend
 			{
 				Logging.WriteLineToLog("Request browser language list from frontend.");
 
@@ -214,7 +215,7 @@ namespace yomigaeri_backend
 					Logging.WriteLineToLog("Time out getting browser language list from frontend.");
 				}
 
-				if (response == null)
+				if (string.IsNullOrEmpty(response))
 					goto skipLanguageList;
 
 				Logging.WriteLineToLog("Frontend browser language list response is: \"{0}\".", response);
@@ -227,6 +228,49 @@ namespace yomigaeri_backend
 				frontendLanguageList = response;
 
 			skipLanguageList:
+				;
+			}
+			#endregion
+
+			int initial_width = 250, initial_height = 25;
+
+			#region Request Initial Window Size from Frontend
+			{
+				RDPVirtualChannel.WriteChannel("INITSIZ");
+
+				string response = null;
+
+				try
+				{
+					response = RDPVirtualChannel.ReadChannelUntilResponse();
+				}
+				catch (TimeoutException)
+				{
+					Logging.WriteLineToLog("Time out getting initial window size from frontend.");
+				}
+
+				if (string.IsNullOrEmpty(response))
+					goto skipWinSize;
+
+				Logging.WriteLineToLog("Frontend initial window size response is: \"{0}\".", response);
+
+				int idx = response.IndexOf(',');
+
+				if (idx == -1 || idx + 1 > response.Length)
+				{
+					Logging.WriteLineToLog("Window size response is incorrect.");
+					goto skipWinSize;
+				}
+
+				if (!int.TryParse(response.Substring(0, idx), NumberStyles.None, CultureInfo.InvariantCulture, out initial_width) ||
+					!int.TryParse(response.Substring(idx + 1), NumberStyles.None, CultureInfo.InvariantCulture, out initial_height))
+				{
+					Logging.WriteLineToLog("Could not parseinitial  window size.");
+				}
+
+				Logging.WriteLineToLog("Parsed and stored initial window size.");
+
+			skipWinSize:
 				;
 			}
 			#endregion
@@ -304,7 +348,7 @@ namespace yomigaeri_backend
 			}
 			#endregion
 
-			Application.Run(new UI.BrowserForm());
+			Application.Run(new UI.BrowserForm() { Width = initial_width, Height = initial_height });
 
 			return 0;
 		}
