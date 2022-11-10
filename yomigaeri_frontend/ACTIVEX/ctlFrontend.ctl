@@ -18,60 +18,68 @@ Begin VB.UserControl ctlFrontend
       FullScreen      =   0   'False
       StartConnected  =   0
    End
-   Begin VB.Menu HistoryMenuForward 
+   Begin VB.Menu mnuHistoryForward 
       Caption         =   "Forward"
-      Begin VB.Menu HistoryMenuForwardItem 
-         Caption         =   "Sorry"
-         Enabled         =   0   'False
+      Begin VB.Menu mnuHistoryForwardItem 
+         Caption         =   "hoge"
+         Index           =   0
+         Visible         =   0   'False
+      End
+      Begin VB.Menu mnuHistoryForwardItem 
+         Caption         =   "hoge"
          Index           =   1
+         Visible         =   0   'False
       End
-      Begin VB.Menu HistoryMenuForwardItem 
-         Caption         =   "not"
-         Enabled         =   0   'False
+      Begin VB.Menu mnuHistoryForwardItem 
+         Caption         =   "hoge"
          Index           =   2
+         Visible         =   0   'False
       End
-      Begin VB.Menu HistoryMenuForwardItem 
-         Caption         =   "implemented"
-         Enabled         =   0   'False
+      Begin VB.Menu mnuHistoryForwardItem 
+         Caption         =   "hoge"
          Index           =   3
+         Visible         =   0   'False
       End
-      Begin VB.Menu HistoryMenuForwardItem 
-         Caption         =   "yet."
-         Enabled         =   0   'False
+      Begin VB.Menu mnuHistoryForwardItem 
+         Caption         =   "hoge"
          Index           =   4
+         Visible         =   0   'False
       End
-      Begin VB.Menu HistoryMenuForwardItem 
-         Caption         =   "Lame!"
-         Enabled         =   0   'False
-         Index           =   5
+      Begin VB.Menu mnuHistoryForwardItem 
+         Caption         =   "-"
+         Index           =   99
       End
    End
-   Begin VB.Menu HistoryMenuBack 
+   Begin VB.Menu mnuHistoryBack 
       Caption         =   "Back"
-      Begin VB.Menu HistoryMenuBackItem 
-         Caption         =   "Sorry"
-         Enabled         =   0   'False
+      Begin VB.Menu mnuHistoryBackItem 
+         Caption         =   "hoge"
+         Index           =   0
+         Visible         =   0   'False
+      End
+      Begin VB.Menu mnuHistoryBackItem 
+         Caption         =   "hoge"
          Index           =   1
+         Visible         =   0   'False
       End
-      Begin VB.Menu HistoryMenuBackItem 
-         Caption         =   "not"
-         Enabled         =   0   'False
+      Begin VB.Menu mnuHistoryBackItem 
+         Caption         =   "hoge"
          Index           =   2
+         Visible         =   0   'False
       End
-      Begin VB.Menu HistoryMenuBackItem 
-         Caption         =   "implemented"
-         Enabled         =   0   'False
+      Begin VB.Menu mnuHistoryBackItem 
+         Caption         =   "hoge"
          Index           =   3
+         Visible         =   0   'False
       End
-      Begin VB.Menu HistoryMenuBackItem 
-         Caption         =   "yet."
-         Enabled         =   0   'False
+      Begin VB.Menu mnuHistoryBackItem 
+         Caption         =   "hoge"
          Index           =   4
+         Visible         =   0   'False
       End
-      Begin VB.Menu HistoryMenuBackItem 
-         Caption         =   "Lame!"
-         Enabled         =   0   'False
-         Index           =   5
+      Begin VB.Menu mnuHistoryBackItem 
+         Caption         =   "-"
+         Index           =   99
       End
    End
 End
@@ -184,13 +192,24 @@ End Sub
 
 Private Sub m_IEToolbar_ToolbarMenuRequested(command As ToolbarCommand)
 
+  ' Item 99 is only visible when there are no items in the history.
+  ' See comment in SetHistoryMenu for the reasoning.
+
     If command = CommandBack Then
-        PopupMenu HistoryMenuBack
+        If Not mnuHistoryBackItem(99).Visible Then
+            PopupMenu mnuHistoryBack
+          Else
+            modLogging.WriteLineToLog "ToolbarMenuRequested: Dan't show it on Back button when empty."
+        End If
         Exit Sub
     End If
 
     If command = CommandForward Then
-        PopupMenu HistoryMenuForward
+        If Not mnuHistoryForwardItem(99).Visible Then
+            PopupMenu mnuHistoryForward
+          Else
+            modLogging.WriteLineToLog "ToolbarMenuRequested: Dan't show it on Forward button when empty."
+        End If
         Exit Sub
     End If
 
@@ -211,13 +230,12 @@ End Sub
 Private Sub rdpClient_OnChannelReceivedData(ByVal chanName As String, ByVal data As String)
 
   Dim intPos As Integer
-  Dim Values(0 To 5) As Variant
 
     If chanName <> VIRTUAL_CHANNEL_NAME Then
         Exit Sub
     End If
 
-    modLogging.WriteLineToLog "OnChannelReceivedData for " & chanName & ": " & data
+    modLogging.WriteLineToLog "OnChannelReceivedData: " & data
 
     ' STYLING: Send colors of the client running frontend to backend
     ' CURSORS: Send paths to custom mouse cursors that backend will load via drive sharing
@@ -250,6 +268,8 @@ Private Sub rdpClient_OnChannelReceivedData(ByVal chanName As String, ByVal data
     ' MCOPYOF: Disable menu item Edit>Copy
     ' MPASTON: Enable menu item Edit>Paste
     ' MPASTOF: Disable menu item Edit>Paste
+    ' MINHIBK: Modify the history popup menu of the Back button (see implementation)
+    ' MINHIFW: Modify the history popup menu of the Forward button (see implementation)
 
     Select Case Left$(UCase$(data), 7)
       Case "STYLING"
@@ -259,35 +279,36 @@ Private Sub rdpClient_OnChannelReceivedData(ByVal chanName As String, ByVal data
       Case "LANGLST"
         rdpClient.SendOnVirtualChannel VIRTUAL_CHANNEL_NAME, modFrontendStyling.GetAcceptLanguage()
       Case "ADDRESS"
-        If Len(data) < 8 Then
-            modLogging.WriteLineToLog "Cannot set address because data is too short."
+        If Len(data) = 7 Then
+            m_IEAddressBar.Text = vbNullString
             Exit Sub
         End If
 
         m_IEAddressBar.Text = Mid$(data, 8)
       Case "ADDHIST"
         If Len(data) < 8 Then
-            modLogging.WriteLineToLog "Cannot add history because data is too short."
+            modLogging.WriteLineToLog "OnChannelReceivedData: ADDHIST: Refuse because data is too short."
             Exit Sub
         End If
 
-        intPos = InStr(1, data, vbTab, vbBinaryCompare)
+        intPos = InStr(1, data, Chr$(1), vbBinaryCompare)
 
         If intPos = 0 Then
-            modLogging.WriteLineToLog "Cannot set address because of bad data."
+            modLogging.WriteLineToLog "OnChannelReceivedData: ADDHIST: Refuse because of bad data."
             Exit Sub
         End If
 
-        Values(0) = Trim$(Mid$(data, 8, intPos - 8))
-        Values(1) = Trim$(Mid$(data, intPos + 1))
+  Dim values(0 To 1) As String
+        values(0) = Trim$(Mid$(data, 8, intPos - 8))
+        values(1) = Trim$(Mid$(data, intPos + 1))
 
-        If Values(0) = "" Then
-            modLogging.WriteLineToLog "Cannot set address because there is no URL."
+        If values(0) = "" Then
+            modLogging.WriteLineToLog "OnChannelReceivedData: ADDHIST: Refuse because there is no URL."
         End If
 
         ' IUrlHistory gracefully deals with an empty title by making up a sensible one.
 
-        m_IEBrowser.PushIntoHistory Values(0), Values(1)
+        m_IEBrowser.AddToHistory values(1), values(0)
       Case "VISIBLE"
         m_HideRDP = False
         PositionRDPClient
@@ -323,8 +344,8 @@ Private Sub rdpClient_OnChannelReceivedData(ByVal chanName As String, ByVal data
       Case "BMEDIOF"
         m_IEToolbar.SetToolbarCommandState CommandMedia, False
       Case "PGTITLE"
-        If Len(data) < 8 Then
-            modLogging.WriteLineToLog "Cannot set page title because data is too short."
+        If Len(data) = 7 Then
+            m_IEBrowser.SetTitle vbNullString
             Exit Sub
         End If
 
@@ -337,13 +358,13 @@ Private Sub rdpClient_OnChannelReceivedData(ByVal chanName As String, ByVal data
         m_IEStatusBar.SSLIcon = SSLIconState.None
       Case "PROGRES"
         If Len(data) < 8 Then
-            modLogging.WriteLineToLog "Cannot set progress bar value because data is too short."
+            modLogging.WriteLineToLog "OnChannelReceivedData: PROGRES: Refuse because data is too short."
             Exit Sub
         End If
 
         On Error Resume Next
-            Values(0) = CInt(Mid$(data, 8))
-            m_IEStatusBar.ProgressBarValue = Values(0)
+            values(0) = CInt(Mid$(data, 8))
+            m_IEStatusBar.ProgressBarValue = values(0)
         On Error GoTo 0
       Case "STATUST"
         If Len(data) < 8 Then
@@ -364,8 +385,23 @@ Private Sub rdpClient_OnChannelReceivedData(ByVal chanName As String, ByVal data
         m_IEFrame.MenuEditPasteEnabled = True
       Case "MPASTOF":
         m_IEFrame.MenuEditPasteEnabled = False
+      Case "MINHIBK":
+        If Len(data) < 8 Then
+            modLogging.WriteLineToLog "OnChannelReceivedData: MINHIBK: Refuse because data is too short."
+            Exit Sub
+        End If
+
+        SetHistoryMenu True, Mid$(data, 8)
+      Case "MINHIFW":
+        If Len(data) < 8 Then
+            modLogging.WriteLineToLog "OnChannelReceivedData: MINHIFW: Refuse because data is too short."
+            Exit Sub
+        End If
+
+        SetHistoryMenu False, Mid$(data, 8)
+
       Case Else
-        modLogging.WriteLineToLog "Unknown command ignored."
+        modLogging.WriteLineToLog "OnChannelReceivedData: Unknown command ignored."
     End Select
 
 End Sub
@@ -384,6 +420,60 @@ Private Sub rdpClient_OnDisconnected(ByVal discReason As Long)
 
     m_HideRDP = True
     PositionRDPClient
+
+End Sub
+
+Private Sub SetHistoryMenu(back As Boolean, backend_data As String)
+
+  Dim items() As String
+  Dim i As Integer
+  Dim gotone As Boolean
+
+    items = Split(backend_data, Chr$(1), , vbBinaryCompare)
+
+    If UBound(items) <> 4 Then
+        ' {0, 1, 2, 3, 4}, so UBound is 4 in VB6, because of course it is.
+        ' UBound is the maximum index of an array that is valid/accessible.
+        ' It's technically not the item count, just always abused as such.
+
+        modLogging.WriteLineToLog "Cannot set back menu because data is bad: " & UBound(items)
+        Exit Sub
+    End If
+
+    ' items is now Title,Title,Title,Title,Title
+
+    ' Item 99 is required because it is illegal in VB6 for all menu items to be
+    ' set to Visible = False at the same time.
+
+    If back Then
+        mnuHistoryBackItem(99).Visible = True
+      Else
+        mnuHistoryForwardItem(99).Visible = True
+    End If
+
+    gotone = False
+
+    For i = 0 To 4 Step 1
+        If back Then
+            mnuHistoryBackItem(i).Caption = items(i)
+            mnuHistoryBackItem(i).Visible = Len(items(i)) > 0
+
+            ' gotone = gotone or mnuHistoryBackItem(i).Visible
+            ' will always evaluate to True. VB6 is painful. :(
+            gotone = (gotone = True) Or (mnuHistoryBackItem(i).Visible = True)
+          Else
+            mnuHistoryForwardItem(i).Caption = items(i)
+            mnuHistoryForwardItem(i).Visible = Len(items(i)) > 0
+
+            gotone = (gotone = True) Or (mnuHistoryForwardItem(i).Visible = True)
+        End If
+    Next i
+
+    If back Then
+        mnuHistoryBackItem(99).Visible = Not gotone
+      Else
+        mnuHistoryForwardItem(99).Visible = Not gotone
+    End If
 
 End Sub
 
@@ -421,8 +511,6 @@ Private Sub UserControl_Initialize()
     ' TS_PERF_ENABLE_ENHANCED GRAPHICS |
     ' TS_PERF_ENABLE_FONT_SMOOTHING
     rdpClient.ColorDepth = 24
-
-    'rdpClient.Visible = False
 
 End Sub
 
@@ -467,7 +555,7 @@ Private Sub UserControl_Show()
 
     PositionRDPClient
 
-    m_IEFrame.Construct UserControl.hwnd
+    m_IEFrame.Construct UserControl.hWnd
     m_IEAddressBar.Construct m_IEFrame.hWndIEFrame
     m_IEBrowser.Construct m_IEFrame.hWndInternetExplorerServer
     m_IEStatusBar.Construct m_IEFrame.hWndIEFrame
@@ -499,14 +587,7 @@ Private Sub UserControl_Terminate()
     Set m_IEToolbar = Nothing
     Set m_IEBrowser = Nothing
 
-    ' Otherwise IE will hang because IEFrame was subclassed
-    ' and IE really doesn't like it even if its completely
-    ' undone.
-
-    'CoUninitialize
-    'ExitProcess 0
-
 End Sub
 
-':) Ulli's VB Code Formatter V2.24.17 (2022-Nov-06 22:42)  Decl: 12  Code: 442  Total: 454 Lines
-':) CommentOnly: 52 (11.5%)  Commented: 10 (2.2%)  Filled: 341 (75.1%)  Empty: 113 (24.9%)  Max Logic Depth: 3
+':) Ulli's VB Code Formatter V2.24.17 (2022-Nov-11 04:01)  Decl: 12  Code: 488  Total: 500 Lines
+':) CommentOnly: 59 (11.8%)  Commented: 10 (2%)  Filled: 396 (79.2%)  Empty: 104 (20.8%)  Max Logic Depth: 3

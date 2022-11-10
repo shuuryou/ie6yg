@@ -22,6 +22,95 @@ Private m_History As IUrlHistoryStg
 
 Public Event NavigationIntercepted(destinationURL As String)
 
+Public Sub AddToHistory(ByVal url As String, ByVal title As String)
+
+    If m_History Is Nothing Then
+        Set m_History = New UrlHistory
+    End If
+
+    If url = "" Then
+        modLogging.WriteLineToLog "IEBrowser: Refuse to add history with empty URL."
+        Exit Sub
+    End If
+
+    ' IUrlHistoryStg.AddUrl does not work with HTTPS URLs, but without access
+    ' to the Windows source code you'll *never* learn the real reason for it.
+    ' It's not documented anywhere; not even in ancient MSDN Library releases.
+
+    ' The reason can be found in leaked WinXP code (and IE5 Bug #110378)
+
+    ' File: shell/shdocvw/urlhist.cpp
+    ' Function: HRESULT CUrlHistory::AddUrlAndNotifyCP
+
+    ' "For secure URLs (https:) [...] we presume that these can contain
+    '  sensitive data that the site did not want retained on the client
+    '  machine. Therefore, we do not write a history entry for such sites."
+
+    ' Horseshit. Well, back in 1999 that was probably valid thinking. But in
+    ' 2022, everyone uses HTTPS for everything thanks to NSA and Snowden.
+
+    ' Workaround: Fool IE6 into thinking the HTTPS website is already cached.
+
+    If InStr(1, UCase$(url), "HTTPS://", vbBinaryCompare) = 1 Then
+  Dim lngBufSize As Long
+
+  Dim strHost As String
+        strHost = Space$(INTERNET_MAX_URL_LENGTH)
+        lngBufSize = Len(strHost)
+
+        UrlGetPartA url, strHost, lngBufSize, URL_PART_HOSTNAME, 0&
+
+        If lngBufSize = INTERNET_MAX_PATH_LENGTH Or lngBufSize = 0 Then
+            modLogging.WriteLineToLog "IEBrowse: Can't add history because UrlGetPartA failed (1)."
+            Exit Sub
+        End If
+
+        strHost = Mid$(strHost, 1, lngBufSize)
+
+  Dim strTempURL As String
+        strTempURL = "https://" & strHost & "/ie6yg.htm"
+
+  Dim strFileName As String
+        strFileName = Space$(MAX_PATH)
+
+        CreateUrlCacheEntry strTempURL, 0, "html", strFileName, 0&
+
+        If Err.LastDllError <> 0 Then
+            modLogging.WriteLineToLog "IEBrowse: Can't add history because CreateUrlCacheEntry failed. HRESULT: " & Hex$(Err.LastDllError)
+            Exit Sub
+        End If
+
+        ' MSDN Library January 2001:
+        ' "Clients that add entries to the cache should set the headers to at
+        '  least "HTTP/1.0 200 OK\r\n\r\n"; otherwise, Internet Explorer and
+        '  other client applications that are utilizing the Win32 Internet
+        '  functions will disregard the entry."
+
+        ' That's perfect, since the entries made by IE6YG are fake garabe.
+        ' Since we do not pass a pointer to INTERNET_CACHE_ENTRY_INFO below,
+        ' no headers are set. But it's enough to fool IE6 into thinking that
+        ' the HTTPS website passed in via "url" didn't set cache headers and
+        ' allows adding the URL to the history to succeed.
+
+  Dim ftExpireTime As FILETIME
+  Dim ftModifiedTime As FILETIME
+
+  Dim lngRet As Long
+
+        lngRet = CommitUrlCacheEntry(url, strFileName, ftExpireTime, _
+                 ftModifiedTime, NORMAL_CACHE_ENTRY, 0&, 0&, 0&, 0&)
+
+        If lngRet <> 1 Then
+            modLogging.WriteLineToLog "IEBrowse: Can't add history because CommitUrlCacheEntry failed. HRESULT: " & Hex$(Err.LastDllError)
+            Exit Sub
+        End If
+    End If
+
+    m_History.ADDURL url, title, 0&
+    modLogging.WriteLineToLog "IEBrowse: Add to history URL=" & url & "; Title=" & title
+
+End Sub
+
 Public Sub Construct(hWndInternetExplorerServer As Long)
 
   ' VB6 classes can't have a real constructor. *sigh*
@@ -79,24 +168,12 @@ Public Sub Destroy()
 
 End Sub
 
-Private Sub m_Browser_BeforeNavigate2(ByVal pDisp As Object, URL As Variant, Flags As Variant, TargetFrameName As Variant, PostData As Variant, Headers As Variant, Cancel As Boolean)
+Private Sub m_Browser_BeforeNavigate2(ByVal pDisp As Object, url As Variant, Flags As Variant, TargetFrameName As Variant, PostData As Variant, Headers As Variant, Cancel As Boolean)
 
     Cancel = True
-    modLogging.WriteLineToLog "IEBrowser: Catch and redirect navigating to: " & CStr(URL)
+    modLogging.WriteLineToLog "IEBrowser: Catch and redirect navigating to: " & CStr(url)
 
-    RaiseEvent NavigationIntercepted(CStr(URL))
-
-End Sub
-
-Public Sub PushIntoHistory(ByVal URL As String, ByVal title As String)
-
-    If m_History Is Nothing Then
-        Set m_History = New UrlHistory
-    End If
-
-    modLogging.WriteLineToLog "IEBrowser: Add to history URL=" & URL & "; Title=" & title
-
-    m_History.ADDURL URL, title, STATURLFLAG_ISTOPLEVEL
+    RaiseEvent NavigationIntercepted(CStr(url))
 
 End Sub
 
@@ -110,5 +187,5 @@ Public Sub SetTitle(newTitle As String)
 
 End Sub
 
-':) Ulli's VB Code Formatter V2.24.17 (2022-Nov-06 08:05)  Decl: 7  Code: 91  Total: 98 Lines
-':) CommentOnly: 9 (9.2%)  Commented: 0 (0%)  Filled: 61 (62.2%)  Empty: 37 (37.8%)  Max Logic Depth: 2
+':) Ulli's VB Code Formatter V2.24.17 (2022-Nov-11 04:01)  Decl: 7  Code: 168  Total: 175 Lines
+':) CommentOnly: 31 (17.7%)  Commented: 0 (0%)  Filled: 118 (67.4%)  Empty: 57 (32.6%)  Max Logic Depth: 3

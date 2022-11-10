@@ -87,46 +87,6 @@ Public Sub Destroy()
 
 End Sub
 
-Public Property Get MenuEditCutEnabled() As Boolean
-    MenuEditCutEnabled = m_MenuEditCutEnabled
-End Property
-
-Public Property Let MenuEditCutEnabled(enabled As Boolean)
-    m_MenuEditCutEnabled = enabled
-End Property
-
-Public Property Get MenuEditCopyEnabled() As Boolean
-    MenuEditCopyEnabled = m_MenuEditCopyEnabled
-End Property
-
-Public Property Let MenuEditCopyEnabled(enabled As Boolean)
-    m_MenuEditCopyEnabled = enabled
-End Property
-
-Public Property Get MenuEditPasteEnabled() As Boolean
-    MenuEditPasteEnabled = m_MenuEditPasteEnabled
-End Property
-
-Public Property Let MenuEditPasteEnabled(enabled As Boolean)
-    m_MenuEditPasteEnabled = enabled
-End Property
-
-Public Property Get MenuEditStopEnabled() As Boolean
-    MenuEditStopEnabled = m_MenuEditStopEnabled
-End Property
-
-Public Property Let MenuEditStopEnabled(enabled As Boolean)
-    m_MenuEditStopEnabled = enabled
-End Property
-
-Public Property Get MenuEditRefreshEnabled() As Boolean
-    MenuEditRefreshEnabled = m_MenuEditRefreshEnabled
-End Property
-
-Public Property Let MenuEditRefreshEnabled(enabled As Boolean)
-    m_MenuEditRefreshEnabled = enabled
-End Property
-
 Private Sub FindIEFrame()
 
   Dim strClassName As String
@@ -387,6 +347,66 @@ Private Function ISubclass_WindowProc(ByVal hwnd As Long, ByVal iMsg As Long, By
 
 End Function
 
+Public Property Let MenuEditCopyEnabled(enabled As Boolean)
+
+    m_MenuEditCopyEnabled = enabled
+
+End Property
+
+Public Property Get MenuEditCopyEnabled() As Boolean
+
+    MenuEditCopyEnabled = m_MenuEditCopyEnabled
+
+End Property
+
+Public Property Let MenuEditCutEnabled(enabled As Boolean)
+
+    m_MenuEditCutEnabled = enabled
+
+End Property
+
+Public Property Get MenuEditCutEnabled() As Boolean
+
+    MenuEditCutEnabled = m_MenuEditCutEnabled
+
+End Property
+
+Public Property Get MenuEditPasteEnabled() As Boolean
+
+    MenuEditPasteEnabled = m_MenuEditPasteEnabled
+
+End Property
+
+Public Property Let MenuEditPasteEnabled(enabled As Boolean)
+
+    m_MenuEditPasteEnabled = enabled
+
+End Property
+
+Public Property Get MenuEditRefreshEnabled() As Boolean
+
+    MenuEditRefreshEnabled = m_MenuEditRefreshEnabled
+
+End Property
+
+Public Property Let MenuEditRefreshEnabled(enabled As Boolean)
+
+    m_MenuEditRefreshEnabled = enabled
+
+End Property
+
+Public Property Get MenuEditStopEnabled() As Boolean
+
+    MenuEditStopEnabled = m_MenuEditStopEnabled
+
+End Property
+
+Public Property Let MenuEditStopEnabled(enabled As Boolean)
+
+    m_MenuEditStopEnabled = enabled
+
+End Property
+
 Private Sub ModifyIEMenu(ByVal hMenu As Long)
 
   ' These need to be turned off. Stuff like "Java Console" makes no sense.
@@ -419,13 +439,14 @@ Private Sub ModifyIEMenu(ByVal hMenu As Long)
     EnableMenuItem hMenu, 41502, MF_BYCOMMAND Or MF_GRAYED
     EnableMenuItem hMenu, 41507, MF_BYCOMMAND Or MF_GRAYED
     EnableMenuItem hMenu, 41500, MF_BYCOMMAND Or MF_GRAYED
-    
+
     ' Select menu items can be enabled/disabled
     EnableMenuItem hMenu, IE_MENU_COMMAND_EDIT_CUT, IIf(m_MenuEditCutEnabled, MF_BYCOMMAND Or MF_ENABLED, MF_BYCOMMAND Or MF_GRAYED)
     EnableMenuItem hMenu, IE_MENU_COMMAND_EDIT_COPY, IIf(m_MenuEditCopyEnabled, MF_BYCOMMAND Or MF_ENABLED, MF_BYCOMMAND Or MF_GRAYED)
     EnableMenuItem hMenu, IE_MENU_COMMAND_EDIT_PASTE, IIf(m_MenuEditPasteEnabled, MF_BYCOMMAND Or MF_ENABLED, MF_BYCOMMAND Or MF_GRAYED)
     EnableMenuItem hMenu, IE_MENU_COMMAND_EDIT_STOP, IIf(m_MenuEditStopEnabled, MF_BYCOMMAND Or MF_ENABLED, MF_BYCOMMAND Or MF_GRAYED)
     EnableMenuItem hMenu, IE_MENU_COMMAND_EDIT_REFRESH, IIf(m_MenuEditRefreshEnabled, MF_BYCOMMAND Or MF_ENABLED, MF_BYCOMMAND Or MF_GRAYED)
+
 End Sub
 
 Private Function TranslateFromIECommand(command As IECommand) As Long
@@ -482,5 +503,5 @@ Private Function TranslateToIECommand(LoWord As Integer) As IECommand
 
 End Function
 
-':) Ulli's VB Code Formatter V2.24.17 (2022-Nov-06 08:05)  Decl: 43  Code: 379  Total: 422 Lines
-':) CommentOnly: 42 (10%)  Commented: 5 (1.2%)  Filled: 321 (76.1%)  Empty: 101 (23.9%)  Max Logic Depth: 4
+':) Ulli's VB Code Formatter V2.24.17 (2022-Nov-11 04:01)  Decl: 47  Code: 447  Total: 494 Lines
+':) CommentOnly: 43 (8.7%)  Commented: 5 (1%)  Filled: 371 (75.1%)  Empty: 123 (24.9%)  Max Logic Depth: 4

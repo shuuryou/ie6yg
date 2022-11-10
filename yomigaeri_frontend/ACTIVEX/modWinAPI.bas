@@ -21,6 +21,11 @@ Public Declare Function DrawMenuBar Lib "USER32.DLL" (ByVal hwnd As Long) As Lon
 
 Public Declare Sub Sleep Lib "KERNEL32.DLL" (ByVal dwMilliseconds As Long)
 
+Public Declare Function CommitUrlCacheEntry Lib "WININET.DLL" Alias "CommitUrlCacheEntryA" (ByVal lpszUrlName As String, ByVal lpszLocalFileName As String, ByRef tftExpireTime As FILETIME, ByRef tftLastModifiedTime As FILETIME, ByVal lCacheEntryType As Long, ByVal lpHeaderInfo As Long, ByVal dwHeaderSize As Long, ByVal lpszFileExtension As String, ByVal dwReserved As Long) As Long
+Public Declare Function CreateUrlCacheEntry Lib "WININET.DLL" Alias "CreateUrlCacheEntryA" (ByVal lpszUrlName As String, ByVal dwExpectedFileSize As Long, ByVal lpszFileExtension As String, ByVal lpszFileName As String, ByVal dwReserved As Long) As Long
+
+Public Const NORMAL_CACHE_ENTRY As Long = &H1
+
 Public Type RECT
     Left As Long
     Top As Long
@@ -132,5 +137,5 @@ Public Function TrimNull(ByVal Text As String) As String
 
 End Function
 
-':) Ulli's VB Code Formatter V2.24.17 (2022-Nov-06 08:04)  Decl: 85  Code: 50  Total: 135 Lines
-':) CommentOnly: 5 (3.7%)  Commented: 0 (0%)  Filled: 91 (67.4%)  Empty: 44 (32.6%)  Max Logic Depth: 2
+':) Ulli's VB Code Formatter V2.24.17 (2022-Nov-11 04:01)  Decl: 91  Code: 50  Total: 141 Lines
+':) CommentOnly: 5 (3.5%)  Commented: 0 (0%)  Filled: 95 (67.4%)  Empty: 46 (32.6%)  Max Logic Depth: 2

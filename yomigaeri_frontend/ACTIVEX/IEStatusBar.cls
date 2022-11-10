@@ -214,7 +214,7 @@ Private Sub FindStatusBar()
 
     modLogging.WriteLineToLog "IEStatusBar: Found msctls_statusbar32: " & Hex$(m_hWndStatusBar) & " and msctls_progress32: " & Hex$(m_hWndProgressBar)
     modLogging.WriteLineToLog "IEStatusBar: Success!"
-    
+
 End Sub
 
 Public Sub FixStatusBar()
@@ -223,9 +223,10 @@ Public Sub FixStatusBar()
         Exit Sub
     End If
 
-    ' Following code adapted from leaked WinXP code available at:
-    ' http://<removed>/download/developer/xpsource/XPSP1/NT/shell/shdocvw/dochost.cpp
-    ' void CDocObjectHost::_PlaceProgressBar(BOOL fForcedLayout)
+    ' Following code adapted from leaked WinXP code.
+
+    ' File: shell/shdocvw/dochost.cpp
+    ' Function: void CDocObjectHost::_PlaceProgressBar(BOOL fForcedLayout)
 
     ' SB_IE6YG_SHIFT is used so WndProc can differentiate the
     ' messages from IE6YG and IE, because obviously IE will
@@ -477,5 +478,5 @@ Private Function ZoneComputePaneSize() As Long
 
 End Function
 
-':) Ulli's VB Code Formatter V2.24.17 (2022-Nov-06 08:04)  Decl: 57  Code: 408  Total: 465 Lines
-':) CommentOnly: 13 (2.8%)  Commented: 8 (1.7%)  Filled: 317 (68.2%)  Empty: 148 (31.8%)  Max Logic Depth: 3
+':) Ulli's VB Code Formatter V2.24.17 (2022-Nov-11 04:01)  Decl: 57  Code: 410  Total: 467 Lines
+':) CommentOnly: 13 (2.8%)  Commented: 8 (1.7%)  Filled: 318 (68.1%)  Empty: 149 (31.9%)  Max Logic Depth: 3

@@ -239,9 +239,9 @@ NextToolbar:
 
                 End Select
             Next j
-            
+
             modLogging.WriteLineToLog "IEToolbar: Success!"
-            
+
             Exit Sub
         End If
     Next i
@@ -315,8 +315,6 @@ Private Function ISubclass_WindowProc(ByVal hwnd As Long, ByVal iMsg As Long, By
             CopyMemory nmTB, ByVal lParam, Len(nmTB)
 
             If nmTB.hdr.code = TBN_DROPDOWN Then
-                modLogging.WriteLineToLog CStr(nmTB.iItem)
-
                 If nmTB.iItem = m_ToolbarIdCommandBACK Then
                     RaiseEvent ToolbarMenuRequested(ToolbarCommand.CommandBack)
                     Exit Function
@@ -387,5 +385,5 @@ Private Function ToolbarCommandIdToEnum(idCommand As Long) As ToolbarCommand
 
 End Function
 
-':) Ulli's VB Code Formatter V2.24.17 (2022-Nov-06 08:04)  Decl: 45  Code: 331  Total: 376 Lines
-':) CommentOnly: 29 (7.7%)  Commented: 3 (0.8%)  Filled: 277 (73.7%)  Empty: 99 (26.3%)  Max Logic Depth: 5
+':) Ulli's VB Code Formatter V2.24.17 (2022-Nov-11 04:01)  Decl: 45  Code: 329  Total: 374 Lines
+':) CommentOnly: 29 (7.8%)  Commented: 3 (0.8%)  Filled: 276 (73.8%)  Empty: 98 (26.2%)  Max Logic Depth: 5
