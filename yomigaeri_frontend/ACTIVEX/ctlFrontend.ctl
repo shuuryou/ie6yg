@@ -10,7 +10,7 @@ Begin VB.UserControl ctlFrontend
    ScaleWidth      =   3975
    Begin VB.Timer tmrResize 
       Enabled         =   0   'False
-      Interval        =   500
+      Interval        =   250
       Left            =   3480
       Top             =   2400
    End
@@ -109,6 +109,18 @@ Attribute m_IEToolbar.VB_VarHelpID = -1
 
 Private m_HideRDP As Boolean
 
+Private Sub BackendUpdateWindowSize()
+
+    If rdpClient.Connected <> 1 Then
+        Exit Sub
+    End If
+
+    rdpClient.SendOnVirtualChannel VIRTUAL_CHANNEL_NAME, "WINSIZE" & _
+                                   (UserControl.Width / Screen.TwipsPerPixelX) & "," & _
+                                   (UserControl.Height / Screen.TwipsPerPixelY)
+
+End Sub
+
 Private Sub m_IEBrowser_NavigationIntercepted(destinationURL As String)
 
     If rdpClient.Connected <> 1 Then
@@ -148,7 +160,7 @@ End Sub
 
 Private Sub m_IEFrame_WindowResized()
 
-    SendResize
+    BackendUpdateWindowSize
 
 End Sub
 
@@ -197,6 +209,26 @@ Private Sub m_IEToolbar_ToolbarMenuRequested(command As ToolbarCommand)
         End If
         Exit Sub
     End If
+
+End Sub
+
+Private Sub mnuHistoryBackItem_Click(Index As Integer)
+
+    If rdpClient.Connected <> 1 Then
+        Exit Sub
+    End If
+
+    rdpClient.SendOnVirtualChannel VIRTUAL_CHANNEL_NAME, "MNUBACK" & (Index + 1)
+
+End Sub
+
+Private Sub mnuHistoryForwardItem_Click(Index As Integer)
+
+    If rdpClient.Connected <> 1 Then
+        Exit Sub
+    End If
+
+    rdpClient.SendOnVirtualChannel VIRTUAL_CHANNEL_NAME, "MNUFORW" & (Index + 1)
 
 End Sub
 
@@ -255,6 +287,7 @@ Private Sub rdpClient_OnChannelReceivedData(ByVal chanName As String, ByVal data
     ' MPASTOF: Disable menu item Edit>Paste
     ' MINHIBK: Modify the history popup menu of the Back button (see implementation)
     ' MINHIFW: Modify the history popup menu of the Forward button (see implementation)
+    ' INITSIZ: Send initial window size to backend (width,height)
 
     Select Case Left$(UCase$(data), 7)
       Case "STYLING"
@@ -384,7 +417,10 @@ Private Sub rdpClient_OnChannelReceivedData(ByVal chanName As String, ByVal data
         End If
 
         SetHistoryMenu False, Mid$(data, 8)
-
+      Case "INITSIZ":
+        rdpClient.SendOnVirtualChannel VIRTUAL_CHANNEL_NAME, _
+                                       (UserControl.Width / Screen.TwipsPerPixelX) & "," & _
+                                       (UserControl.Height / Screen.TwipsPerPixelY)
       Case Else
         modLogging.WriteLineToLog "OnChannelReceivedData: Unknown command ignored."
     End Select
@@ -405,18 +441,6 @@ Private Sub rdpClient_OnDisconnected(ByVal discReason As Long)
 
     m_HideRDP = True
     PositionRDPClient
-
-End Sub
-
-Private Sub SendResize()
-
-    If rdpClient.Connected <> 1 Then
-        Exit Sub
-    End If
-
-    rdpClient.SendOnVirtualChannel VIRTUAL_CHANNEL_NAME, "WINSIZE" & _
-                                   (UserControl.Width / Screen.TwipsPerPixelX) & "," & _
-                                   (UserControl.Height / Screen.TwipsPerPixelY)
 
 End Sub
 
@@ -478,7 +502,7 @@ Private Sub tmrResize_Timer()
 
     tmrResize.enabled = False
 
-    SendResize
+    BackendUpdateWindowSize
 
 End Sub
 
@@ -596,5 +620,5 @@ Private Sub UserControl_Terminate()
 
 End Sub
 
-':) Ulli's VB Code Formatter V2.24.17 (2022-Nov-11 06:25)  Decl: 11  Code: 490  Total: 501 Lines
-':) CommentOnly: 56 (11.2%)  Commented: 8 (1.6%)  Filled: 394 (78.6%)  Empty: 107 (21.4%)  Max Logic Depth: 3
+':) Ulli's VB Code Formatter V2.24.17 (2022-Nov-11 08:25)  Decl: 11  Code: 514  Total: 525 Lines
+':) CommentOnly: 57 (10.9%)  Commented: 8 (1.5%)  Filled: 408 (77.7%)  Empty: 117 (22.3%)  Max Logic Depth: 3
