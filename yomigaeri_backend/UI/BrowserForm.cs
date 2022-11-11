@@ -9,37 +9,37 @@ namespace yomigaeri_backend.UI
 	public partial class BrowserForm : Form
 	{
 		private readonly SynchronizerState m_SyncState;
-		private readonly TravelLog m_HistoryProcessor;
+		private readonly TravelLog m_TravelLog;
 
 		public BrowserForm()
 		{
 			InitializeComponent();
 
 			m_SyncState = new SynchronizerState();
-			m_HistoryProcessor = new TravelLog();
+			m_TravelLog = new TravelLog();
 
-			m_HistoryProcessor.NewHistoryReady += HistoryProcessor_NewHistoryReady;
-
+			m_TravelLog.NewHistoryReady += HistoryProcessor_NewHistoryReady;
 			Program.WebBrowser.Dock = DockStyle.Fill;
 			Controls.Add(Program.WebBrowser);
-
+			
 			Program.WebBrowser.IsBrowserInitializedChanged += WebBrowser_IsBrowserInitializedChanged;
 			Program.WebBrowser.LoadingStateChanged += WebBrowser_LoadingStateChanged;
-			Program.WebBrowser.StatusMessage += WebBrowser_StatusMessage;
-			Program.WebBrowser.TitleChanged += WebBrowser_TitleChanged;
-			Program.WebBrowser.AddressChanged += WebBrowser_AddressChanged;
 			Program.WebBrowser.FrameLoadStart += WebBrowser_FrameLoadStart;
 			Program.WebBrowser.FrameLoadEnd += WebBrowser_FrameLoadEnd;
 
 			Program.WebBrowser.DisplayHandler = new MyDisplayHandler(m_SyncState, SynchronizeWithFrontend);
 			Program.WebBrowser.RequestHandler = new MyRequestHandler(m_SyncState, SynchronizeWithFrontend);
 
+			// This is important! See BrowserForm.DisplayHandler.cs, OnCursorChange method
+			Cursor.Hide();
+
 			SystemEvents.SessionSwitch += SystemEvents_SessionSwitch;
 		}
 
+
 		private void HistoryProcessor_NewHistoryReady(object sender, EventArgs e)
 		{
-			m_SyncState.MiniHistory = true;
+			m_SyncState.TravelLog = true;
 			SynchronizeWithFrontend();
 		}
 

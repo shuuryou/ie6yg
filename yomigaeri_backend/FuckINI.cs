@@ -60,7 +60,7 @@ namespace yomigaeri_backend
 						// Inline comments
 						if (offsetComment + 1 < value.Length)
 						{
-							idx = value.IndexOf(';', offsetComment + 1);
+							idx = value.IndexOf(';', offsetComment);
 							if (idx != -1)
 								value = value.Substring(0, idx);
 						}

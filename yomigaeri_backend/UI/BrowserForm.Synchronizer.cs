@@ -26,10 +26,11 @@ namespace yomigaeri_backend.UI
 				EnableTextCut = 10,
 				EnableTextCopy = 11,
 				EnableTextPaste = 12,
-				MiniHistory = 13
+				TravelLog = 13,
+				Cursor = 14
 			}
 
-			private const int CHANGE_ITEMS = 14;
+			private const int CHANGE_ITEMS = 15;
 
 			private bool m_Visible;
 			public bool Visible
@@ -37,6 +38,9 @@ namespace yomigaeri_backend.UI
 				get { return m_Visible; }
 				set
 				{
+					if (m_Visible == value)
+						return;
+
 					m_Visible = value;
 					m_Changes[(int)Change.Visible] = true;
 				}
@@ -48,6 +52,9 @@ namespace yomigaeri_backend.UI
 				get { return m_CanGoBack; }
 				set
 				{
+					if (m_CanGoBack == value)
+						return;
+
 					m_CanGoBack = value;
 					m_Changes[(int)Change.CanGoBack] = true;
 				}
@@ -59,6 +66,9 @@ namespace yomigaeri_backend.UI
 				get { return m_CanGoForward; }
 				set
 				{
+					if (m_CanGoForward == value)
+						return;
+
 					m_CanGoForward = value;
 					m_Changes[(int)Change.CanGoForward] = true;
 				}
@@ -70,6 +80,9 @@ namespace yomigaeri_backend.UI
 				get { return m_CanReload; }
 				set
 				{
+					if (m_CanReload == value)
+						return;
+
 					m_CanReload = value;
 					m_Changes[(int)Change.CanReload] = true;
 				}
@@ -81,6 +94,8 @@ namespace yomigaeri_backend.UI
 				get { return m_IsLoading; }
 				set
 				{
+					if (m_IsLoading == value)
+						return;
 					m_IsLoading = value;
 					m_Changes[(int)Change.IsLoading] = true;
 				}
@@ -92,6 +107,8 @@ namespace yomigaeri_backend.UI
 				get { return m_StatusText; }
 				set
 				{
+					if (m_StatusText == value)
+						return;
 					m_StatusText = value;
 					m_Changes[(int)Change.StatusText] = true;
 				}
@@ -103,6 +120,8 @@ namespace yomigaeri_backend.UI
 				get { return m_StatusProgress; }
 				set
 				{
+					if (m_StatusProgress == value)
+						return;
 					m_StatusProgress = value;
 					m_Changes[(int)Change.StatusProgress] = true;
 				}
@@ -114,6 +133,8 @@ namespace yomigaeri_backend.UI
 				get { return m_Address; }
 				set
 				{
+					if (m_Address == value)
+						return;
 					m_Address = value;
 					m_Changes[(int)Change.Address] = true;
 				}
@@ -125,6 +146,8 @@ namespace yomigaeri_backend.UI
 				get { return m_PageTitle; }
 				set
 				{
+					if (m_PageTitle == value)
+						return;
 					m_PageTitle = value;
 					m_Changes[(int)Change.PageTitle] = true;
 				}
@@ -136,6 +159,8 @@ namespace yomigaeri_backend.UI
 				get { return m_AddHistoryItem; }
 				set
 				{
+					if (m_AddHistoryItem == value)
+						return;
 					m_AddHistoryItem = value;
 					m_Changes[(int)Change.AddHistoryItem] = true;
 				}
@@ -147,6 +172,8 @@ namespace yomigaeri_backend.UI
 				get { return m_EnableTextCut; }
 				set
 				{
+					if (m_EnableTextCut == value)
+						return;
 					m_EnableTextCut = value;
 					m_Changes[(int)Change.EnableTextCut] = true;
 				}
@@ -158,6 +185,8 @@ namespace yomigaeri_backend.UI
 				get { return m_EnableTextCopy; }
 				set
 				{
+					if (m_EnableTextCopy == value)
+						return;
 					m_EnableTextCopy = value;
 					m_Changes[(int)Change.EnableTextCopy] = true;
 				}
@@ -169,20 +198,38 @@ namespace yomigaeri_backend.UI
 				get { return m_EnableTextPaste; }
 				set
 				{
+					if (m_EnableTextPaste == value)
+						return;
 					m_EnableTextPaste = value;
 					m_Changes[(int)Change.EnableTextPaste] = true;
 				}
 			}
 
-			private bool m_MiniHistory;
+			private bool m_TravelLog;
 
-			public bool MiniHistory
+			public bool TravelLog
 			{
-				get { return m_MiniHistory; }
+				get { return m_TravelLog; }
 				set
 				{
-					m_MiniHistory = value;
-					m_Changes[(int)Change.MiniHistory] = true;
+					if (m_TravelLog == value)
+						return;
+					m_TravelLog = value;
+					m_Changes[(int)Change.TravelLog] = true;
+				}
+			}
+
+			private int m_Cursor;
+
+			public int Cursor
+			{
+				get { return m_Cursor; }
+				set
+				{
+					if (m_Cursor == value)
+						return;
+					m_Cursor = value;
+					m_Changes[(int)Change.Cursor] = true;
 				}
 			}
 
@@ -208,7 +255,7 @@ namespace yomigaeri_backend.UI
 		}
 
 		private void SynchronizeWithFrontend()
-		{ 
+		{
 			if (m_SyncState.IsChanged(SynchronizerState.Change.Visible))
 			{
 				if (m_SyncState.Visible)
@@ -267,7 +314,7 @@ namespace yomigaeri_backend.UI
 				m_SyncState.AddHistoryItem = false;
 			}
 
-			if (m_SyncState.IsChanged(SynchronizerState.Change.StatusProgress ))
+			if (m_SyncState.IsChanged(SynchronizerState.Change.StatusProgress))
 			{
 				int progress = m_SyncState.StatusProgress;
 
@@ -295,13 +342,18 @@ namespace yomigaeri_backend.UI
 				RDPVirtualChannel.WriteChannel("PGTITLE" + m_SyncState.PageTitle);
 			}
 
-			if (m_SyncState.IsChanged( SynchronizerState.Change.MiniHistory))
+			if (m_SyncState.IsChanged(SynchronizerState.Change.TravelLog))
 			{
-				RDPVirtualChannel.WriteChannel("MINHIBK" +
-					m_HistoryProcessor.MakeMenuStringForFrontend(TravelLog.NavigationKind.Back));
+				RDPVirtualChannel.WriteChannel("TRAVLBK" +
+					m_TravelLog.MakeMenuStringForFrontend(TravelLog.TravelDirection.Back));
 
-				RDPVirtualChannel.WriteChannel("MINHIFW" +
-					m_HistoryProcessor.MakeMenuStringForFrontend(TravelLog.NavigationKind.Forward));
+				RDPVirtualChannel.WriteChannel("TRAVLFW" +
+					m_TravelLog.MakeMenuStringForFrontend(TravelLog.TravelDirection.Forward));
+			}
+
+			if (m_SyncState.IsChanged(SynchronizerState.Change.Cursor))
+			{
+				RDPVirtualChannel.WriteChannel("SETCURS" + m_SyncState.Cursor);
 			}
 
 			m_SyncState.SyncNone();

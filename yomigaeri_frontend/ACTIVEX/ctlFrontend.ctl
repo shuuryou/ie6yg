@@ -96,6 +96,8 @@ Attribute VB_PredeclaredId = False
 Attribute VB_Exposed = True
 Option Explicit
 
+Implements SSubTUP.ISubclass
+
 Private Const VIRTUAL_CHANNEL_NAME As String = "BEFECOM"
 
 Private m_IEAddressBar As IEAddressBar
@@ -109,6 +111,10 @@ Attribute m_IEToolbar.VB_VarHelpID = -1
 
 Private m_HideRDP As Boolean
 
+Private m_CursorCurrent As Long
+Private m_CursorHCURSOR As Long
+Private m_CursorHCURSORIsCustom As Boolean
+
 Private Sub BackendUpdateWindowSize()
 
     If rdpClient.Connected <> 1 Then
@@ -121,13 +127,45 @@ Private Sub BackendUpdateWindowSize()
 
 End Sub
 
+Private Property Get ISubclass_MsgResponse() As SSubTUP.EMsgResponse
+
+    ISubclass_MsgResponse = emrConsume
+
+End Property
+
+Private Property Let ISubclass_MsgResponse(ByVal RHS As SSubTUP.EMsgResponse)
+
+  ' Unused
+
+End Property
+
+Private Function ISubclass_WindowProc(ByVal hWnd As Long, ByVal iMsg As Long, ByVal wParam As Long, ByVal lParam As Long) As Long
+
+  ' https://devblogs.microsoft.com/oldnewthing/20050525-27/?p=35543
+
+    If iMsg = WM_SETCURSOR Then
+        If m_CursorHCURSOR = 0 Then
+            ' Don't have one yet, so just forward to VBRUN.
+            ISubclass_WindowProc = SSubTUP.CallOldWindowProc(hWnd, iMsg, wParam, lParam)
+            Exit Function
+        End If
+
+        SetCursor m_CursorHCURSOR
+        Exit Function
+    End If
+
+    ISubclass_WindowProc = SSubTUP.CallOldWindowProc(hWnd, iMsg, wParam, lParam)
+
+End Function
+
 Private Sub m_IEBrowser_NavigationIntercepted(destinationURL As String)
 
     If rdpClient.Connected <> 1 Then
         Exit Sub
     End If
 
-    rdpClient.SendOnVirtualChannel VIRTUAL_CHANNEL_NAME, "NAVIGATE:" & destinationURL
+    rdpClient.SendOnVirtualChannel VIRTUAL_CHANNEL_NAME, _
+        "NAVIGAT" & destinationURL
 
     rdpClient.SetFocus
 
@@ -240,8 +278,6 @@ Private Sub PositionRDPClient()
                    rdpClient.Width, _
                    rdpClient.Height
 
-    DoEvents
-
 End Sub
 
 Private Sub rdpClient_OnChannelReceivedData(ByVal chanName As String, ByVal data As String)
@@ -255,7 +291,6 @@ Private Sub rdpClient_OnChannelReceivedData(ByVal chanName As String, ByVal data
     modLogging.WriteLineToLog "OnChannelReceivedData: " & data
 
     ' STYLING: Send colors of the client running frontend to backend
-    ' CURSORS: Send paths to custom mouse cursors that backend will load via drive sharing
     ' LANGLST: Gets IE Accept-Language language list from registry or "<EMPTY>" if unset
     ' ADDRESS: Set IE address bar text to content following after "ADDRESS"
     ' ADDHIST: Add to IE history following after "ADDHIST" in the format URL\tTitle
@@ -285,15 +320,14 @@ Private Sub rdpClient_OnChannelReceivedData(ByVal chanName As String, ByVal data
     ' MCOPYOF: Disable menu item Edit>Copy
     ' MPASTON: Enable menu item Edit>Paste
     ' MPASTOF: Disable menu item Edit>Paste
-    ' MINHIBK: Modify the history popup menu of the Back button (see implementation)
-    ' MINHIFW: Modify the history popup menu of the Forward button (see implementation)
-    ' INITSIZ: Send initial window size to backend (width,height)
+    ' TRAVLBK: Modify the travel log of the Back button (see implementation)
+    ' TRAVLFW: Modify the travel log of the Forward button (see implementation)
+    ' INITSIZ: Make frontend send initial window size to backend (width,height)
+    ' SETCURS: Set cursor based on ID number following after "SETCURS"
 
     Select Case Left$(UCase$(data), 7)
       Case "STYLING"
         rdpClient.SendOnVirtualChannel VIRTUAL_CHANNEL_NAME, modFrontendStyling.MakeStyling(UserControl.hDC)
-      Case "CURSORS"
-        rdpClient.SendOnVirtualChannel VIRTUAL_CHANNEL_NAME, modFrontendStyling.GetCursors()
       Case "LANGLST"
         rdpClient.SendOnVirtualChannel VIRTUAL_CHANNEL_NAME, modFrontendStyling.GetAcceptLanguage()
       Case "ADDRESS"
@@ -403,16 +437,16 @@ Private Sub rdpClient_OnChannelReceivedData(ByVal chanName As String, ByVal data
         m_IEFrame.MenuEditPasteEnabled = True
       Case "MPASTOF":
         m_IEFrame.MenuEditPasteEnabled = False
-      Case "MINHIBK":
+      Case "TRAVLBK":
         If Len(data) < 8 Then
-            modLogging.WriteLineToLog "OnChannelReceivedData: MINHIBK: Refuse because data is too short."
+            modLogging.WriteLineToLog "OnChannelReceivedData: TRAVLBK: Refuse because data is too short."
             Exit Sub
         End If
 
         SetHistoryMenu True, Mid$(data, 8)
-      Case "MINHIFW":
+      Case "TRAVLFW":
         If Len(data) < 8 Then
-            modLogging.WriteLineToLog "OnChannelReceivedData: MINHIFW: Refuse because data is too short."
+            modLogging.WriteLineToLog "OnChannelReceivedData: TRAVLFW: Refuse because data is too short."
             Exit Sub
         End If
 
@@ -421,6 +455,24 @@ Private Sub rdpClient_OnChannelReceivedData(ByVal chanName As String, ByVal data
         rdpClient.SendOnVirtualChannel VIRTUAL_CHANNEL_NAME, _
                                        (UserControl.Width / Screen.TwipsPerPixelX) & "," & _
                                        (UserControl.Height / Screen.TwipsPerPixelY)
+      Case "SETCURS":
+        If Len(data) < 8 Then
+            modLogging.WriteLineToLog "OnChannelReceivedData: SETCURS: Refuse because data is too short."
+            Exit Sub
+        End If
+
+  Dim cursorid As Long
+        cursorid = -1
+        On Error Resume Next
+            cursorid = CLng(Mid$(data, 8))
+        On Error GoTo 0
+
+        If cursorid = -1 Then
+            modLogging.WriteLineToLog "OnChannelReceivedData: SETCURS: Refuse because data is invalid."
+            Exit Sub
+        End If
+
+        SetFrontendCursor cursorid
       Case Else
         modLogging.WriteLineToLog "OnChannelReceivedData: Unknown command ignored."
     End Select
@@ -441,6 +493,45 @@ Private Sub rdpClient_OnDisconnected(ByVal discReason As Long)
 
     m_HideRDP = True
     PositionRDPClient
+
+End Sub
+
+Private Sub SetFrontendCursor(cursorid As Long)
+
+  Dim hInstance As Long
+  Dim hCursorToDestroy As Long
+
+    If m_CursorCurrent = cursorid Then
+        Exit Sub
+    End If
+
+    If m_CursorHCURSORIsCustom Then
+        hCursorToDestroy = m_CursorHCURSOR
+      Else
+        hCursorToDestroy = -1
+    End If
+
+    If cursorid < 32000 Then
+        ' Custom cursor in ACTIVEX.RES
+        hInstance = App.hInstance
+      Else
+        hInstance = 0&
+    End If
+
+    m_CursorHCURSOR = LoadCursor(hInstance, MAKEINTRESOURCE(cursorid))
+
+    If m_CursorHCURSOR = 0 Then
+        modLogging.WriteLineToLog "SetCursor: Failed loading cursor " & cursorid & ". HRESULT=" & Hex$(Err.LastDllError)
+        Exit Sub
+    End If
+
+    SetCursor m_CursorHCURSOR
+
+    If hCursorToDestroy <> -1 Then
+        DestroyCursor hCursorToDestroy
+    End If
+
+    modLogging.WriteLineToLog "SetCursor: Set cursor to " & cursorid & "; HCURSOR=" & Hex$(m_CursorHCURSOR)
 
 End Sub
 
@@ -533,20 +624,19 @@ Private Sub UserControl_Initialize()
 
     rdpClient.CreateVirtualChannels VIRTUAL_CHANNEL_NAME
 
-    rdpClient.AdvancedSettings3.EnableAutoReconnect = False
+    rdpClient.AdvancedSettings3.EnableAutoReconnect = True
+    rdpClient.AdvancedSettings.allowBackgroundInput = True
     rdpClient.AdvancedSettings3.RedirectDrives = True
     rdpClient.AdvancedSettings3.RedirectPrinters = True
     rdpClient.AdvancedSettings3.EnableWindowsKey = False
+    rdpClient.AdvancedSettings3.AcceleratorPassthrough = True
     rdpClient.AdvancedSettings3.keepAliveInterval = 5000
     rdpClient.AdvancedSettings3.MaximizeShell = False
-    rdpClient.AdvancedSettings3.PerformanceFlags = &H9F
-    ' &H9F =
-    ' TS_PERF_DISABLE_WALLPAPER |
-    ' TS_PERF_DISABLE_FULLWINDOWDRAG |
-    ' TS_PERF_DISABLE_MENUANIMATIONS |
-    ' TS_PERF_DISABLE_THEMING |
+    rdpClient.AdvancedSettings3.DoubleClickDetect = True
+    rdpClient.AdvancedSettings3.PerformanceFlags = &H190
     ' TS_PERF_ENABLE_ENHANCED GRAPHICS |
-    ' TS_PERF_ENABLE_FONT_SMOOTHING
+    ' TS_PERF_ENABLE_FONT_SMOOTHING |
+    ' TS_PERF_ENABLE_DESKTOP_COMPOSITION
     rdpClient.ColorDepth = 24
 
 End Sub
@@ -564,7 +654,10 @@ Private Sub UserControl_ReadProperties(PropBag As PropertyBag)
 
     If rdpClient.Server = "" Or rdpClient.UserName = "" Or CStr(PropBag.ReadProperty("RDP_Password", vbNullString)) = "" Or rdpClient.SecuredSettings2.StartProgram = "" Then
         Err.Raise -1, "YOMIGAERI", LoadResString(103) ' The parameters for the frontend are incorrect.
+        Exit Sub
     End If
+
+    rdpClient.Connect
 
 End Sub
 
@@ -583,7 +676,9 @@ Private Sub UserControl_Show()
   ' Will be fired when the control is actually shown on the website.
   ' UserControl_Initialize still has the control floating in space.
 
-    m_IEFrame.Construct UserControl.hwnd
+    SSubTUP.AttachMessage Me, UserControl.hWnd, WM_SETCURSOR
+
+    m_IEFrame.Construct UserControl.hWnd
     m_IEAddressBar.Construct m_IEFrame.hWndIEFrame
     m_IEBrowser.Construct m_IEFrame.hWndInternetExplorerServer
     m_IEStatusBar.Construct m_IEFrame.hWndIEFrame
@@ -602,11 +697,17 @@ Private Sub UserControl_Show()
     m_IEStatusBar.SSLIcon = SSLIconState.None
 
     m_IEStatusBar.Text = LoadResString(101)  ' Connecting to rendering engine....
-    rdpClient.Connect
 
 End Sub
 
 Private Sub UserControl_Terminate()
+
+    If m_CursorHCURSORIsCustom Then
+        ' This will free any custom cursor
+        SetCursor IDC_ARROW
+    End If
+
+    SSubTUP.DetachMessage Me, UserControl.hWnd, WM_SETCURSOR
 
     m_IEFrame.Destroy
     m_IEStatusBar.Destroy
@@ -620,5 +721,5 @@ Private Sub UserControl_Terminate()
 
 End Sub
 
-':) Ulli's VB Code Formatter V2.24.17 (2022-Nov-11 08:25)  Decl: 11  Code: 514  Total: 525 Lines
-':) CommentOnly: 57 (10.9%)  Commented: 8 (1.5%)  Filled: 408 (77.7%)  Empty: 117 (22.3%)  Max Logic Depth: 3
+':) Ulli's VB Code Formatter V2.24.17 (2022-Nov-12 08:13)  Decl: 17  Code: 608  Total: 625 Lines
+':) CommentOnly: 58 (9.3%)  Commented: 8 (1.3%)  Filled: 478 (76.5%)  Empty: 147 (23.5%)  Max Logic Depth: 3

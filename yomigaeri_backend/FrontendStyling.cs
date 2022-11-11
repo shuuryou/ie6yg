@@ -38,13 +38,6 @@ namespace yomigaeri_backend
 		private const int COLOR_2NDACTIVECAPTION = 27;
 		private const int COLOR_2NDINACTIVECAPTION = 28;
 
-		[DllImport("user32.dll", SetLastError = true)]
-		[return: MarshalAs(UnmanagedType.Bool)]
-		static extern bool SystemParametersInfo(int uiAction, int uiParam, IntPtr pvParam, int fWinIni);
-
-		private const int SPI_SETCURSORS = 0x0057;
-		private const int SPIF_SENDCHANGE = 0x02;
-
 		public static Font DesiredFont { get; private set; }
 
 		static FrontendStyling()
@@ -164,98 +157,6 @@ namespace yomigaeri_backend
 			bool ret = SetSysColors(elements.Length, elements, values);
 
 			Logging.WriteLineToLog("SetSysColors result: {0}", ret);
-		}
-
-		internal static void ApplyCursors(string fe_cursors)
-		{
-			/* What the frontend sends:
-			 *	GetUserCursors = _
-			 *	 "AppStarting=" & strAppStarting & vbTab & _
-			 *	 "Arrow=" & strArrow & vbTab & _
-			 *	 "Crosshair=" & strCrosshair & vbTab & _
-			 *	 "IBeam=" & strIBeam & vbTab & _
-			 *	 "No=" & strNo & vbTab & _
-			 *	 "SizeAll=" & strSizeAll & vbTab & _
-			 *	 "SizeNESW=" & strSizeNESW & vbTab & _
-			 *	 "SizeNS=" & strSizeNS & vbTab & _
-			 *	 "SizeNWSE=" & strSizeNWSE & vbTab & _
-			 *	 "SizeWE=" & strSizeWE & vbTab & _
-			 *	 "Wait=" & strWait
-             *	
-             *	The strings are paths local to the frontend.
-             *	We abuse RDP drive sharing to make this work.
-			*/
-
-			if (fe_cursors == null)
-				throw new ArgumentNullException("fe_cursors");
-
-			if (string.IsNullOrWhiteSpace(fe_cursors))
-				throw new ArgumentException("Cursors string is empty.", "fe_cursors");
-
-			string[] cursors = fe_cursors.Split("\t".ToCharArray(), StringSplitOptions.RemoveEmptyEntries);
-
-			RegistryKey cursorsKey = null;
-
-			try
-			{
-				cursorsKey = Registry.CurrentUser.OpenSubKey("Control Panel\\Cursors", true);
-
-				foreach (string cursor in cursors)
-				{
-					int idx = cursor.IndexOf('=');
-
-					if (idx == -1)
-					{
-						Logging.WriteLineToLog("Invalid cursor definition: \"{0}\". Skipped.", cursor);
-						continue;
-					}
-
-					string keyName = cursor.Substring(0, idx);
-					string cursorPath = cursor.Substring(idx + 1);
-
-					if (string.IsNullOrEmpty(cursorPath) || !char.IsLetter(cursorPath[0]) || cursorPath[1] != ':' || cursorPath[2] != '\\')
-					{
-						Logging.WriteLineToLog("Invalid cursor definition: key \"{0}\" has no path. Skipped.", keyName);
-						continue;
-					}
-
-					cursorPath = string.Format(CultureInfo.InvariantCulture, "\\\\tsclient\\{0}\\{1}",
-						cursorPath[0], cursorPath.Substring(3));
-
-					Logging.WriteLineToLog("cursorPath for \"{0}\" is now: \"{1}\"", keyName, cursorPath);
-
-					if (!File.Exists(cursorPath))
-					{
-						Logging.WriteLineToLog("Cursor not found on frontend's hard disk. Skipping.");
-						continue;
-					}
-
-					string tempFile = string.Format(CultureInfo.InvariantCulture, "{0}{1}{2}-{3}",
-						Path.GetTempPath(), Path.DirectorySeparatorChar,
-						Path.GetFileNameWithoutExtension(Path.GetRandomFileName()),
-						Path.GetFileName(cursorPath));
-
-					Logging.WriteLineToLog("Cache cursor locally: \"{0}\" --> \"{1}\"", cursorPath, tempFile);
-
-					File.Copy(cursorPath, tempFile, true);
-
-					Logging.WriteLineToLog("Set cursor registry key \"{0}\" to \"{1}\",", keyName, tempFile);
-
-					cursorsKey.SetValue(keyName, tempFile);
-				}
-			}
-			finally
-			{
-				if (cursorsKey != null)
-				{
-					cursorsKey.Close();
-					cursorsKey.Dispose();
-				}
-			}
-
-			bool ret = SystemParametersInfo(SPI_SETCURSORS, 0, IntPtr.Zero, SPIF_SENDCHANGE);
-
-			Logging.WriteLineToLog("SystemParametersInfo returned: {0}", ret);
 		}
 	}
 }

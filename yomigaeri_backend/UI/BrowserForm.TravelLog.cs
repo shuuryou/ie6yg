@@ -21,7 +21,7 @@ namespace yomigaeri_backend.UI
 			// @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
 			private const int MAX_ENTRIES = 11;
 
-			public enum NavigationKind
+			public enum TravelDirection
 			{
 				Back = 1,
 				Forward = 2
@@ -62,7 +62,7 @@ namespace yomigaeri_backend.UI
 				return true;
 			}
 
-			public string MakeMenuStringForFrontend(NavigationKind button)
+			public string MakeMenuStringForFrontend(TravelDirection button)
 			{
 				NavigationEntry[] entries = m_NavigationEntries.ToArray();
 				string[] slots = new string[5];
@@ -81,7 +81,7 @@ namespace yomigaeri_backend.UI
 
 				int j = 0;
 
-				if (button == NavigationKind.Back)
+				if (button == TravelDirection.Back)
 				{
 					for (int i = m_offsetCurrent - 1; i >= 0; i--)
 						slots[j++] = string.IsNullOrWhiteSpace(entries[i].Title) ? entries[i].DisplayUrl : entries[i].Title;
@@ -89,7 +89,7 @@ namespace yomigaeri_backend.UI
 					return string.Join("\x1", slots);
 				}
 
-				if (button == NavigationKind.Forward)
+				if (button == TravelDirection.Forward)
 				{
 					for (int i = m_offsetCurrent + 1; i < entries.Length; i++)
 						slots[j++] = string.IsNullOrWhiteSpace(entries[i].Title) ? entries[i].DisplayUrl : entries[i].Title;

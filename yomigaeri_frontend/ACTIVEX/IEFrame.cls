@@ -137,7 +137,7 @@ End Sub
 
 Private Function FindInternetExplorerServer() As Long
 
-  Dim hwnd As Long
+  Dim hWnd As Long
   Dim strClassName As String
 
     If m_hWndUserControl = -1 Then
@@ -146,7 +146,7 @@ Private Function FindInternetExplorerServer() As Long
         Exit Function
     End If
 
-    hwnd = GetParent(m_hWndUserControl)
+    hWnd = GetParent(m_hWndUserControl)
 
     If Err.LastDllError <> 0 Then
         modLogging.WriteLineToLog "IEFrame: GetParent failed in search for InternetExplorer_Server: " & Hex$(Err.LastDllError)
@@ -155,7 +155,7 @@ Private Function FindInternetExplorerServer() As Long
     End If
 
     strClassName = Space$(128)
-    GetClassNameA hwnd, strClassName, 128
+    GetClassNameA hWnd, strClassName, 128
 
     If Err.LastDllError <> 0 Then
         modLogging.WriteLineToLog "IEFrame: GetClassName failed in search for InternetExplorer_Server: " & Hex$(Err.LastDllError)
@@ -171,18 +171,18 @@ Private Function FindInternetExplorerServer() As Long
         Exit Function
     End If
 
-    modLogging.WriteLineToLog "IEFrame: Internet Explorer_Server hWnd is " & Hex$(hwnd)
+    modLogging.WriteLineToLog "IEFrame: Internet Explorer_Server hWnd is " & Hex$(hWnd)
 
-    FindInternetExplorerServer = hwnd
+    FindInternetExplorerServer = hWnd
 
 End Function
 
 Private Function FindShellDocObjectView(ByVal hWndInternetExplorerServer As Long) As Long
 
-  Dim hwnd As Long
+  Dim hWnd As Long
   Dim strClassName As String
 
-    hwnd = GetParent(hWndInternetExplorerServer)
+    hWnd = GetParent(hWndInternetExplorerServer)
 
     If Err.LastDllError <> 0 Then
         modLogging.WriteLineToLog "IEFrame: GetParent failed in search for Shell DocObject View: " & Hex$(Err.LastDllError)
@@ -191,7 +191,7 @@ Private Function FindShellDocObjectView(ByVal hWndInternetExplorerServer As Long
     End If
 
     strClassName = Space$(128)
-    GetClassNameA hwnd, strClassName, 128
+    GetClassNameA hWnd, strClassName, 128
 
     If Err.LastDllError <> 0 Then
         modLogging.WriteLineToLog "IEFrame: GetClassName failed in search for Shell DocObject View: " & Hex$(Err.LastDllError)
@@ -207,9 +207,9 @@ Private Function FindShellDocObjectView(ByVal hWndInternetExplorerServer As Long
         Exit Function
     End If
 
-    modLogging.WriteLineToLog "IEFrame: Shell DocObject View hWnd is " & Hex$(hwnd)
+    modLogging.WriteLineToLog "IEFrame: Shell DocObject View hWnd is " & Hex$(hWnd)
 
-    FindShellDocObjectView = hwnd
+    FindShellDocObjectView = hWnd
 
 End Function
 
@@ -243,7 +243,7 @@ Private Property Let ISubclass_MsgResponse(ByVal RHS As SSubTUP.EMsgResponse)
 
 End Property
 
-Private Function ISubclass_WindowProc(ByVal hwnd As Long, ByVal iMsg As Long, ByVal wParam As Long, ByVal lParam As Long) As Long
+Private Function ISubclass_WindowProc(ByVal hWnd As Long, ByVal iMsg As Long, ByVal wParam As Long, ByVal lParam As Long) As Long
 
   ' WM_INITMENUPOPUP seems to be the most sane way to get hMenu.
   ' IE6's menu bar is actually a ReBar and the menu buttons are
@@ -283,11 +283,11 @@ Private Function ISubclass_WindowProc(ByVal hwnd As Long, ByVal iMsg As Long, By
                 Exit Function
             End If
 
-            ISubclass_WindowProc = SSubTUP.CallOldWindowProc(hwnd, iMsg, wParam, lParam)
+            ISubclass_WindowProc = SSubTUP.CallOldWindowProc(hWnd, iMsg, wParam, lParam)
             Exit Function
         End If
 
-        ISubclass_WindowProc = SSubTUP.CallOldWindowProc(hwnd, iMsg, wParam, lParam)
+        ISubclass_WindowProc = SSubTUP.CallOldWindowProc(hWnd, iMsg, wParam, lParam)
     End If
 
     ' The idea of the following exercise is to get WindowResized event
@@ -295,7 +295,7 @@ Private Function ISubclass_WindowProc(ByVal hwnd As Long, ByVal iMsg As Long, By
     ' That is to say, *only* after the fact. Not before. Not during.
 
     If iMsg = WM_EXITSIZEMOVE Then
-        ISubclass_WindowProc = SSubTUP.CallOldWindowProc(hwnd, iMsg, wParam, lParam)
+        ISubclass_WindowProc = SSubTUP.CallOldWindowProc(hWnd, iMsg, wParam, lParam)
 
         If m_GotSizeMessage Then
             ' This way, because WM_EXITSIZEMOVE won't tell you whether
@@ -308,7 +308,7 @@ Private Function ISubclass_WindowProc(ByVal hwnd As Long, ByVal iMsg As Long, By
     End If
 
     If iMsg = WM_SIZE Then
-        ISubclass_WindowProc = SSubTUP.CallOldWindowProc(hwnd, iMsg, wParam, lParam)
+        ISubclass_WindowProc = SSubTUP.CallOldWindowProc(hWnd, iMsg, wParam, lParam)
 
         m_GotSizeMessage = True
 
@@ -503,5 +503,5 @@ Private Function TranslateToIECommand(LoWord As Integer) As IECommand
 
 End Function
 
-':) Ulli's VB Code Formatter V2.24.17 (2022-Nov-11 06:25)  Decl: 47  Code: 447  Total: 494 Lines
-':) CommentOnly: 43 (8.7%)  Commented: 5 (1%)  Filled: 360 (72.9%)  Empty: 134 (27.1%)  Max Logic Depth: 4
+':) Ulli's VB Code Formatter V2.24.17 (2022-Nov-12 08:13)  Decl: 47  Code: 447  Total: 494 Lines
+':) CommentOnly: 43 (8.7%)  Commented: 5 (1%)  Filled: 361 (73.1%)  Empty: 133 (26.9%)  Max Logic Depth: 4

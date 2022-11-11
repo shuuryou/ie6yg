@@ -154,48 +154,6 @@ namespace yomigaeri_backend
 			}
 			#endregion
 
-			#region Request and Apply Cursors from Frontend
-			{
-				Logging.WriteLineToLog("Request cursors from frontend.");
-
-				RDPVirtualChannel.WriteChannel("CURSORS");
-
-				string response = null;
-
-				try
-				{
-					response = RDPVirtualChannel.ReadChannelUntilResponse();
-				}
-				catch (TimeoutException)
-				{
-					Logging.WriteLineToLog("Time out getting curors from frontend.");
-				}
-
-				if (string.IsNullOrEmpty(response))
-					goto skipStyling;
-
-				Logging.WriteLineToLog("Frontend curors response is: \"{0}\".", response);
-
-				if (response == "ERROR" || response == "UNSUPPORTED")
-					goto skipStyling;
-
-				Logging.WriteLineToLog("Apply frontend curors to this session.");
-
-				try
-				{
-					FrontendStyling.ApplyCursors(response);
-				}
-				catch (Exception e)
-				{
-					Logging.WriteLineToLog("Error applying curors: {0}", e);
-				}
-
-
-			skipStyling:
-				;
-			}
-			#endregion
-
 			string frontendLanguageList = string.Empty;
 
 			#region Request Accept-Language List from Frontend

@@ -335,11 +335,11 @@ Private Property Let ISubclass_MsgResponse(ByVal RHS As SSubTUP.EMsgResponse)
 
 End Property
 
-Private Function ISubclass_WindowProc(ByVal hwnd As Long, ByVal iMsg As Long, ByVal wParam As Long, ByVal lParam As Long) As Long
+Private Function ISubclass_WindowProc(ByVal hWnd As Long, ByVal iMsg As Long, ByVal wParam As Long, ByVal lParam As Long) As Long
 
     If iMsg = SB_SIMPLE Then
         m_IsStatusBarCurrentlySimple = (wParam > 0)
-        ISubclass_WindowProc = CallOldWindowProc(hwnd, iMsg, wParam, lParam)
+        ISubclass_WindowProc = CallOldWindowProc(hWnd, iMsg, wParam, lParam)
         Exit Function
     End If
 
@@ -351,7 +351,7 @@ Private Function ISubclass_WindowProc(ByVal hwnd As Long, ByVal iMsg As Long, By
         Or iMsg = SB_SETMINHEIGHT Or iMsg = SB_SETICON) Then
 
         If m_IsStatusBarCurrentlySimple Then
-            ISubclass_WindowProc = CallOldWindowProc(hwnd, iMsg, wParam, lParam)
+            ISubclass_WindowProc = CallOldWindowProc(hWnd, iMsg, wParam, lParam)
         End If
 
         Exit Function
@@ -362,7 +362,7 @@ Private Function ISubclass_WindowProc(ByVal hwnd As Long, ByVal iMsg As Long, By
         iMsg = iMsg - SB_IE6YG_SHIFT
     End If
 
-    ISubclass_WindowProc = CallOldWindowProc(hwnd, iMsg, wParam, lParam)
+    ISubclass_WindowProc = CallOldWindowProc(hWnd, iMsg, wParam, lParam)
 
 End Function
 
@@ -478,5 +478,5 @@ Private Function ZoneComputePaneSize() As Long
 
 End Function
 
-':) Ulli's VB Code Formatter V2.24.17 (2022-Nov-11 04:01)  Decl: 57  Code: 410  Total: 467 Lines
+':) Ulli's VB Code Formatter V2.24.17 (2022-Nov-12 08:13)  Decl: 57  Code: 410  Total: 467 Lines
 ':) CommentOnly: 13 (2.8%)  Commented: 8 (1.7%)  Filled: 318 (68.1%)  Empty: 149 (31.9%)  Max Logic Depth: 3

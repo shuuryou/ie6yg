@@ -11,18 +11,31 @@ namespace yomigaeri_backend.UI
 			if (message == null)
 				throw new ArgumentNullException("message");
 
-			#region NAVIGATE
-			if (message.StartsWith("NAVIGATE:", StringComparison.Ordinal))
+			// There is no technical reason that the messages start with
+			// seven letter long commands; they could be longer. It just
+			// emerged as a pattern and now it's here to stay like that.
+
+			#region NAVIGAT -- Navigate to URL
+			if (message.StartsWith("NAVIGAT", StringComparison.Ordinal))
 			{
-				Program.WebBrowser.LoadUrl(message.Substring(9));
+				string url = message.Substring(7);
+
+				if (string.IsNullOrEmpty(url))
+					return;
+
+				Program.WebBrowser.LoadUrl(url);
 				return;
 			}
 			#endregion
 
-			#region WINSIZE
+			#region WINSIZE -- Adjust window size
 			if (message.StartsWith("WINSIZE", StringComparison.Ordinal))
 			{
-				string size = message.Trim().Substring(7);
+				// e.g. WINSIZE800,600
+				//      01234567890123...
+
+				string size = message.Substring(7);
+
 				if (String.IsNullOrEmpty(size))
 					goto winsize_err;
 
@@ -46,7 +59,7 @@ namespace yomigaeri_backend.UI
 			}
 			#endregion
 
-			#region BTNBACK, BTNFORW
+			#region BTNBACK, BTNFORW -- Forward and Back buttons
 			if (message == "BTNBACK")
 			{
 				if (!Program.WebBrowser.CanGoBack)
@@ -67,19 +80,20 @@ namespace yomigaeri_backend.UI
 			}
 			#endregion
 
-			#region MNUBACK, MNUFORW
+			#region MNUBACK, MNUFORW -- Forward and Back travel log
 			if (message.StartsWith("MNUBACK") || message.StartsWith("MNUFORW"))
 			{ 
 				if (message.Length != 8)
 					return;
+
+				// e.g. MNUBACK1
+				//      01234567
 
 				if (!int.TryParse(message[7].ToString(), NumberStyles.None, CultureInfo.InvariantCulture, out int offset))
 					return;
 
 				if (message.StartsWith("MNUBACK"))
 					offset *= -1;
-
-				Logging.WriteLineToLog("History menu. Offset={0}", offset);
 
 				// TODO - This needs to be done another way at some point. Right now
 				// CEF doesn't offer another way, but websites that fuck around with

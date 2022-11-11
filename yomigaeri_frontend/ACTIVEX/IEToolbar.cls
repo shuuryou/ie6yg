@@ -274,11 +274,11 @@ Private Property Let ISubclass_MsgResponse(ByVal RHS As SSubTUP.EMsgResponse)
 
 End Property
 
-Private Function ISubclass_WindowProc(ByVal hwnd As Long, ByVal iMsg As Long, ByVal wParam As Long, ByVal lParam As Long) As Long
+Private Function ISubclass_WindowProc(ByVal hWnd As Long, ByVal iMsg As Long, ByVal wParam As Long, ByVal lParam As Long) As Long
 
   Dim command As ToolbarCommand
 
-    If hwnd = m_hWndButtonToolbar Then
+    If hWnd = m_hWndButtonToolbar Then
         If iMsg = TB_ENABLEBUTTON Then
             Exit Function
         End If
@@ -287,18 +287,18 @@ Private Function ISubclass_WindowProc(ByVal hwnd As Long, ByVal iMsg As Long, By
             iMsg = iMsg - TB_IE6YG_SHIFT
         End If
 
-        ISubclass_WindowProc = CallOldWindowProc(hwnd, iMsg, wParam, lParam)
+        ISubclass_WindowProc = CallOldWindowProc(hWnd, iMsg, wParam, lParam)
         Exit Function
     End If
 
-    If hwnd = m_hWndReBarWindow32 Then
+    If hWnd = m_hWndReBarWindow32 Then
         If iMsg = WM_COMMAND Then
             command = ToolbarCommandIdToEnum(wParam)
 
             If command <> CommandUnknown Then
                 RaiseEvent ToolbarButtonPressed(command)
               Else
-                ISubclass_WindowProc = CallOldWindowProc(hwnd, iMsg, wParam, lParam)
+                ISubclass_WindowProc = CallOldWindowProc(hWnd, iMsg, wParam, lParam)
             End If
 
             Exit Function
@@ -327,7 +327,7 @@ Private Function ISubclass_WindowProc(ByVal hwnd As Long, ByVal iMsg As Long, By
             End If
         End If
 
-        ISubclass_WindowProc = CallOldWindowProc(hwnd, iMsg, wParam, lParam)
+        ISubclass_WindowProc = CallOldWindowProc(hWnd, iMsg, wParam, lParam)
         Exit Function
     End If
 
@@ -385,5 +385,5 @@ Private Function ToolbarCommandIdToEnum(idCommand As Long) As ToolbarCommand
 
 End Function
 
-':) Ulli's VB Code Formatter V2.24.17 (2022-Nov-11 04:01)  Decl: 45  Code: 329  Total: 374 Lines
+':) Ulli's VB Code Formatter V2.24.17 (2022-Nov-12 08:13)  Decl: 45  Code: 329  Total: 374 Lines
 ':) CommentOnly: 29 (7.8%)  Commented: 3 (0.8%)  Filled: 276 (73.8%)  Empty: 98 (26.2%)  Max Logic Depth: 5

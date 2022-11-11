@@ -10,7 +10,7 @@ namespace yomigaeri_backend.UI
 	{
 		private void SystemEvents_SessionSwitch(object sender, SessionSwitchEventArgs e)
 		{
-			Logging.WriteLineToLog("SystemEvents_SessionSwitch in BrowserForm. Reason: {0}", e.Reason);
+			Logging.WriteLineToLog("WebBrowserEvents: SessionSwitch with eason: {0}", e.Reason);
 
 			if (e.Reason == SessionSwitchReason.RemoteDisconnect)
 			{
@@ -36,32 +36,8 @@ namespace yomigaeri_backend.UI
 			SynchronizeWithFrontend();
 		}
 
-		private void WebBrowser_StatusMessage(object sender, StatusMessageEventArgs e)
-		{
-			m_SyncState.StatusText = e.Value;
-			SynchronizeWithFrontend();
-		}
-
-		private void WebBrowser_TitleChanged(object sender, TitleChangedEventArgs e)
-		{
-			if (string.IsNullOrEmpty(e.Title))
-				m_SyncState.PageTitle = Program.WebBrowser.Address;
-			else
-				m_SyncState.PageTitle = e.Title;
-
-			SynchronizeWithFrontend();
-		}
-
-		private void WebBrowser_AddressChanged(object sender, AddressChangedEventArgs e)
-		{
-			m_SyncState.Address = e.Address;
-			SynchronizeWithFrontend();
-		}
-
 		private void WebBrowser_FrameLoadStart(object sender, FrameLoadStartEventArgs e)
 		{
-			Logging.WriteLineToLog("WebBrowserEvents: FrameLoadStart: Main? {0}", e.Frame.IsMain);
-
 			if (!e.Frame.IsMain)
 				return;
 
@@ -85,16 +61,15 @@ namespace yomigaeri_backend.UI
 
 		private void WebBrowser_FrameLoadEnd(object sender, FrameLoadEndEventArgs e)
 		{
-			Logging.WriteLineToLog("WebBrowserEvents: FrameLoadEnd: Main? {0}", e.Frame.IsMain);
-
 			if (!e.Frame.IsMain)
 				return;
 
+			m_TravelLog.PrepareForVisit();
+			Program.WebBrowser.GetBrowserHost().GetNavigationEntries(m_TravelLog, false);
+
 			this.InvokeOnUiThreadIfRequired(() =>
 			{
-				m_HistoryProcessor.PrepareForVisit();
-				Program.WebBrowser.GetBrowserHost().GetNavigationEntries(m_HistoryProcessor, false);
-
+				m_SyncState.StatusText = string.Empty;
 				m_SyncState.AddHistoryItem = true;
 				SynchronizeWithFrontend();
 			});
