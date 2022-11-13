@@ -195,17 +195,12 @@ NextToolbar:
         SendMessage hwndToolbar, TB_GETBUTTON, i, sctTbButton
 
         ' Another shitty hack. It would have been nice to use TB_GETBUTTONTEXT,
-        ' but this consistenly crashed the BHO and IE unless there was a MsgBox
-        ' in this loop to interrupt it every iteration. I guess it's a bug in
-        ' COMCTL32?
-
-        ' Don't know. Don't care. All of this is insane anyway, so I gave up
-        ' after a day of trying to debug the crash. BHO's have a very large
-        ' iBitmap value, so the following is reliable enough to find the button
-        ' toolbar.
+        ' but this consistenly crashed IE unless there was a MsgBox in this loop
+        ' to interrupt it every iteration.
 
         ' It doesn't help that most BHO development went down 15-20 years ago
         ' and the knowledge has since become somewhat lost on the Internet.
+
         If sctTbButton.idCommand <> 0 And sctTbButton.iBitmap = TOOLBAR_IBITMAP_REFRESH Then
             m_hWndButtonToolbar = hwndToolbar
             modLogging.WriteLineToLog "IEToolbar: Found it: " & Hex$(hwndToolbar)
@@ -230,10 +225,12 @@ NextToolbar:
                   Case TOOLBAR_IBITMAP_REFRESH
                     modLogging.WriteLineToLog "IEToolbar: Found REFRESH button. Command ID: " & sctTbButton.idCommand
                     m_ToolbarIdCommandREFRESH = sctTbButton.idCommand
-                  Case TOOLBAR_IBITMAP_HOME:
+                  Case TOOLBAR_IBITMAP_HOME
+
                     modLogging.WriteLineToLog "IEToolbar: Found HOME button. Command ID: " & sctTbButton.idCommand
                     m_ToolbarIdCommandHOME = sctTbButton.idCommand
-                  Case TOOLBAR_IBITMAP_MEDIA:
+                  Case TOOLBAR_IBITMAP_MEDIA
+
                     modLogging.WriteLineToLog "IEToolbar: Found MEDIA button. Command ID: " & sctTbButton.idCommand
                     m_ToolbarIdCommandMEDIA = sctTbButton.idCommand
 
@@ -385,5 +382,5 @@ Private Function ToolbarCommandIdToEnum(idCommand As Long) As ToolbarCommand
 
 End Function
 
-':) Ulli's VB Code Formatter V2.24.17 (2022-Nov-12 08:13)  Decl: 45  Code: 329  Total: 374 Lines
-':) CommentOnly: 29 (7.8%)  Commented: 3 (0.8%)  Filled: 276 (73.8%)  Empty: 98 (26.2%)  Max Logic Depth: 5
+':) Ulli's VB Code Formatter V2.24.17 (2022-Nov-14 08:11)  Decl: 45  Code: 326  Total: 371 Lines
+':) CommentOnly: 24 (6.5%)  Commented: 3 (0.8%)  Filled: 271 (73%)  Empty: 100 (27%)  Max Logic Depth: 5

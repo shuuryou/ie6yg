@@ -114,7 +114,7 @@ Private Sub FindAddressBar()
     modLogging.WriteLineToLog "IEAddressBar: Edit hWnd is " & Hex$(hWnd)
 
     m_hWndAddressBar = hWnd
-    
+
     modLogging.WriteLineToLog "IEAddressBar: Success!"
 
 End Sub
@@ -147,7 +147,7 @@ Public Property Get Text() As String
     SendMessage m_hWndAddressBar, WM_GETTEXT, ByVal (lngLength + 1), bytText(0)
 
     Text = TrimNull(StrConv(bytText, vbUnicode))
-    
+
     modLogging.WriteLineToLog "IEAddressBar: Get text result: " & Text
 
 End Property
@@ -160,13 +160,13 @@ Public Property Let Text(newText As String)
         Exit Property
     End If
 
-    Text = StrConv(newText, vbFromUnicode) & Chr$(0)
+    Text = StrConv(newText, vbFromUnicode) & vbNullChar
 
     SendMessage m_hWndAddressBar, WM_SETTEXT, 0&, Text(0)
-    
+
     modLogging.WriteLineToLog "IEAddressBar: Set text to: " & newText
 
 End Property
 
-':) Ulli's VB Code Formatter V2.24.17 (2022-Nov-06 08:05)  Decl: 4  Code: 152  Total: 156 Lines
-':) CommentOnly: 13 (8.3%)  Commented: 0 (0%)  Filled: 98 (62.8%)  Empty: 58 (37.2%)  Max Logic Depth: 3
+':) Ulli's VB Code Formatter V2.24.17 (2022-Nov-14 08:11)  Decl: 4  Code: 155  Total: 159 Lines
+':) CommentOnly: 13 (8.2%)  Commented: 0 (0%)  Filled: 99 (62.3%)  Empty: 60 (37.7%)  Max Logic Depth: 3

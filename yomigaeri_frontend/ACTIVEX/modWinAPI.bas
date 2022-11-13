@@ -3,7 +3,7 @@ Option Explicit
 
 ' Everthing already included in oleexp.tlb is not explicitly mentioned here again.
 
-Public Declare Function AccessibleObjectFromWindow Lib "oleacc.dll" (ByVal hWnd As Long, ByVal dwId As Long, ByRef riid As UUID, ByRef ppvObject As Object) As Long
+Public Declare Function AccessibleObjectFromWindow Lib "OLEACC.DLL" (ByVal hWnd As Long, ByVal dwId As Long, ByRef riid As UUID, ByRef ppvObject As Object) As Long
 Public Declare Function IIDFromString Lib "OLE32.DLL" (ByVal lpsz As Long, ByRef lpiid As UUID) As Long
 
 Public Const IIDSTR_IHTMLElement As String = "{3050f1ff-98b5-11cf-bb82-00aa00bdce0b}"
@@ -14,19 +14,25 @@ Public Const OBJID_CLIENT As Long = -4
 Public Declare Function FindWindowEx Lib "USER32.DLL" Alias "FindWindowExA" (ByVal hWnd1 As Long, ByVal hWnd2 As Long, ByVal lpsz1 As String, ByVal lpsz2 As String) As Long
 Public Declare Function GetParent Lib "USER32.DLL" (ByVal hWnd As Long) As Long
 
-Public Declare Function LoadImage Lib "USER32.DLL" Alias "LoadImageA" (ByVal hInst As Long, ByVal lpsz As String, ByVal dwImageType As Long, ByVal dwDesiredWidth As Long, ByVal dwDesiredHeight As Long, ByVal dwFlags As Long) As Long
+Public Declare Function LoadImage Lib "USER32.DLL" Alias "LoadImageA" (ByVal hinst As Long, ByVal lpsz As String, ByVal dwImageType As Long, ByVal dwDesiredWidth As Long, ByVal dwDesiredHeight As Long, ByVal dwFlags As Long) As Long
 Public Declare Function DestroyIcon Lib "USER32.DLL" (ByVal hIcon As Long) As Long
 
-Public Declare Function InflateRect Lib "USER32.DLL" (lpRect As RECT, ByVal x As Long, ByVal y As Long) As Long
-Public Declare Function SetWindowPos Lib "USER32.DLL" (ByVal hWnd As Long, ByVal hWndInsertAfter As Long, ByVal x As Long, ByVal y As Long, ByVal cx As Long, ByVal cy As Long, ByVal wFlags As Long) As Long
+Public Declare Function InflateRect Lib "USER32.DLL" (lpRect As RECT, ByVal X As Long, ByVal Y As Long) As Long
+Public Declare Function SetWindowPos Lib "USER32.DLL" (ByVal hWnd As Long, ByVal hWndInsertAfter As Long, ByVal X As Long, ByVal Y As Long, ByVal cx As Long, ByVal cy As Long, ByVal wFlags As Long) As Long
 Public Declare Function GetClientRect Lib "USER32.DLL" (ByVal hWnd As Long, lpRect As RECT) As Long
 
 Public Type RECT
-    Left As Long
-    Top As Long
-    Right As Long
-    Bottom As Long
+    left As Long
+    top As Long
+    right As Long
+    bottom As Long
 End Type
+
+Public Const SWP_NOSIZE As Long = &H1
+Public Const SWP_NOMOVE As Long = &H2
+Public Const SWP_NOZORDER As Long = &H4
+Public Const SWP_NOACTIVATE As Long = &H10
+Public Const SWP_SHOWWINDOW = &H40
 
 Public Declare Function EnableMenuItem Lib "USER32.DLL" (ByVal hMenu As Long, ByVal wIDEnableItem As Long, ByVal wEnable As Long) As Long
 Public Declare Function DrawMenuBar Lib "USER32.DLL" (ByVal hWnd As Long) As Long
@@ -39,8 +45,41 @@ Public Declare Function SetCursor Lib "USER32.DLL" (ByVal hCursor As Long) As Lo
 Public Declare Function LoadCursor Lib "USER32.DLL" Alias "LoadCursorA" (ByVal hInstance As Long, ByVal lpCursorName As String) As Long
 Public Declare Function DestroyCursor Lib "USER32.DLL" (ByVal hCursor As Long) As Long
 
+Public Declare Function InitCommonControls Lib "COMCTL32.DLL" () As Long
+Public Declare Function CreateWindowEx Lib "USER32.DLL" Alias "CreateWindowExA" (ByVal dwExStyle As Long, ByVal lpClassName As String, ByVal lpWindowName As String, ByVal dwStyle As Long, ByVal X As Long, ByVal Y As Long, ByVal nWidth As Long, ByVal nHeight As Long, ByVal hWndParent As Long, ByVal hMenu As Long, ByVal hInstance As Long, lpParam As Any) As Long
+Public Declare Function DestroyWindow Lib "USER32.DLL" (ByVal hWnd As Long) As Long
+Public Declare Function GetCursorPos Lib "USER32.DLL" (lpPoint As POINT) As Long
+
+' For ctlFrontend (cursor update)
 Public Const GCL_HCURSOR As Long = (-12)
 Public Const IDC_ARROW As Long = &H7F00
+
+' For IEToolTip
+Public Type TOOLINFO
+    cbSize As Long
+    uFlags As Long
+    hWnd As Long
+    uid As Long
+    rc As RECT
+    hinst As Long
+    lpszText As String
+    lParam As Long
+End Type
+
+Public Const CW_USEDEFAULT As Long = &H80000000
+Public Const TOOLTIPS_CLASSA As String = "tooltips_class32"
+Public Const HWND_TOPMOST As Long = -1
+
+Public Const TTF_TRACK As Long = &H20
+Public Const TTF_ABSOLUTE As Long = &H80
+
+Public Const TTS_ALWAYSTIP As Long = &H1
+Public Const TTS_NOPREFIX As Long = &H2
+
+Public Const TTM_ADDTOOL As Long = (WM_USER + 4)
+Public Const TTM_UPDATETIPTEXT As Long = (WM_USER + 12)
+Public Const TTM_TRACKACTIVATE As Long = (WM_USER + 17)
+Public Const TTM_TRACKPOSITION As Long = (WM_USER + 18)
 
 ' For IEToolbar
 Public Type NMTOOLBAR_SHORT
@@ -75,12 +114,9 @@ Public Const SB_SIMPLE As Long = WM_USER + 9
 Public Const SB_GETRECT As Long = WM_USER + 10
 Public Const SB_SETTEXTW As Long = WM_USER + 11
 Public Const SB_SETICON As Long = WM_USER + 15
+Public Const SB_SETTIPTEXTA As Long = WM_USER + 16
 
 Public Const SBT_NOTABPARSING As Long = &H800
-
-Public Const SWP_NOZORDER As Long = &H4
-Public Const SWP_NOACTIVATE As Long = &H10
-Public Const SWP_SHOWWINDOW = &H40
 
 Public Const IMAGE_ICON = 1
 
@@ -113,9 +149,9 @@ Public Function LoWord(lDWord As Long) As Integer
 
 End Function
 
-Public Function MAKEINTRESOURCE(lID As Long)
+Public Function MAKEINTRESOURCE(lId As Long)
 
-    MAKEINTRESOURCE = "#" & CStr(MAKELPARAM(lID, 0))
+    MAKEINTRESOURCE = "#" & CStr(MAKELPARAM(lId, 0))
 
 End Function
 
@@ -135,14 +171,14 @@ Public Function TrimNull(ByVal Text As String) As String
 
   Dim lngPos As Long
 
-    lngPos = InStr(Text, Chr$(0))
+    lngPos = InStr(Text, vbNullChar)
     If lngPos > 0 Then
-        Text = Left$(Text, lngPos - 1)
+        Text = left$(Text, lngPos - 1)
     End If
 
     TrimNull = Text
 
 End Function
 
-':) Ulli's VB Code Formatter V2.24.17 (2022-Nov-12 08:13)  Decl: 97  Code: 50  Total: 147 Lines
-':) CommentOnly: 8 (5.4%)  Commented: 0 (0%)  Filled: 101 (68.7%)  Empty: 46 (31.3%)  Max Logic Depth: 2
+':) Ulli's VB Code Formatter V2.24.17 (2022-Nov-14 08:11)  Decl: 133  Code: 50  Total: 183 Lines
+':) CommentOnly: 10 (5.5%)  Commented: 0 (0%)  Filled: 131 (71.6%)  Empty: 52 (28.4%)  Max Logic Depth: 2

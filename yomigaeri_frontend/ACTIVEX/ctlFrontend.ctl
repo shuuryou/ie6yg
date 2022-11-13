@@ -108,6 +108,7 @@ Attribute m_IEFrame.VB_VarHelpID = -1
 Private m_IEStatusBar As IEStatusBar
 Private WithEvents m_IEToolbar As IEToolbar
 Attribute m_IEToolbar.VB_VarHelpID = -1
+Private m_IEToolTip As IEToolTip
 
 Private m_HideRDP As Boolean
 
@@ -165,7 +166,7 @@ Private Sub m_IEBrowser_NavigationIntercepted(destinationURL As String)
     End If
 
     rdpClient.SendOnVirtualChannel VIRTUAL_CHANNEL_NAME, _
-        "NAVIGAT" & destinationURL
+                                   "NAVIGAT" & destinationURL
 
     rdpClient.SetFocus
 
@@ -324,8 +325,9 @@ Private Sub rdpClient_OnChannelReceivedData(ByVal chanName As String, ByVal data
     ' TRAVLFW: Modify the travel log of the Forward button (see implementation)
     ' INITSIZ: Make frontend send initial window size to backend (width,height)
     ' SETCURS: Set cursor based on ID number following after "SETCURS"
+    ' TOOLTIP: Show a Win32 tooltip at mouse position with text following after "TOOLTIP"
 
-    Select Case Left$(UCase$(data), 7)
+    Select Case left$(UCase$(data), 7)
       Case "STYLING"
         rdpClient.SendOnVirtualChannel VIRTUAL_CHANNEL_NAME, modFrontendStyling.MakeStyling(UserControl.hDC)
       Case "LANGLST"
@@ -425,37 +427,47 @@ Private Sub rdpClient_OnChannelReceivedData(ByVal chanName As String, ByVal data
             Exit Sub
         End If
         m_IEStatusBar.Text = Mid$(data, 8)
-      Case "M_CUTON":
+      Case "M_CUTON"
+
         m_IEFrame.MenuEditCutEnabled = True
-      Case "M_CUTOF":
+      Case "M_CUTOF"
+
         m_IEFrame.MenuEditCutEnabled = False
-      Case "MCOPYON":
+      Case "MCOPYON"
+
         m_IEFrame.MenuEditCopyEnabled = True
-      Case "MCOPYOF":
+      Case "MCOPYOF"
+
         m_IEFrame.MenuEditCopyEnabled = False
-      Case "MPASTON":
+      Case "MPASTON"
+
         m_IEFrame.MenuEditPasteEnabled = True
-      Case "MPASTOF":
+      Case "MPASTOF"
+
         m_IEFrame.MenuEditPasteEnabled = False
-      Case "TRAVLBK":
+      Case "TRAVLBK"
+
         If Len(data) < 8 Then
             modLogging.WriteLineToLog "OnChannelReceivedData: TRAVLBK: Refuse because data is too short."
             Exit Sub
         End If
 
         SetHistoryMenu True, Mid$(data, 8)
-      Case "TRAVLFW":
+      Case "TRAVLFW"
+
         If Len(data) < 8 Then
             modLogging.WriteLineToLog "OnChannelReceivedData: TRAVLFW: Refuse because data is too short."
             Exit Sub
         End If
 
         SetHistoryMenu False, Mid$(data, 8)
-      Case "INITSIZ":
+      Case "INITSIZ"
+
         rdpClient.SendOnVirtualChannel VIRTUAL_CHANNEL_NAME, _
                                        (UserControl.Width / Screen.TwipsPerPixelX) & "," & _
                                        (UserControl.Height / Screen.TwipsPerPixelY)
-      Case "SETCURS":
+      Case "SETCURS"
+
         If Len(data) < 8 Then
             modLogging.WriteLineToLog "OnChannelReceivedData: SETCURS: Refuse because data is too short."
             Exit Sub
@@ -473,6 +485,14 @@ Private Sub rdpClient_OnChannelReceivedData(ByVal chanName As String, ByVal data
         End If
 
         SetFrontendCursor cursorid
+      Case "TOOLTIP"
+        If Len(data) = 7 Then
+            m_IEToolTip.Visible = False
+            Exit Sub
+        End If
+
+        m_IEToolTip.Text = Mid$(data, 8)
+        m_IEToolTip.Visible = True
       Case Else
         modLogging.WriteLineToLog "OnChannelReceivedData: Unknown command ignored."
     End Select
@@ -621,6 +641,7 @@ Private Sub UserControl_Initialize()
     Set m_IEFrame = New IEFrame
     Set m_IEStatusBar = New IEStatusBar
     Set m_IEToolbar = New IEToolbar
+    Set m_IEToolTip = New IEToolTip
 
     rdpClient.CreateVirtualChannels VIRTUAL_CHANNEL_NAME
 
@@ -683,6 +704,7 @@ Private Sub UserControl_Show()
     m_IEBrowser.Construct m_IEFrame.hWndInternetExplorerServer
     m_IEStatusBar.Construct m_IEFrame.hWndIEFrame
     m_IEToolbar.Construct m_IEFrame.hWndIEFrame
+    m_IEToolTip.Construct UserControl.hWnd
 
     m_IEBrowser.SetTitle ""
 
@@ -713,13 +735,15 @@ Private Sub UserControl_Terminate()
     m_IEStatusBar.Destroy
     m_IEToolbar.Destroy
     m_IEBrowser.Destroy
+    m_IEToolTip.Destroy
 
     Set m_IEFrame = Nothing
     Set m_IEStatusBar = Nothing
     Set m_IEToolbar = Nothing
     Set m_IEBrowser = Nothing
+    Set m_IEToolTip = Nothing
 
 End Sub
 
-':) Ulli's VB Code Formatter V2.24.17 (2022-Nov-12 08:13)  Decl: 17  Code: 608  Total: 625 Lines
-':) CommentOnly: 58 (9.3%)  Commented: 8 (1.3%)  Filled: 478 (76.5%)  Empty: 147 (23.5%)  Max Logic Depth: 3
+':) Ulli's VB Code Formatter V2.24.17 (2022-Nov-14 08:11)  Decl: 18  Code: 632  Total: 650 Lines
+':) CommentOnly: 59 (9.1%)  Commented: 8 (1.2%)  Filled: 491 (75.5%)  Empty: 159 (24.5%)  Max Logic Depth: 3

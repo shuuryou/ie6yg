@@ -410,7 +410,7 @@ End Property
 Private Sub ModifyIEMenu(ByVal hMenu As Long)
 
   ' These need to be turned off. Stuff like "Java Console" makes no sense.
-  ' Other stuff I just have no time for right now. :-(
+  ' Other stuff I just have no time to implement right now. :-(
 
   ' MENUITEM "&Open...\tCtrl+O", 256, MFT_STRING, MFS_ENABLED
   ' MENUITEM "E&dit", 41030, MFT_STRING, MFS_ENABLED
@@ -503,5 +503,5 @@ Private Function TranslateToIECommand(LoWord As Integer) As IECommand
 
 End Function
 
-':) Ulli's VB Code Formatter V2.24.17 (2022-Nov-12 08:13)  Decl: 47  Code: 447  Total: 494 Lines
-':) CommentOnly: 43 (8.7%)  Commented: 5 (1%)  Filled: 361 (73.1%)  Empty: 133 (26.9%)  Max Logic Depth: 4
+':) Ulli's VB Code Formatter V2.24.17 (2022-Nov-14 08:11)  Decl: 47  Code: 447  Total: 494 Lines
+':) CommentOnly: 43 (8.7%)  Commented: 5 (1%)  Filled: 360 (72.9%)  Empty: 134 (27.1%)  Max Logic Depth: 4

@@ -86,7 +86,7 @@ Public Sub AddToHistory(ByVal url As String, ByVal title As String)
         '  other client applications that are utilizing the Win32 Internet
         '  functions will disregard the entry."
 
-        ' That's perfect, since the entries made by IE6YG are fake garabe.
+        ' That's perfect, since the entries made by IE6YG are fake garbage.
         ' Since we do not pass a pointer to INTERNET_CACHE_ENTRY_INFO below,
         ' no headers are set. But it's enough to fool IE6 into thinking that
         ' the HTTPS website passed in via "url" didn't set cache headers and
@@ -187,5 +187,5 @@ Public Sub SetTitle(newTitle As String)
 
 End Sub
 
-':) Ulli's VB Code Formatter V2.24.17 (2022-Nov-11 04:01)  Decl: 7  Code: 168  Total: 175 Lines
-':) CommentOnly: 31 (17.7%)  Commented: 0 (0%)  Filled: 118 (67.4%)  Empty: 57 (32.6%)  Max Logic Depth: 3
+':) Ulli's VB Code Formatter V2.24.17 (2022-Nov-14 08:11)  Decl: 7  Code: 168  Total: 175 Lines
+':) CommentOnly: 31 (17.7%)  Commented: 0 (0%)  Filled: 117 (66.9%)  Empty: 58 (33.1%)  Max Logic Depth: 3

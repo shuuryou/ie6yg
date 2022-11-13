@@ -82,7 +82,7 @@ Public Function GetAcceptLanguage() As String
 
         .ValueKey = "AcceptLanguage"
 
-        strRet = .Value
+        strRet = .value
     End With
 
     Set Registry = Nothing
@@ -140,7 +140,7 @@ Public Function MakeStyling(ByRef hDC As Long) As String
     End If
 
     strFont = StrConv(sctNCM.lfMessageFont.lfFaceName, vbUnicode)
-    strFont = Left$(strFont, InStr(strFont, Chr$(0)) - 1)
+    strFont = Left$(strFont, InStr(strFont, vbNullChar) - 1)
 
     ' Str$ in the font size is important to account for locales that
     ' do not use a period as the decimal separator.

@@ -24,14 +24,6 @@ Private Const STATUS_PANE_CONNECTION As Integer = 2
 Private Const STATUS_PANE_SSL As Integer = 3
 Private Const STATUS_PANE_ZONE As Integer = 4
 
-Private Const ICON_ID_DISCONNECTED As Integer = 101
-Private Const ICON_ID_CONNECTED As Integer = 102
-Private Const ICON_ID_CONNECTING As Integer = 107
-Private Const ICON_ID_WEBPAGE As Integer = 103
-Private Const ICON_ID_SSL_BAD As Integer = 104
-Private Const ICON_ID_SSL_OK As Integer = 105
-Private Const ICON_ID_ZONE As Integer = 106
-
 Private m_hWndIEFrame As Long
 Private m_hWndStatusBar As Long
 Private m_hWndProgressBar As Long
@@ -40,11 +32,20 @@ Private m_hIconDisconnected As Long
 Private m_hIconConnected As Long
 Private m_hIconConnecting As Long
 Private m_hIconWebpage As Long
+Private m_hIconSSLNone As Long
 Private m_hIconSSLBad As Long
 Private m_hIconSSLOK As Long
 Private m_hIconZone As Long
 
 Private m_EngineText() As Byte
+
+Private m_EngineDisconnectedText() As Byte
+Private m_EngineConnectedText() As Byte
+Private m_EngineConnectingText() As Byte
+
+Private m_SSLIconNoneText() As Byte
+Private m_SSLIconOKText() As Byte
+Private m_SSLIconBadText() As Byte
 
 Public Enum ConnectionIconState
     None = 0
@@ -85,9 +86,12 @@ Public Property Let ConnectionIcon(newState As ConnectionIconState)
 
     If m_StateConnectionIcon = Connected Then
         lngIcon = m_hIconConnected
+        SendMessage m_hWndStatusBar, SB_SETTIPTEXTA + SB_IE6YG_SHIFT, STATUS_PANE_CONNECTION, m_EngineConnectedText(0)
       ElseIf m_StateConnectionIcon = Disconnected Then
+        SendMessage m_hWndStatusBar, SB_SETTIPTEXTA + SB_IE6YG_SHIFT, STATUS_PANE_CONNECTION, m_EngineDisconnectedText(0)
         lngIcon = m_hIconDisconnected
       ElseIf m_StateConnectionIcon = Connecting Then
+        SendMessage m_hWndStatusBar, SB_SETTIPTEXTA + SB_IE6YG_SHIFT, STATUS_PANE_CONNECTION, m_EngineConnectingText(0)
         lngIcon = m_hIconConnecting
       Else
         lngIcon = 0&
@@ -111,7 +115,15 @@ Public Sub Construct(hWndIEFrame As Long)
         Exit Sub
     End If
 
-    m_EngineText = StrConv(LoadResString(106), vbFromUnicode) & Chr$(0) ' Chromium
+    m_EngineText = StrConv(LoadResString(106), vbFromUnicode) & vbNullChar ' Chromium
+
+    m_EngineDisconnectedText = StrConv(LoadResString(102), vbFromUnicode) & vbNullChar ' Disconnected from rendering engine.
+    m_EngineConnectedText = StrConv(LoadResString(112), vbFromUnicode) & vbNullChar ' Connected to the rendering engine.
+    m_EngineConnectingText = StrConv(LoadResString(101), vbFromUnicode) & vbNullChar ' Connecting to rendering engine...
+
+    m_SSLIconNoneText = StrConv(LoadResString(111), vbFromUnicode) & vbNullChar ' Insecure connection
+    m_SSLIconOKText = StrConv(LoadResString(109), vbFromUnicode) & vbNullChar ' Insecure connection: certificate validation failed
+    m_SSLIconBadText = StrConv(LoadResString(110), vbFromUnicode) & vbNullChar ' Secure connection
 
     AttachMessage Me, m_hWndStatusBar, SB_SETTEXTA
     AttachMessage Me, m_hWndStatusBar, SB_SETTEXTW
@@ -123,21 +135,28 @@ Public Sub Construct(hWndIEFrame As Long)
     AttachMessage Me, m_hWndStatusBar, WM_SIZE
     AttachMessage Me, m_hWndStatusBar, WM_WINDOWPOSCHANGING
     AttachMessage Me, m_hWndStatusBar, WM_WINDOWPOSCHANGED
+    AttachMessage Me, m_hWndStatusBar, WM_LBUTTONUP
+    AttachMessage Me, m_hWndStatusBar, WM_RBUTTONUP
 
     AttachMessage Me, m_hWndStatusBar, SB_SETTEXTA + SB_IE6YG_SHIFT
+    AttachMessage Me, m_hWndStatusBar, SB_SETTIPTEXTA + SB_IE6YG_SHIFT
     AttachMessage Me, m_hWndStatusBar, SB_SETPARTS + SB_IE6YG_SHIFT
     AttachMessage Me, m_hWndStatusBar, SB_SETMINHEIGHT + SB_IE6YG_SHIFT
     AttachMessage Me, m_hWndStatusBar, SB_SETICON + SB_IE6YG_SHIFT
 
     lngIconSize = GetSystemMetrics(SM_CXSMICON)
 
-    m_hIconDisconnected = LoadImage(App.hInstance, MAKEINTRESOURCE(ICON_ID_DISCONNECTED), IMAGE_ICON, lngIconSize, lngIconSize, 0&)
-    m_hIconConnected = LoadImage(App.hInstance, MAKEINTRESOURCE(ICON_ID_CONNECTED), IMAGE_ICON, lngIconSize, lngIconSize, 0&)
-    m_hIconConnecting = LoadImage(App.hInstance, MAKEINTRESOURCE(ICON_ID_CONNECTING), IMAGE_ICON, lngIconSize, lngIconSize, 0&)
-    m_hIconWebpage = LoadImage(App.hInstance, MAKEINTRESOURCE(ICON_ID_WEBPAGE), IMAGE_ICON, lngIconSize, lngIconSize, 0&)
-    m_hIconSSLBad = LoadImage(App.hInstance, MAKEINTRESOURCE(ICON_ID_SSL_BAD), IMAGE_ICON, lngIconSize, lngIconSize, 0&)
-    m_hIconSSLOK = LoadImage(App.hInstance, MAKEINTRESOURCE(ICON_ID_SSL_OK), IMAGE_ICON, lngIconSize, lngIconSize, 0&)
-    m_hIconZone = LoadImage(App.hInstance, MAKEINTRESOURCE(ICON_ID_ZONE), IMAGE_ICON, lngIconSize, lngIconSize, 0&)
+    m_hIconDisconnected = LoadImage(App.hInstance, MAKEINTRESOURCE(101), IMAGE_ICON, lngIconSize, lngIconSize, 0&)
+    m_hIconConnected = LoadImage(App.hInstance, MAKEINTRESOURCE(102), IMAGE_ICON, lngIconSize, lngIconSize, 0&)
+    m_hIconConnecting = LoadImage(App.hInstance, MAKEINTRESOURCE(107), IMAGE_ICON, lngIconSize, lngIconSize, 0&)
+
+    m_hIconWebpage = LoadImage(App.hInstance, MAKEINTRESOURCE(103), IMAGE_ICON, lngIconSize, lngIconSize, 0&)
+
+    m_hIconSSLNone = LoadImage(App.hInstance, MAKEINTRESOURCE(108), IMAGE_ICON, lngIconSize, lngIconSize, 0&)
+    m_hIconSSLBad = LoadImage(App.hInstance, MAKEINTRESOURCE(104), IMAGE_ICON, lngIconSize, lngIconSize, 0&)
+    m_hIconSSLOK = LoadImage(App.hInstance, MAKEINTRESOURCE(105), IMAGE_ICON, lngIconSize, lngIconSize, 0&)
+
+    m_hIconZone = LoadImage(App.hInstance, MAKEINTRESOURCE(106), IMAGE_ICON, lngIconSize, lngIconSize, 0&)
 
     FixStatusBar
 
@@ -175,6 +194,8 @@ Public Sub Destroy()
     DetachMessage Me, m_hWndStatusBar, WM_SIZE
     DetachMessage Me, m_hWndStatusBar, WM_WINDOWPOSCHANGING
     DetachMessage Me, m_hWndStatusBar, WM_WINDOWPOSCHANGED
+    DetachMessage Me, m_hWndStatusBar, WM_LBUTTONUP
+    DetachMessage Me, m_hWndStatusBar, WM_RBUTTONUP
 
     DetachMessage Me, m_hWndStatusBar, SB_SETTEXTA + SB_IE6YG_SHIFT
     DetachMessage Me, m_hWndStatusBar, SB_SETPARTS + SB_IE6YG_SHIFT
@@ -246,7 +267,7 @@ Public Sub FixStatusBar()
     cxProgressBar = 100
 
   Dim nSBWidth As Integer
-    nSBWidth = rc.Right - rc.Left
+    nSBWidth = rc.right - rc.left
 
   Dim arnRtEdge(STATUS_PANES) As Long
     arnRtEdge(0) = 1
@@ -291,7 +312,7 @@ Public Sub FixStatusBar()
     If SendMessage(m_hWndStatusBar, SB_GETRECT, 1, rc) <> 0 Then
         InflateRect rc, -1 * GetSystemMetrics(SM_CXEDGE), -1 * GetSystemMetrics(SM_CYEDGE)
       Else
-        rc.Left = rc.Top = rc.Right = rc.Bottom = 0
+        rc.left = rc.top = rc.right = rc.bottom = 0
     End If
 
     SendMessage m_hWndStatusBar, SB_SETICON + SB_IE6YG_SHIFT, STATUS_PANE_NAVIGATION, ByVal m_hIconWebpage
@@ -303,8 +324,8 @@ Public Sub FixStatusBar()
     SendMessage m_hWndStatusBar, SB_SETTEXTA + SB_IE6YG_SHIFT, STATUS_PANE_ZONE, m_EngineText(0)
 
     SetWindowPos m_hWndProgressBar, 0&, _
-                 rc.Left, rc.Top, _
-                 rc.Right - rc.Left, rc.Bottom - rc.Top, _
+                 rc.left, rc.top, _
+                 rc.right - rc.left, rc.bottom - rc.top, _
                  SWP_NOZORDER Or SWP_NOACTIVATE Or SWP_SHOWWINDOW
 
     SendMessage m_hWndProgressBar, PBM_SETRANGE, 0&, ByVal MAKELPARAM(0, 100)
@@ -337,6 +358,11 @@ End Property
 
 Private Function ISubclass_WindowProc(ByVal hWnd As Long, ByVal iMsg As Long, ByVal wParam As Long, ByVal lParam As Long) As Long
 
+    If iMsg = WM_LBUTTONUP Or iMsg = WM_RBUTTONUP Then
+        ' TODO: This is where to handle a context menu popup.
+        Exit Function
+    End If
+
     If iMsg = SB_SIMPLE Then
         m_IsStatusBarCurrentlySimple = (wParam > 0)
         ISubclass_WindowProc = CallOldWindowProc(hWnd, iMsg, wParam, lParam)
@@ -358,7 +384,8 @@ Private Function ISubclass_WindowProc(ByVal hWnd As Long, ByVal iMsg As Long, By
     End If
 
     If iMsg = SB_SETTEXTA + SB_IE6YG_SHIFT Or iMsg = SB_SETPARTS + SB_IE6YG_SHIFT Or _
-       iMsg = SB_SETMINHEIGHT + SB_IE6YG_SHIFT Or iMsg = SB_SETICON + SB_IE6YG_SHIFT Then
+       iMsg = SB_SETMINHEIGHT + SB_IE6YG_SHIFT Or iMsg = SB_SETICON + SB_IE6YG_SHIFT Or _
+       iMsg = SB_SETTIPTEXTA + SB_IE6YG_SHIFT Then
         iMsg = iMsg - SB_IE6YG_SHIFT
     End If
 
@@ -418,10 +445,13 @@ Public Property Let SSLIcon(newState As SSLIconState)
 
     If m_StateSSLIcon = OK Then
         lngIcon = m_hIconSSLOK
+        SendMessage m_hWndStatusBar, SB_SETTIPTEXTA + SB_IE6YG_SHIFT, STATUS_PANE_SSL, m_SSLIconOKText(0)
       ElseIf m_StateSSLIcon = Bad Then
         lngIcon = m_hIconSSLBad
+        SendMessage m_hWndStatusBar, SB_SETTIPTEXTA + SB_IE6YG_SHIFT, STATUS_PANE_SSL, m_SSLIconBadText(0)
       Else
-        lngIcon = 0&
+        lngIcon = m_hIconSSLNone
+        SendMessage m_hWndStatusBar, SB_SETTIPTEXTA + SB_IE6YG_SHIFT, STATUS_PANE_SSL, m_SSLIconNoneText(0)
     End If
 
     SendMessage m_hWndStatusBar, SB_SETICON + SB_IE6YG_SHIFT, STATUS_PANE_SSL, ByVal lngIcon
@@ -461,7 +491,7 @@ Public Property Let Text(newText As String)
         Exit Property
     End If
 
-    bytText = StrConv(newText, vbFromUnicode) & Chr$(0)
+    bytText = StrConv(newText, vbFromUnicode) & vbNullChar
 
     SendMessage m_hWndStatusBar, SB_SETTEXTA + SB_IE6YG_SHIFT, 0&, bytText(0)
 
@@ -478,5 +508,5 @@ Private Function ZoneComputePaneSize() As Long
 
 End Function
 
-':) Ulli's VB Code Formatter V2.24.17 (2022-Nov-12 08:13)  Decl: 57  Code: 410  Total: 467 Lines
-':) CommentOnly: 13 (2.8%)  Commented: 8 (1.7%)  Filled: 318 (68.1%)  Empty: 149 (31.9%)  Max Logic Depth: 3
+':) Ulli's VB Code Formatter V2.24.17 (2022-Nov-14 08:11)  Decl: 58  Code: 439  Total: 497 Lines
+':) CommentOnly: 14 (2.8%)  Commented: 14 (2.8%)  Filled: 341 (68.6%)  Empty: 156 (31.4%)  Max Logic Depth: 3
