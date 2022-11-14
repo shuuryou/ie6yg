@@ -118,17 +118,19 @@
     <Reference Include="System.ValueTuple, Version=4.0.3.0, Culture=neutral, PublicKeyToken=cc7b13ffcd2ddd51, processorArchitecture=MSIL">
       <HintPath>packages\System.ValueTuple.4.5.0\lib\net47\System.ValueTuple.dll</HintPath>
     </Reference>
+    <Reference Include="System.Web" />
     <Reference Include="System.Windows.Forms" />
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Browser\SynchronizerState.cs" />
     <Compile Include="ControlExtensions.cs" />
     <Compile Include="FrontendStyling.cs" />
     <Compile Include="AdBlock.cs" />
-    <Compile Include="UI\BrowserForm.cs">
+    <Compile Include="Browser\BrowserForm.cs">
       <SubType>Form</SubType>
     </Compile>
-    <Compile Include="UI\BrowserForm.Designer.cs">
+    <Compile Include="Browser\BrowserForm.Designer.cs">
       <DependentUpon>BrowserForm.cs</DependentUpon>
     </Compile>
     <Compile Include="FuckINI.cs" />
@@ -136,28 +138,14 @@
     <Compile Include="Program.cs" />
     <Compile Include="AssemblyInfo.cs" />
     <Compile Include="RDPVirtualChannel.cs" />
-    <Compile Include="Resources\Strings.Designer.cs">
+    <Compile Include="Browser\Handlers\MyLoadHandler.cs" />
+    <Compile Include="Browser\TravelLog.cs" />
+    <Compile Include="Browser\Handlers\MyRequestHandler.cs" />
+    <Compile Include="Browser\Handlers\MyDisplayHandler.cs" />
+    <Compile Include="Resources.Designer.cs">
       <AutoGen>True</AutoGen>
       <DesignTime>True</DesignTime>
-      <DependentUpon>Strings.resx</DependentUpon>
-    </Compile>
-    <Compile Include="UI\BrowserForm.TravelLog.cs">
-      <SubType>Form</SubType>
-    </Compile>
-    <Compile Include="UI\BrowserForm.RequestHandler.cs">
-      <SubType>Form</SubType>
-    </Compile>
-    <Compile Include="UI\BrowserForm.MessageProcessing.cs">
-      <SubType>Form</SubType>
-    </Compile>
-    <Compile Include="UI\BrowserForm.Synchronizer.cs">
-      <SubType>Form</SubType>
-    </Compile>
-    <Compile Include="UI\BrowserForm.DisplayHandler.cs">
-      <SubType>Form</SubType>
-    </Compile>
-    <Compile Include="UI\BrowserForm.WebBrowserEvents.cs">
-      <SubType>Form</SubType>
+      <DependentUpon>Resources.resx</DependentUpon>
     </Compile>
     <None Include="app.config" />
     <None Include="backend.ini">
@@ -167,32 +155,35 @@
   </ItemGroup>
   <ItemGroup>
     <Content Include="backend.ico" />
-    <Content Include="Resources\AdBlock\easylist.txt">
+    <Content Include="AdBlock\easylist.txt">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
-    <Content Include="Resources\AdBlock\easyprivacy.txt">
+    <Content Include="AdBlock\easyprivacy.txt">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
-    <Content Include="Resources\AdBlock\fanboy-annoyance.txt">
+    <Content Include="AdBlock\fanboy-annoyance.txt">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
-    <Content Include="Resources\AdBlock\fanboy-cookiemonster.txt">
+    <Content Include="AdBlock\fanboy-cookiemonster.txt">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
-    <Content Include="Resources\AdBlock\fanboy-social.txt">
+    <Content Include="AdBlock\fanboy-social.txt">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
-    <Content Include="Resources\AdBlock\serverlist.txt">
+    <Content Include="AdBlock\serverlist.txt">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
+    <None Include="HTML\en_us\BACKENDERROR.HTML" />
+    <None Include="HTML\en_us\BROWSERERROR.HTML" />
   </ItemGroup>
   <ItemGroup>
-    <EmbeddedResource Include="UI\BrowserForm.resx">
+    <EmbeddedResource Include="Browser\BrowserForm.resx">
       <DependentUpon>BrowserForm.cs</DependentUpon>
     </EmbeddedResource>
-    <EmbeddedResource Include="Resources\Strings.resx">
+    <EmbeddedResource Include="Resources.resx">
       <Generator>ResXFileCodeGenerator</Generator>
-      <LastGenOutput>Strings.Designer.cs</LastGenOutput>
+      <SubType>Designer</SubType>
+      <LastGenOutput>Resources.Designer.cs</LastGenOutput>
     </EmbeddedResource>
   </ItemGroup>
   <ItemGroup>

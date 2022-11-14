@@ -8,7 +8,7 @@
 // </auto-generated>
 //------------------------------------------------------------------------------
 
-namespace yomigaeri_backend.Resources {
+namespace yomigaeri_backend {
     using System;
     
     
@@ -22,14 +22,14 @@ namespace yomigaeri_backend.Resources {
     [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Resources.Tools.StronglyTypedResourceBuilder", "16.0.0.0")]
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
     [global::System.Runtime.CompilerServices.CompilerGeneratedAttribute()]
-    internal class Strings {
+    internal class Resources {
         
         private static global::System.Resources.ResourceManager resourceMan;
         
         private static global::System.Globalization.CultureInfo resourceCulture;
         
         [global::System.Diagnostics.CodeAnalysis.SuppressMessageAttribute("Microsoft.Performance", "CA1811:AvoidUncalledPrivateCode")]
-        internal Strings() {
+        internal Resources() {
         }
         
         /// <summary>
@@ -39,7 +39,7 @@ namespace yomigaeri_backend.Resources {
         internal static global::System.Resources.ResourceManager ResourceManager {
             get {
                 if (object.ReferenceEquals(resourceMan, null)) {
-                    global::System.Resources.ResourceManager temp = new global::System.Resources.ResourceManager("yomigaeri_backend.Resources.Strings", typeof(Strings).Assembly);
+                    global::System.Resources.ResourceManager temp = new global::System.Resources.ResourceManager("yomigaeri_backend.Resources", typeof(Resources).Assembly);
                     resourceMan = temp;
                 }
                 return resourceMan;
@@ -57,6 +57,87 @@ namespace yomigaeri_backend.Resources {
             }
             set {
                 resourceCulture = value;
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to &lt;!doctype html&gt;
+        ///&lt;html lang=&quot;en&quot;&gt;
+        ///&lt;head&gt;
+        ///    &lt;meta charset=&quot;utf-8&quot;&gt;
+        ///    &lt;meta name=&quot;viewport&quot; content=&quot;width=device-width, initial-scale=1&quot;&gt;
+        ///
+        ///    &lt;title&gt;%TITLE_TEX%&lt;/title&gt;
+        ///
+        ///    &lt;style type=&quot;text/css&quot;&gt;
+        ///        body {
+        ///            background-color: white;
+        ///            color: black;
+        ///            font-family: Verdana;
+        ///            font-size: 8pt;
+        ///            line-height: 11pt;
+        ///        }
+        ///
+        ///        a:link {
+        ///            color: red;
+        ///        }
+        ///
+        ///        a:visited {
+        ///            color: #4e4e4e;
+        ///       [rest of string was truncated]&quot;;.
+        /// </summary>
+        internal static string BACKENDERROR_HTML {
+            get {
+                return ResourceManager.GetString("BACKENDERROR_HTML", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to &lt;!doctype html&gt;
+        ///&lt;html lang=&quot;en&quot;&gt;
+        ///&lt;head&gt;
+        ///    &lt;meta charset=&quot;utf-8&quot;&gt;
+        ///    &lt;meta name=&quot;viewport&quot; content=&quot;width=device-width, initial-scale=1&quot;&gt;
+        ///
+        ///    &lt;title&gt;The page cannot be displayed&lt;/title&gt;
+        ///
+        ///    &lt;style type=&quot;text/css&quot;&gt;
+        ///        body {
+        ///            background-color: white;
+        ///            color: black;
+        ///            font-family: Verdana;
+        ///            font-size: 8pt;
+        ///            line-height: 11pt;
+        ///        }
+        ///
+        ///        a:link {
+        ///            color: red;
+        ///        }
+        ///
+        ///        a:visited {
+        ///            color: [rest of string was truncated]&quot;;.
+        /// </summary>
+        internal static string BROWSERERROR_HTML {
+            get {
+                return ResourceManager.GetString("BROWSERERROR_HTML", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to There was a problem trying to communicate with the Internet Explorer frontend and the communication channel was closed. Your computer may be experiencing network errors. Any information you were working on has been lost..
+        /// </summary>
+        internal static string E_BackendVirtualChannel_Text {
+            get {
+                return ResourceManager.GetString("E_BackendVirtualChannel_Text", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Communication with frontend was lost.
+        /// </summary>
+        internal static string E_BackendVirtualChannel_Title {
+            get {
+                return ResourceManager.GetString("E_BackendVirtualChannel_Title", resourceCulture);
             }
         }
         
@@ -129,7 +210,7 @@ namespace yomigaeri_backend.Resources {
         }
         
         /// <summary>
-        ///   Looks up a localized string similar to Connecting to &quot;{0}&quot;....
+        ///   Looks up a localized string similar to Opening page {0}....
         /// </summary>
         internal static string StatusConnecting {
             get {

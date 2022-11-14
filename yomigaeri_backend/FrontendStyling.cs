@@ -1,8 +1,6 @@
-﻿using Microsoft.Win32;
-using System;
+﻿using System;
 using System.Drawing;
 using System.Globalization;
-using System.IO;
 using System.Runtime.InteropServices;
 
 namespace yomigaeri_backend
@@ -91,7 +89,7 @@ namespace yomigaeri_backend
 
 			string[] items = fe_styling.Split('\t');
 
-			Logging.WriteLineToLog("Number of elements in fe_styling: {0:n0}", items.Length);
+			Logging.WriteLineToLog("FrontendStyling: Number of elements in fe_styling: {0:n0}", items.Length);
 
 			if (items.Length != 25)
 				throw new ArgumentOutOfRangeException("fe_styling");
@@ -156,7 +154,7 @@ namespace yomigaeri_backend
 
 			bool ret = SetSysColors(elements.Length, elements, values);
 
-			Logging.WriteLineToLog("SetSysColors result: {0}", ret);
+			Logging.WriteLineToLog("FrontendStyling: SetSysColors result: {0}", ret);
 		}
 	}
 }

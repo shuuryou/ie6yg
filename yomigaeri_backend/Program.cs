@@ -27,9 +27,9 @@ namespace yomigaeri_backend
 			catch (Exception e)
 			{
 				string err = string.Format(CultureInfo.CurrentUICulture,
-					Resources.Strings.E_InitErrorCouldNotOpenLog, Logging.LogFile, e);
+					Resources.E_InitErrorCouldNotOpenLog, Logging.LogFile, e);
 
-				MessageBox.Show(err, Resources.Strings.E_InitErrorTitle,
+				MessageBox.Show(err, Resources.E_InitErrorTitle,
 					MessageBoxButtons.OK, MessageBoxIcon.Error);
 
 				return 1;
@@ -50,7 +50,7 @@ namespace yomigaeri_backend
 				string ini_file_location =
 					Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "backend.ini");
 
-				Logging.WriteLineToLog("Now going to load settings from \"{0}\".",
+				Logging.WriteLineToLog("Main: Now going to load settings from \"{0}\".",
 					ini_file_location);
 
 				try
@@ -60,36 +60,35 @@ namespace yomigaeri_backend
 				catch (Exception e)
 				{
 					string err = string.Format(CultureInfo.CurrentUICulture,
-						Resources.Strings.E_InitErrorCouldNotLoadSettings,
+						Resources.E_InitErrorCouldNotLoadSettings,
 						ini_file_location, e.Message);
 
-					Logging.WriteLineToLog("Error loading settings: {0}", e);
+					Logging.WriteLineToLog("Main: Error loading settings: {0}", e);
 
-					MessageBox.Show(err, Resources.Strings.E_InitErrorTitle,
+					MessageBox.Show(err, Resources.E_InitErrorTitle,
 						MessageBoxButtons.OK, MessageBoxIcon.Error);
-
 
 					return 1;
 				}
 
-				Logging.WriteLineToLog("Settings were loaded successfully.");
+				Logging.WriteLineToLog("Main: Settings were loaded successfully.");
 			}
 			#endregion
 
 			#region Initialize RDP Virtual Channel
 			{
-				Logging.WriteLineToLog("This is a Terminal Server session? {0}", SystemInformation.TerminalServerSession);
+				Logging.WriteLineToLog("Main: Is this a Terminal Server session? {0}", SystemInformation.TerminalServerSession);
 
 				if (!SystemInformation.TerminalServerSession)
 				{
-					MessageBox.Show(Resources.Strings.E_InitErrorNotTerminalSession,
-						Resources.Strings.E_InitErrorTitle, MessageBoxButtons.OK,
+					MessageBox.Show(Resources.E_InitErrorNotTerminalSession,
+						Resources.E_InitErrorTitle, MessageBoxButtons.OK,
 						MessageBoxIcon.None);
 
 					return 1;
 				}
 
-				Logging.WriteLineToLog("Opening RDP virtual channel to frontend.");
+				Logging.WriteLineToLog("Main: Opening RDP virtual channel to frontend.");
 
 				try
 				{
@@ -98,12 +97,12 @@ namespace yomigaeri_backend
 				catch (Win32Exception e)
 				{
 					string err = string.Format(CultureInfo.CurrentUICulture,
-						Resources.Strings.E_InitErrorCouldNotOpenRDPVC,
+						Resources.E_InitErrorCouldNotOpenRDPVC,
 						 e.Message);
 
-					Logging.WriteLineToLog("Error opening virtual channel: {0}", e);
+					Logging.WriteLineToLog("Main: Error opening virtual channel: {0}", e);
 
-					MessageBox.Show(err, Resources.Strings.E_InitErrorTitle,
+					MessageBox.Show(err, Resources.E_InitErrorTitle,
 						MessageBoxButtons.OK, MessageBoxIcon.Error);
 #if !DEBUG
 							return 1;
@@ -114,30 +113,30 @@ namespace yomigaeri_backend
 
 			#region Request and Apply Styling from Frontend
 			{
-				Logging.WriteLineToLog("Request styling from frontend.");
+				Logging.WriteLineToLog("Main: Request styling from frontend.");
 
-				RDPVirtualChannel.WriteChannel("STYLING");
+				RDPVirtualChannel.Write("STYLING");
 
 				string response = null;
 
 				try
 				{
-					response = RDPVirtualChannel.ReadChannelUntilResponse();
+					response = RDPVirtualChannel.ReadUntilResponse();
 				}
 				catch (TimeoutException)
 				{
-					Logging.WriteLineToLog("Time out getting styling from frontend.");
+					Logging.WriteLineToLog("Main: Time out getting styling from frontend.");
 				}
 
 				if (string.IsNullOrEmpty(response))
 					goto skipStyling;
 
-				Logging.WriteLineToLog("Frontend styling response is: \"{0}\".", response);
+				Logging.WriteLineToLog("Main: Frontend styling response is: \"{0}\".", response);
 
 				if (response == "ERROR" || response == "UNSUPPORTED")
 					goto skipStyling;
 
-				Logging.WriteLineToLog("Apply frontend styling to this session.");
+				Logging.WriteLineToLog("Main: Apply frontend styling to this session.");
 
 				try
 				{
@@ -145,7 +144,7 @@ namespace yomigaeri_backend
 				}
 				catch (Exception e)
 				{
-					Logging.WriteLineToLog("Error applying styling: {0}", e);
+					Logging.WriteLineToLog("Main: Error applying styling: {0}", e);
 				}
 
 
@@ -158,30 +157,30 @@ namespace yomigaeri_backend
 
 			#region Request Accept-Language List from Frontend
 			{
-				Logging.WriteLineToLog("Request browser language list from frontend.");
+				Logging.WriteLineToLog("Main: Request browser language list from frontend.");
 
-				RDPVirtualChannel.WriteChannel("LANGLST");
+				RDPVirtualChannel.Write("LANGLST");
 
 				string response = null;
 
 				try
 				{
-					response = RDPVirtualChannel.ReadChannelUntilResponse();
+					response = RDPVirtualChannel.ReadUntilResponse();
 				}
 				catch (TimeoutException)
 				{
-					Logging.WriteLineToLog("Time out getting browser language list from frontend.");
+					Logging.WriteLineToLog("Main: Time out getting browser language list from frontend.");
 				}
 
 				if (string.IsNullOrEmpty(response))
 					goto skipLanguageList;
 
-				Logging.WriteLineToLog("Frontend browser language list response is: \"{0}\".", response);
+				Logging.WriteLineToLog("Main: Frontend browser language list response is: \"{0}\".", response);
 
 				if (response == "<EMPTY>")
 					goto skipLanguageList;
 
-				Logging.WriteLineToLog("Store frontend browser language list for CEF settings.");
+				Logging.WriteLineToLog("Main: Store frontend browser language list for CEF settings.");
 
 				frontendLanguageList = response;
 
@@ -194,39 +193,39 @@ namespace yomigaeri_backend
 
 			#region Request Initial Window Size from Frontend
 			{
-				RDPVirtualChannel.WriteChannel("INITSIZ");
+				RDPVirtualChannel.Write("INITSIZ");
 
 				string response = null;
 
 				try
 				{
-					response = RDPVirtualChannel.ReadChannelUntilResponse();
+					response = RDPVirtualChannel.ReadUntilResponse();
 				}
 				catch (TimeoutException)
 				{
-					Logging.WriteLineToLog("Time out getting initial window size from frontend.");
+					Logging.WriteLineToLog("Main: Time out getting initial window size from frontend.");
 				}
 
 				if (string.IsNullOrEmpty(response))
 					goto skipWinSize;
 
-				Logging.WriteLineToLog("Frontend initial window size response is: \"{0}\".", response);
+				Logging.WriteLineToLog("Main: Frontend initial window size response is: \"{0}\".", response);
 
 				int idx = response.IndexOf(',');
 
 				if (idx == -1 || idx + 1 > response.Length)
 				{
-					Logging.WriteLineToLog("Window size response is incorrect.");
+					Logging.WriteLineToLog("Main: Window size response is incorrect.");
 					goto skipWinSize;
 				}
 
 				if (!int.TryParse(response.Substring(0, idx), NumberStyles.None, CultureInfo.InvariantCulture, out initial_width) ||
 					!int.TryParse(response.Substring(idx + 1), NumberStyles.None, CultureInfo.InvariantCulture, out initial_height))
 				{
-					Logging.WriteLineToLog("Could not parseinitial  window size.");
+					Logging.WriteLineToLog("Main: Could not parse initial window size.");
 				}
 
-				Logging.WriteLineToLog("Parsed and stored initial window size.");
+				Logging.WriteLineToLog("Main: Parsed and stored initial window size.");
 
 			skipWinSize:
 				;
@@ -244,12 +243,12 @@ namespace yomigaeri_backend
 			catch (Exception e)
 			{
 				string err = string.Format(CultureInfo.CurrentUICulture,
-					Resources.Strings.E_InitErrorAdBlock,
+					Resources.E_InitErrorAdBlock,
 					 e.Message);
 
-				Logging.WriteLineToLog("Error initializing AdBlock: {0}", e);
+				Logging.WriteLineToLog("Main: Error initializing AdBlock: {0}", e);
 
-				MessageBox.Show(err, Resources.Strings.E_InitErrorTitle,
+				MessageBox.Show(err, Resources.E_InitErrorTitle,
 					MessageBoxButtons.OK, MessageBoxIcon.Error);
 			}
 			#endregion
@@ -286,6 +285,7 @@ namespace yomigaeri_backend
 				cefSettings.WindowlessRenderingEnabled = false;
 
 				Cef.EnableWaitForBrowsersToClose();
+
 				if (Settings.Get("CEF", "EnableHighDPISupport") == "1")
 					Cef.EnableHighDPISupport();
 
@@ -296,17 +296,17 @@ namespace yomigaeri_backend
 			catch (Exception e)
 			{
 				string err = string.Format(CultureInfo.CurrentUICulture,
-					Resources.Strings.E_InitErrorChromiumEmbeddedFramework,
+					Resources.E_InitErrorChromiumEmbeddedFramework,
 					 e.Message);
 
-				Logging.WriteLineToLog("Error initializing AdBlock: {0}", e);
+				Logging.WriteLineToLog("Main: Error initializing CEF: {0}", e);
 
-				MessageBox.Show(err, Resources.Strings.E_InitErrorTitle,
+				MessageBox.Show(err, Resources.E_InitErrorTitle,
 					MessageBoxButtons.OK, MessageBoxIcon.Error);
 			}
 			#endregion
 
-			Application.Run(new UI.BrowserForm() { Width = initial_width, Height = initial_height });
+			Application.Run(new Browser.BrowserForm() { Width = initial_width, Height = initial_height });
 
 			return 0;
 		}

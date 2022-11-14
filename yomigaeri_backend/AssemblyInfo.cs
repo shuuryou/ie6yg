@@ -1,5 +1,5 @@
-﻿using System.Resources;
-using System.Reflection;
+﻿using System.Reflection;
+using System.Resources;
 using System.Runtime.InteropServices;
 [assembly: AssemblyTitle("IE6 Yomigaeri Backend")]
 [assembly: AssemblyDescription("IE6 Yomigaeri Backend")]

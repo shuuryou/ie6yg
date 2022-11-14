@@ -1,5 +1,4 @@
-﻿using Microsoft.Win32;
-using System;
+﻿using System;
 using System.ComponentModel;
 using System.Globalization;
 using System.IO;
@@ -76,7 +75,7 @@ namespace yomigaeri_backend
 
 			s_hChannel = hChannel;
 
-			Logging.WriteLineToLog("RDPVirtualChannel handle is 0x{0:x}", s_hChannel);
+			Logging.WriteLineToLog("RDPVirtualChannel: OpenChannel: Handle is 0x{0:x}", s_hChannel);
 		}
 
 		public static void CloseChannel()
@@ -95,7 +94,7 @@ namespace yomigaeri_backend
 			s_hChannel = IntPtr.Zero;
 		}
 
-		public static string ReadChannelUntilResponse(int timeout = 5)
+		public static string ReadUntilResponse(int timeout = 5)
 		{
 			// Not proud of this, but it will have to do until something better
 			// comes along.
@@ -103,7 +102,7 @@ namespace yomigaeri_backend
 			DateTime start = DateTime.Now;
 
 			again:
-			string ret = ReadChannel(false);
+			string ret = Read(false);
 
 			if (ret.Length == 0)
 			{
@@ -116,7 +115,7 @@ namespace yomigaeri_backend
 			return ret;
 		}
 
-		public static string ReadChannel(bool noDelay = false)
+		public static string Read(bool noDelay = false)
 		{
 			if (s_hChannel == IntPtr.Zero)
 				throw new InvalidOperationException("RDP virtual channel is closed.");
@@ -149,11 +148,11 @@ namespace yomigaeri_backend
 
 		done:
 			if (!string.IsNullOrEmpty(ret))
-				Logging.WriteLineToLog("RDPVirtualChannel read: \"{0}\"", ret);
+				Logging.WriteLineToLog("RDPVirtualChannel: ReadChannel: \"{0}\"", ret);
 
 			return ret;
 		}
-		public static void WriteChannel(string message)
+		public static void Write(string message)
 		{
 			if (s_hChannel == IntPtr.Zero)
 				throw new InvalidOperationException("RDP virtual channel is closed.");
@@ -175,7 +174,7 @@ namespace yomigaeri_backend
 				throw new IOException(string.Format(CultureInfo.InvariantCulture,
 					"Operation failed. Should write {0:n0} bytes, but wrote {1:n0} bytes.", buf.Length, written));
 
-			Logging.WriteLineToLog("RDPVirtualChannel wrote: \"{0}\"", message);
+			Logging.WriteLineToLog("RDPVirtualChannel: WriteChannel: \"{0}\"", message);
 		}
 	}
 }

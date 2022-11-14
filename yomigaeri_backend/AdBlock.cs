@@ -4,8 +4,6 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace yomigaeri_backend
 {
@@ -28,22 +26,22 @@ namespace yomigaeri_backend
 
 			if (!enable)
 			{
-				Logging.WriteLineToLog("Feature is disabled, so I will end my own suffering.");
+				Logging.WriteLineToLog("AdBlock: Feature is disabled, so I will end my own suffering.");
 				return;
 			}
 
 			Debug = Program.Settings.Get("AdBlock", "Debug") == "1";
 
 			if (Debug)
-				Logging.WriteLineToLog("Debug mode is enabled.");
+				Logging.WriteLineToLog("AdBlock: Debug mode is enabled.");
 
-			Logging.WriteLineToLog("Going to parse AdBlock lists.");
+			Logging.WriteLineToLog("AdBlock: Going to parse AdBlock lists.");
 
 			string lists_str = Program.Settings.Get("AdBlock", "Lists");
 
 			if (string.IsNullOrWhiteSpace(lists_str))
 			{
-				Logging.WriteLineToLog("Error: lists setting is empty. AdBlock will be disabled.");
+				Logging.WriteLineToLog("AdBlock: Error: lists setting is empty. AdBlock will be disabled.");
 				return;
 			}
 
@@ -52,19 +50,19 @@ namespace yomigaeri_backend
 			if (!string.IsNullOrWhiteSpace(db_file))
 			{
 				db_file = Path.Combine(AppDomain.CurrentDomain.BaseDirectory,
-					"Resources", "AdBlock", db_file);
+					"AdBlock", db_file);
 
-				Logging.WriteLineToLog("Compiled rules will be stored in \"{0}\".", db_file);
+				Logging.WriteLineToLog("AdBlock: Compiled rules will be stored in \"{0}\".", db_file);
 			}
 			else
 			{
 				db_file = null;
-				Logging.WriteLineToLog("Compiled rules will be cached in memory only. This is bad for performance.");
+				Logging.WriteLineToLog("AdBlock: Compiled rules will be cached in memory only. This is bad for performance.");
 			}
 
 			if (File.Exists(db_file))
 			{
-				Logging.WriteLineToLog("Compiled rules exist, so not parsing filter lists.");
+				Logging.WriteLineToLog("AdBlock: Compiled rules exist, so not parsing filter lists.");
 				s_FilterDB = new FilterDbCollection(db_file, false, true);
 				goto done;
 			}
@@ -72,19 +70,19 @@ namespace yomigaeri_backend
 			string[] lists = lists_str.Split(",".ToCharArray(), StringSplitOptions.RemoveEmptyEntries);
 			short category = 0;
 
-			Logging.WriteLineToLog("DistillNET only supports AdBlock Plus format and only domain rules.");
-			Logging.WriteLineToLog("Please, contribute a better parser if you want perfect ad blocking.");
+			Logging.WriteLineToLog("AdBlock: DistillNET only supports AdBlock Plus format and only domain rules.");
+			Logging.WriteLineToLog("AdBlock: Please, contribute a better parser if you want perfect ad blocking.");
 
 			foreach (string list in lists)
 			{
 				string list_file = Path.Combine(AppDomain.CurrentDomain.BaseDirectory,
 					"Resources", "AdBlock", list);
 
-				Logging.WriteLineToLog("Processing rules list: \"{0}\" as ID {1}...", list_file, category);
+				Logging.WriteLineToLog("AdBlock: Processing rules list: \"{0}\" as ID {1}...", list_file, category);
 
 				if (!File.Exists(list_file))
 				{
-					Logging.WriteLineToLog("Error: File does not exist. Skipping it.");
+					Logging.WriteLineToLog("AdBlock: Error: File does not exist. Skipping it.");
 					continue;
 				}
 
@@ -101,22 +99,22 @@ namespace yomigaeri_backend
 				using (FileStream fs = File.OpenRead(list_file))
 					read_bad = s_FilterDB.ParseStoreRulesFromStream(fs, category++);
 
-				Logging.WriteLineToLog("Read {0:n0} rules and rejected {1:n0} of them.",
+				Logging.WriteLineToLog("AdBlock: Read {0:n0} rules and rejected {1:n0} of them.",
 					read_bad.Item1, read_bad.Item2);
 			}
 
 			if (s_FilterDB == null)
 			{
-				Logging.WriteLineToLog("Error: Still no filter DB. All files invalid? AdBlock will be disabled.");
+				Logging.WriteLineToLog("AdBlock: Error: Still no filter DB. All files invalid? AdBlock will be disabled.");
 				s_AdBlockEnabled = false;
 				return;
 			}
 
-			Logging.WriteLineToLog("Finalizing compiled rules.");
+			Logging.WriteLineToLog("AdBlock: Finalizing compiled rules.");
 			s_FilterDB.FinalizeForRead();
 
 		done:
-			Logging.WriteLineToLog("AdBlock is ready.");
+			Logging.WriteLineToLog("AdBlock: Ready.");
 		}
 
 		public static bool DomainShouldBeBlocked(string domain)
@@ -154,7 +152,7 @@ namespace yomigaeri_backend
 			catch (UriFormatException)
 			{
 				if (Debug)
-					Logging.WriteLineToLog("ShouldBlockRequest got bad URL: \"{0}\".", request.Url);
+					Logging.WriteLineToLog("AdBlock: ShouldBlockRequest got bad URL: \"{0}\".", request.Url);
 			}
 
 			if (request_uri == null)

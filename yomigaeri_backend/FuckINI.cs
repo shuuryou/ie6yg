@@ -4,11 +4,11 @@ using System.IO;
 
 namespace yomigaeri_backend
 {
-    // There is not a single INI parser in C# out there that is not
-    // totally over-engineered. I just want to load a few key-value
-    // pairs that are organized in sections.
-    // So here is my own light-weight C# INI parser. (Version 1.2a)
-    internal sealed class FuckINI
+	// There is not a single INI parser in C# out there that is not
+	// totally over-engineered. I just want to load a few key-value
+	// pairs that are organized in sections.
+	// So here is my own light-weight C# INI parser. (Version 1.2a)
+	internal sealed class FuckINI
     {
         private readonly Dictionary<string, Dictionary<string, string>> m_Sections;
 
