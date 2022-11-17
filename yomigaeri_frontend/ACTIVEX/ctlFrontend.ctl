@@ -176,7 +176,7 @@ End Sub
 
 Private Sub HandleADDRESS(ByRef data As String)
 
-    m_IEAddressBar.Text = data
+    m_IEAddressBar.Address = data
 
 End Sub
 
@@ -405,7 +405,7 @@ End Sub
 
 Private Sub HandlePGTITLE(ByRef data As String)
 
-    m_IEBrowser.SetTitle data
+    m_IEBrowser.PageTitle = data
 
 End Sub
 
@@ -663,7 +663,7 @@ Private Sub m_IEBrowser_NavigationIntercepted(destinationURL As String)
     If rdpClient.Connected <> 1 Then
         Exit Sub
     End If
-    
+
     m_FindReplace.CloseDialog
 
     rdpClient.SendOnVirtualChannel VIRTUAL_CHANNEL_NAME, _
@@ -711,7 +711,7 @@ Private Sub m_IEFrame_CommandReceived(command As IECommand)
         m_NewFind = True
         m_FindReplace.VBFindText m_IEFrame.hWndIEFrame, , FR_NOWHOLEWORD Or FR_DOWN
       Case IECommand.CommandFavoritesAdd
-        MsgBox "Not implemented yet.", vbInformation, "Lame!" ' XXX TODO
+        m_IEBrowser.AddToFavorites m_IEFrame.hWndIEFrame, m_IEAddressBar.Address, m_IEBrowser.PageTitle
       Case IECommand.CommandFileProperties
         MsgBox "Not implemented yet.", vbInformation, "Lame!" ' XXX TODO
       Case IECommand.CommandViewSource
@@ -1046,7 +1046,7 @@ Private Sub UserControl_Show()
     m_IEToolTip.Construct UserControl.hWnd
 
     m_IEAddressBar.Enabled = False
-    m_IEBrowser.SetTitle ""
+    m_IEBrowser.PageTitle = ""
 
     m_IEToolbar.SetToolbarCommandState CommandBack, False
     m_IEToolbar.SetToolbarCommandState CommandForward, False
@@ -1091,5 +1091,5 @@ Private Sub UserControl_Terminate()
 
 End Sub
 
-':) Ulli's VB Code Formatter V2.24.17 (2022-Nov-18 05:21)  Decl: 32  Code: 961  Total: 993 Lines
-':) CommentOnly: 56 (5.6%)  Commented: 14 (1.4%)  Filled: 715 (72%)  Empty: 278 (28%)  Max Logic Depth: 3
+':) Ulli's VB Code Formatter V2.24.17 (2022-Nov-18 08:03)  Decl: 32  Code: 963  Total: 995 Lines
+':) CommentOnly: 56 (5.6%)  Commented: 13 (1.3%)  Filled: 714 (71.8%)  Empty: 281 (28.2%)  Max Logic Depth: 3

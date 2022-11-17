@@ -49,6 +49,73 @@ Private m_CBEFSelectedImage As Long
 
 Private m_Enabled As Boolean
 
+Public Property Let Address(newAddress As String)
+
+  Dim strAddress As String
+
+    If m_hWndComboBoxEx = -1 Then
+        Exit Property
+    End If
+
+    strAddress = StrConv(newAddress, vbFromUnicode)
+
+    ' From leaked WinXP SP1 source code.
+    ' File: shell/browseui/addrlist.cpp
+    ' Function: HRESULT CAddressList::NavigationComplete
+
+    ' Chromium takes care of making URLs look nice, so all the URL cleanup
+    ' code (SHRemoveURLTurd, SHCleanupUrlForDisplay, ...) isn't used here.
+
+  Dim item As COMBOBOXEXITEM
+
+    With item
+        .mask = CBEIF_TEXT Or CBEIF_IMAGE Or CBEIF_SELECTEDIMAGE
+        .pszText = strAddress
+        .cchTextMax = LenB(strAddress)
+        .iImage = m_CBEFImage
+        .iSelectedImage = m_CBEFSelectedImage
+        .iItem = -1
+    End With
+
+    If SendMessage(m_hWndComboBoxEx, CBEM_SETITEMA, 0, item) = 0 Then
+        modLogging.WriteLineToLog "IEAddressBar: Failed to set text to: " & strAddress
+        Exit Property
+    End If
+
+    modLogging.WriteLineToLog "IEAddressBar: Successfully set text to: " & strAddress
+
+    ComboBoxInsertURL strAddress, 15
+
+End Property
+
+Public Property Get Address() As String
+
+  Dim strAddress As String
+
+    If m_hWndComboBoxEx = -1 Then
+        Exit Property
+    End If
+
+    strAddress = Space$(INTERNET_MAX_URL_LENGTH + 1)
+
+  Dim item As COMBOBOXEXITEM
+
+    With item
+        .mask = CBEIF_TEXT
+        .pszText = strAddress
+        .cchTextMax = LenB(strAddress)
+        .iItem = -1
+    End With
+
+    If SendMessage(m_hWndComboBoxEx, CBEM_GETITEMA, 0, item) = 0 Then
+        Address = ""
+        Exit Property
+    End If
+
+    Address = TrimNull(StrConv(item.pszText, vbUnicode))
+
+End Property
+
 Private Sub ComboBoxInsertURL(szURL As String, nMaxComboBoxSize As Long)
 
   ' Translated from leaked WinXP SP1 source code.
@@ -85,7 +152,7 @@ Private Sub ComboBoxInsertURL(szURL As String, nMaxComboBoxSize As Long)
 
     iPrevInstance = SendMessage(m_hWndComboBoxEx, CB_FINDSTRINGEXACT, -1&, strURLConvForSendMessage(0))
 
-    ' Microsoft code did not check if iPrevInstance is not 0. That's an optimization from IE6YG.
+    ' Microsoft did not check if iPrevInstance is not 0. That's an optimization from IE6YG.
     If iPrevInstance <> CB_ERR And iPrevInstance <> 0 Then
         MoveAddressToTopOfList iPrevInstance
         Exit Sub
@@ -295,44 +362,5 @@ Private Function MoveAddressToTopOfList(iSel As Long) As Boolean
 
 End Function
 
-Public Property Let Text(newText As String)
-
-  Dim strAddress As String
-
-    If m_hWndComboBoxEx = -1 Then
-        Exit Property
-    End If
-
-    strAddress = StrConv(newText, vbFromUnicode)
-
-    ' From leaked WinXP SP1 source code.
-    ' File: shell/browseui/addrlist.cpp
-    ' Function: HRESULT CAddressList::NavigationComplete
-
-    ' Chromium takes care of making URLs look nice, so all the URL cleanup
-    ' code (SHRemoveURLTurd, SHCleanupUrlForDisplay, ...) isn't used here.
-
-  Dim item As COMBOBOXEXITEM
-
-    With item
-        .mask = CBEIF_TEXT Or CBEIF_IMAGE Or CBEIF_SELECTEDIMAGE
-        .pszText = strAddress
-        .cchTextMax = LenB(strAddress)
-        .iImage = m_CBEFImage
-        .iSelectedImage = m_CBEFSelectedImage
-        .iItem = -1
-    End With
-    
-    If SendMessage(m_hWndComboBoxEx, CBEM_SETITEMA, 0, item) = 0 Then
-        modLogging.WriteLineToLog "IEAddressBar: Failed to set text to: " & newText
-        Exit Property
-    End If
-
-    modLogging.WriteLineToLog "IEAddressBar: Successfully set text to: " & newText
-
-    ComboBoxInsertURL newText, 15
-
-End Property
-
-':) Ulli's VB Code Formatter V2.24.17 (2022-Nov-18 00:20)  Decl: 37  Code: 287  Total: 324 Lines
-':) CommentOnly: 52 (16%)  Commented: 4 (1.2%)  Filled: 220 (67.9%)  Empty: 104 (32.1%)  Max Logic Depth: 3
+':) Ulli's VB Code Formatter V2.24.17 (2022-Nov-18 08:03)  Decl: 37  Code: 316  Total: 353 Lines
+':) CommentOnly: 53 (15%)  Commented: 4 (1.1%)  Filled: 240 (68%)  Empty: 113 (32%)  Max Logic Depth: 3

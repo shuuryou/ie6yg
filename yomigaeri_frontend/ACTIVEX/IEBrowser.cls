@@ -15,6 +15,9 @@ Attribute VB_Ext_KEY = "SavedWithClassBuilder6" ,"Yes"
 Attribute VB_Ext_KEY = "Top_Level" ,"Yes"
 Option Explicit
 
+Private Declare Function DoFileDownloadEx Lib "SHDOCVW.DLL" (ByVal pwszURL As Long, ByVal fSaveAS As Boolean) As Long
+Private Declare Function AddUrlToFavorites Lib "SHDOCVW.DLL" (ByVal hwnd As Long, ByVal pszUrlW As Long, ByVal pszTitleW As Long, ByVal fDisplayNoUI As Boolean) As Long
+
 Private Declare Function CreateUrlCacheEntry Lib "WININET.DLL" Alias "CreateUrlCacheEntryA" (ByVal lpszUrlName As String, ByVal dwExpectedFileSize As Long, ByVal lpszFileExtension As String, ByVal lpszFileName As String, ByVal dwReserved As Long) As Long
 Private Declare Function CommitUrlCacheEntry Lib "WININET.DLL" Alias "CommitUrlCacheEntryA" (ByVal lpszUrlName As String, ByVal lpszLocalFileName As String, ByRef tftExpireTime As FILETIME, ByRef tftLastModifiedTime As FILETIME, ByVal lCacheEntryType As Long, ByVal lpHeaderInfo As Long, ByVal dwHeaderSize As Long, ByVal lpszFileExtension As String, ByVal dwReserved As Long) As Long
 
@@ -31,6 +34,12 @@ Attribute m_Browser.VB_VarHelpID = -1
 Private m_History As IUrlHistoryStg
 
 Public Event NavigationIntercepted(destinationURL As String)
+
+Public Sub AddToFavorites(hWndParent As Long, url As String, title As String)
+
+    AddUrlToFavorites hWndParent, StrPtr(url), StrPtr(title), False
+
+End Sub
 
 Public Sub AddToHistory(ByVal url As String, ByVal title As String)
 
@@ -188,15 +197,21 @@ Private Sub m_Browser_BeforeNavigate2(ByVal pDisp As Object, url As Variant, fla
 
 End Sub
 
-Public Sub SetTitle(newTitle As String)
+Public Property Get PageTitle() As String
+
+    PageTitle = m_Browser.Document.title
+
+End Property
+
+Public Property Let PageTitle(title As String)
 
     If m_Browser Is Nothing Then
-        Exit Sub
+        Exit Property
     End If
 
-    m_Browser.Document.title = newTitle
+    m_Browser.Document.title = title
 
-End Sub
+End Property
 
-':) Ulli's VB Code Formatter V2.24.17 (2022-Nov-18 00:20)  Decl: 17  Code: 169  Total: 186 Lines
-':) CommentOnly: 33 (17.7%)  Commented: 1 (0.5%)  Filled: 124 (66.7%)  Empty: 62 (33.3%)  Max Logic Depth: 3
+':) Ulli's VB Code Formatter V2.24.17 (2022-Nov-18 08:03)  Decl: 20  Code: 181  Total: 201 Lines
+':) CommentOnly: 33 (16.4%)  Commented: 1 (0.5%)  Filled: 134 (66.7%)  Empty: 67 (33.3%)  Max Logic Depth: 3
