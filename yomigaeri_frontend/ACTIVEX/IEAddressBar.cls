@@ -85,7 +85,8 @@ Private Sub ComboBoxInsertURL(szURL As String, nMaxComboBoxSize As Long)
 
     iPrevInstance = SendMessage(m_hWndComboBoxEx, CB_FINDSTRINGEXACT, -1&, strURLConvForSendMessage(0))
 
-    If iPrevInstance <> CB_ERR Then
+    ' Microsoft code did not check if iPrevInstance is not 0. That's an optimization from IE6YG.
+    If iPrevInstance <> CB_ERR And iPrevInstance <> 0 Then
         MoveAddressToTopOfList iPrevInstance
         Exit Sub
     End If
@@ -321,7 +322,7 @@ Public Property Let Text(newText As String)
         .iSelectedImage = m_CBEFSelectedImage
         .iItem = -1
     End With
-
+    
     If SendMessage(m_hWndComboBoxEx, CBEM_SETITEMA, 0, item) = 0 Then
         modLogging.WriteLineToLog "IEAddressBar: Failed to set text to: " & newText
         Exit Property
