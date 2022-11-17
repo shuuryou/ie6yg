@@ -98,6 +98,13 @@ Option Explicit
 
 Implements SSubTUP.ISubclass
 
+Private Declare Function SetCursor Lib "USER32.DLL" (ByVal hCursor As Long) As Long
+Private Declare Function LoadCursor Lib "USER32.DLL" Alias "LoadCursorA" (ByVal hInstance As Long, ByVal lpCursorName As String) As Long
+Private Declare Function DestroyCursor Lib "USER32.DLL" (ByVal hCursor As Long) As Long
+
+Private Const GCL_HCURSOR As Long = (-12)
+Private Const IDC_ARROW As Long = &H7F00
+
 Private Const VIRTUAL_CHANNEL_NAME As String = "BEFECOM"
 
 Private m_IEAddressBar As IEAddressBar
@@ -602,14 +609,14 @@ Private Property Let ISubclass_MsgResponse(ByVal RHS As SSubTUP.EMsgResponse)
 
 End Property
 
-Private Function ISubclass_WindowProc(ByVal hwnd As Long, ByVal iMsg As Long, ByVal wParam As Long, ByVal lParam As Long) As Long
+Private Function ISubclass_WindowProc(ByVal hWnd As Long, ByVal iMsg As Long, ByVal wParam As Long, ByVal lParam As Long) As Long
 
   ' https://devblogs.microsoft.com/oldnewthing/20050525-27/?p=35543
 
     If iMsg = WM_SETCURSOR Then
         If m_CursorHCURSOR = 0 Then
             ' Don't have one yet, so just forward to VBRUN.
-            ISubclass_WindowProc = SSubTUP.CallOldWindowProc(hwnd, iMsg, wParam, lParam)
+            ISubclass_WindowProc = SSubTUP.CallOldWindowProc(hWnd, iMsg, wParam, lParam)
             Exit Function
         End If
 
@@ -617,7 +624,7 @@ Private Function ISubclass_WindowProc(ByVal hwnd As Long, ByVal iMsg As Long, By
         Exit Function
     End If
 
-    ISubclass_WindowProc = SSubTUP.CallOldWindowProc(hwnd, iMsg, wParam, lParam)
+    ISubclass_WindowProc = SSubTUP.CallOldWindowProc(hWnd, iMsg, wParam, lParam)
 
 End Function
 
@@ -659,15 +666,17 @@ Private Sub m_IEFrame_CommandReceived(command As IECommand)
 
     Select Case command
       Case IECommand.CommandEditCut
-        rdpClient.SendOnVirtualChannel VIRTUAL_CHANNEL_NAME, "CLIPCUT"
+        MsgBox "Not implemented yet.", vbInformation, "Lame!" ' XXX TODO
       Case IECommand.CommandEditCopy
-        rdpClient.SendOnVirtualChannel VIRTUAL_CHANNEL_NAME, "CLIPCPY"
+        MsgBox "Not implemented yet.", vbInformation, "Lame!" ' XXX TODO
       Case IECommand.CommandEditPaste
-        rdpClient.SendOnVirtualChannel VIRTUAL_CHANNEL_NAME, "CLIPPST"
+        MsgBox "Not implemented yet.", vbInformation, "Lame!" ' XXX TODO
       Case IECommand.CommandEditRefresh
         rdpClient.SendOnVirtualChannel VIRTUAL_CHANNEL_NAME, "BTNREFR"
       Case IECommand.CommandEditStop
         rdpClient.SendOnVirtualChannel VIRTUAL_CHANNEL_NAME, "BTNSTOP"
+      Case IECommand.CommandEditFind
+        MsgBox "Not implemented yet.", vbInformation, "Lame!" ' XXX TODO
       Case IECommand.CommandFavoritesAdd
         MsgBox "Not implemented yet.", vbInformation, "Lame!" ' XXX TODO
       Case IECommand.CommandFileProperties
@@ -992,14 +1001,14 @@ Private Sub UserControl_Show()
   ' Will be fired when the control is actually shown on the website.
   ' UserControl_Initialize still has the control floating in space.
 
-    SSubTUP.AttachMessage Me, UserControl.hwnd, WM_SETCURSOR
+    SSubTUP.AttachMessage Me, UserControl.hWnd, WM_SETCURSOR
 
-    m_IEFrame.Construct UserControl.hwnd
+    m_IEFrame.Construct UserControl.hWnd
     m_IEAddressBar.Construct m_IEFrame.hWndIEFrame
     m_IEBrowser.Construct m_IEFrame.hWndInternetExplorerServer
     m_IEStatusBar.Construct m_IEFrame.hWndStatusBar, m_IEFrame.hWndProgressBar
     m_IEToolbar.Construct m_IEFrame.hWndIEFrame
-    m_IEToolTip.Construct UserControl.hwnd
+    m_IEToolTip.Construct UserControl.hWnd
 
     m_IEAddressBar.Enabled = False
     m_IEBrowser.SetTitle ""
@@ -1025,7 +1034,7 @@ Private Sub UserControl_Terminate()
         SetCursor IDC_ARROW
     End If
 
-    SSubTUP.DetachMessage Me, UserControl.hwnd, WM_SETCURSOR
+    SSubTUP.DetachMessage Me, UserControl.hWnd, WM_SETCURSOR
 
     m_IEFrame.Destroy
     m_IEStatusBar.Destroy
@@ -1045,5 +1054,5 @@ Private Sub UserControl_Terminate()
 
 End Sub
 
-':) Ulli's VB Code Formatter V2.24.17 (2022-Nov-17 19:42)  Decl: 22  Code: 928  Total: 950 Lines
-':) CommentOnly: 56 (5.9%)  Commented: 11 (1.2%)  Filled: 686 (72.2%)  Empty: 264 (27.8%)  Max Logic Depth: 3
+':) Ulli's VB Code Formatter V2.24.17 (2022-Nov-18 00:20)  Decl: 29  Code: 930  Total: 959 Lines
+':) CommentOnly: 56 (5.8%)  Commented: 15 (1.6%)  Filled: 693 (72.3%)  Empty: 266 (27.7%)  Max Logic Depth: 3

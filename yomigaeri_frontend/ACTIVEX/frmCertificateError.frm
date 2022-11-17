@@ -133,6 +133,8 @@ Attribute VB_PredeclaredId = True
 Attribute VB_Exposed = False
 Option Explicit
 
+Private Declare Function SetParent Lib "USER32.DLL" (ByVal hWndChild As Long, ByVal hWndNewParent As Long) As Long
+
 ' It would be nice not to have to do all of this work and just
 ' rely on InternetErrorDlg(), but hRequest requires a HINTERNET
 ' handle that was passed to HttpSendRequest() before. Since all
@@ -286,7 +288,7 @@ End Sub
 Private Sub Form_Load()
 
     If m_hWndParent <> -1 Then
-        SetParent Me.hwnd, m_hWndParent
+        SetParent Me.hWnd, m_hWndParent
     End If
 
 End Sub
@@ -362,9 +364,9 @@ Public Property Let NoPromptMode(enable As Boolean)
 
 End Property
 
-Public Property Let ParentWindowHandle(hwnd As Long)
+Public Property Let ParentWindowHandle(hWnd As Long)
 
-    m_hWndParent = hwnd
+    m_hWndParent = hWnd
 
 End Property
 
@@ -374,5 +376,5 @@ Public Property Get result() As VbMsgBoxResult
 
 End Property
 
-':) Ulli's VB Code Formatter V2.24.17 (2022-Nov-17 19:43)  Decl: 39  Code: 206  Total: 245 Lines
-':) CommentOnly: 14 (5.7%)  Commented: 8 (3.3%)  Filled: 181 (73.9%)  Empty: 64 (26.1%)  Max Logic Depth: 3
+':) Ulli's VB Code Formatter V2.24.17 (2022-Nov-18 00:20)  Decl: 41  Code: 206  Total: 247 Lines
+':) CommentOnly: 14 (5.7%)  Commented: 8 (3.2%)  Filled: 182 (73.7%)  Empty: 65 (26.3%)  Max Logic Depth: 3

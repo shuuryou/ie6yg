@@ -15,6 +15,27 @@ Option Explicit
 
 Implements SSubTUP.ISubclass
 
+Private Declare Function EnableMenuItem Lib "USER32.DLL" (ByVal hMenu As Long, ByVal wIDEnableItem As Long, ByVal wEnable As Long) As Long
+Private Declare Function DrawMenuBar Lib "USER32.DLL" (ByVal hWnd As Long) As Long
+
+Private Const SIZE_RESTORED As Long = 0
+Private Const SIZE_MINIMIZED As Long = 1
+Private Const SIZE_MAXIMIZED As Long = 2
+
+Private Const MF_BYCOMMAND As Long = &H0
+Private Const MF_GRAYED As Long = &H1
+Private Const MF_ENABLED As Long = &H0
+
+Private Const NM_DBLCLK As Long = -3
+
+Private Type NMMOUSE
+    hdr As NMHDR
+    dwItemSpec As Long
+    dwItemData As Long
+    pt As POINT
+    dwHitInfo As Long
+End Type
+
 Private m_hWndUserControl As Long
 
 Private m_hWndInternetExplorerServer As Long
@@ -146,7 +167,7 @@ End Sub
 
 Private Function FindInternetExplorerServer() As Long
 
-  Dim hwnd As Long
+  Dim hWnd As Long
   Dim strClassName As String
 
     If m_hWndUserControl = -1 Then
@@ -155,7 +176,7 @@ Private Function FindInternetExplorerServer() As Long
         Exit Function
     End If
 
-    hwnd = GetParent(m_hWndUserControl)
+    hWnd = GetParent(m_hWndUserControl)
 
     If Err.LastDllError <> 0 Then
         modLogging.WriteLineToLog "IEFrame: GetParent failed in search for InternetExplorer_Server: " & Hex$(Err.LastDllError)
@@ -164,7 +185,7 @@ Private Function FindInternetExplorerServer() As Long
     End If
 
     strClassName = Space$(128)
-    GetClassNameA hwnd, strClassName, 128
+    GetClassNameA hWnd, strClassName, 128
 
     If Err.LastDllError <> 0 Then
         modLogging.WriteLineToLog "IEFrame: GetClassName failed in search for InternetExplorer_Server: " & Hex$(Err.LastDllError)
@@ -180,18 +201,18 @@ Private Function FindInternetExplorerServer() As Long
         Exit Function
     End If
 
-    modLogging.WriteLineToLog "IEFrame: Internet Explorer_Server hWnd is " & Hex$(hwnd)
+    modLogging.WriteLineToLog "IEFrame: Internet Explorer_Server hWnd is " & Hex$(hWnd)
 
-    FindInternetExplorerServer = hwnd
+    FindInternetExplorerServer = hWnd
 
 End Function
 
 Private Function FindShellDocObjectView(ByVal hWndInternetExplorerServer As Long) As Long
 
-  Dim hwnd As Long
+  Dim hWnd As Long
   Dim strClassName As String
 
-    hwnd = GetParent(hWndInternetExplorerServer)
+    hWnd = GetParent(hWndInternetExplorerServer)
 
     If Err.LastDllError <> 0 Then
         modLogging.WriteLineToLog "IEFrame: GetParent failed in search for Shell DocObject View: " & Hex$(Err.LastDllError)
@@ -200,7 +221,7 @@ Private Function FindShellDocObjectView(ByVal hWndInternetExplorerServer As Long
     End If
 
     strClassName = Space$(128)
-    GetClassNameA hwnd, strClassName, 128
+    GetClassNameA hWnd, strClassName, 128
 
     If Err.LastDllError <> 0 Then
         modLogging.WriteLineToLog "IEFrame: GetClassName failed in search for Shell DocObject View: " & Hex$(Err.LastDllError)
@@ -216,9 +237,9 @@ Private Function FindShellDocObjectView(ByVal hWndInternetExplorerServer As Long
         Exit Function
     End If
 
-    modLogging.WriteLineToLog "IEFrame: Shell DocObject View hWnd is " & Hex$(hwnd)
+    modLogging.WriteLineToLog "IEFrame: Shell DocObject View hWnd is " & Hex$(hWnd)
 
-    FindShellDocObjectView = hwnd
+    FindShellDocObjectView = hWnd
 
 End Function
 
@@ -298,7 +319,7 @@ Private Property Let ISubclass_MsgResponse(ByVal RHS As SSubTUP.EMsgResponse)
 
 End Property
 
-Private Function ISubclass_WindowProc(ByVal hwnd As Long, ByVal iMsg As Long, ByVal wParam As Long, ByVal lParam As Long) As Long
+Private Function ISubclass_WindowProc(ByVal hWnd As Long, ByVal iMsg As Long, ByVal wParam As Long, ByVal lParam As Long) As Long
 
     If iMsg = WM_NOTIFY Then
   Dim hdr As NMHDR
@@ -310,7 +331,7 @@ Private Function ISubclass_WindowProc(ByVal hwnd As Long, ByVal iMsg As Long, By
 
             CopyMemory hdr2, ByVal lParam, Len(hdr2)
 
-            If hdr2.dwItemSpec = STATUS_PANE_SSL Then
+            If hdr2.dwItemSpec = StatusBarPanes.SSL Then
                 modLogging.WriteLineToLog "hi2"
 
                 RaiseEvent CertificateErrorDialogRequested
@@ -318,7 +339,7 @@ Private Function ISubclass_WindowProc(ByVal hwnd As Long, ByVal iMsg As Long, By
             End If
         End If
 
-        ISubclass_WindowProc = SSubTUP.CallOldWindowProc(hwnd, iMsg, wParam, lParam)
+        ISubclass_WindowProc = SSubTUP.CallOldWindowProc(hWnd, iMsg, wParam, lParam)
     End If
 
     ' ------------------------------------------------------------------------
@@ -363,11 +384,11 @@ Private Function ISubclass_WindowProc(ByVal hwnd As Long, ByVal iMsg As Long, By
                 Exit Function
             End If
 
-            ISubclass_WindowProc = SSubTUP.CallOldWindowProc(hwnd, iMsg, wParam, lParam)
+            ISubclass_WindowProc = SSubTUP.CallOldWindowProc(hWnd, iMsg, wParam, lParam)
             Exit Function
         End If
 
-        ISubclass_WindowProc = SSubTUP.CallOldWindowProc(hwnd, iMsg, wParam, lParam)
+        ISubclass_WindowProc = SSubTUP.CallOldWindowProc(hWnd, iMsg, wParam, lParam)
     End If
 
     ' ------------------------------------------------------------------------
@@ -377,7 +398,7 @@ Private Function ISubclass_WindowProc(ByVal hwnd As Long, ByVal iMsg As Long, By
     ' That is to say, *only* after the fact. Not before. Not during.
 
     If iMsg = WM_EXITSIZEMOVE Then
-        ISubclass_WindowProc = SSubTUP.CallOldWindowProc(hwnd, iMsg, wParam, lParam)
+        ISubclass_WindowProc = SSubTUP.CallOldWindowProc(hWnd, iMsg, wParam, lParam)
 
         If m_GotSizeMessage Then
             ' This way, because WM_EXITSIZEMOVE won't tell you whether
@@ -390,7 +411,7 @@ Private Function ISubclass_WindowProc(ByVal hwnd As Long, ByVal iMsg As Long, By
     End If
 
     If iMsg = WM_SIZE Then
-        ISubclass_WindowProc = SSubTUP.CallOldWindowProc(hwnd, iMsg, wParam, lParam)
+        ISubclass_WindowProc = SSubTUP.CallOldWindowProc(hWnd, iMsg, wParam, lParam)
 
         m_GotSizeMessage = True
 
@@ -585,5 +606,5 @@ Private Function TranslateToIECommand(LoWord As Integer) As IECommand
 
 End Function
 
-':) Ulli's VB Code Formatter V2.24.17 (2022-Nov-17 19:43)  Decl: 53  Code: 523  Total: 576 Lines
-':) CommentOnly: 46 (8%)  Commented: 5 (0.9%)  Filled: 412 (71.5%)  Empty: 164 (28.5%)  Max Logic Depth: 4
+':) Ulli's VB Code Formatter V2.24.17 (2022-Nov-18 00:20)  Decl: 74  Code: 523  Total: 597 Lines
+':) CommentOnly: 46 (7.7%)  Commented: 5 (0.8%)  Filled: 428 (71.7%)  Empty: 169 (28.3%)  Max Logic Depth: 4

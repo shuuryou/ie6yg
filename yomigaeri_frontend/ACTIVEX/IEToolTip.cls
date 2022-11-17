@@ -13,6 +13,36 @@ Attribute VB_PredeclaredId = False
 Attribute VB_Exposed = False
 Option Explicit
 
+Private Declare Function CreateWindowEx Lib "USER32.DLL" Alias "CreateWindowExA" (ByVal dwExStyle As Long, ByVal lpClassName As String, ByVal lpWindowName As String, ByVal dwStyle As Long, ByVal X As Long, ByVal Y As Long, ByVal nWidth As Long, ByVal nHeight As Long, ByVal hWndParent As Long, ByVal hMenu As Long, ByVal hInstance As Long, lpParam As Any) As Long
+Private Declare Function DestroyWindow Lib "USER32.DLL" (ByVal hWnd As Long) As Long
+Private Declare Function GetCursorPos Lib "USER32.DLL" (lpPoint As POINT) As Long
+
+Private Type TOOLINFO
+    cbSize As Long
+    uFlags As Long
+    hWnd As Long
+    uid As Long
+    rc As RECT
+    hinst As Long
+    lpszText As String
+    lParam As Long
+End Type
+
+Private Const CW_USEDEFAULT As Long = &H80000000
+Private Const TOOLTIPS_CLASSA As String = "tooltips_class32"
+Private Const HWND_TOPMOST As Long = -1
+
+Private Const TTF_TRACK As Long = &H20
+Private Const TTF_ABSOLUTE As Long = &H80
+
+Private Const TTS_ALWAYSTIP As Long = &H1
+Private Const TTS_NOPREFIX As Long = &H2
+
+Private Const TTM_ADDTOOL As Long = (WM_USER + 4)
+Private Const TTM_UPDATETIPTEXT As Long = (WM_USER + 12)
+Private Const TTM_TRACKACTIVATE As Long = (WM_USER + 17)
+Private Const TTM_TRACKPOSITION As Long = (WM_USER + 18)
+
 Private m_HwndToolTip As Long
 Private m_hWndParent As Long
 
@@ -52,7 +82,7 @@ Public Sub Construct(ByVal hWndParent As Long)
     With m_ToolInfo
         .cbSize = Len(m_ToolInfo)
         .uFlags = TTF_ABSOLUTE Or TTF_TRACK
-        .hwnd = m_hWndParent
+        .hWnd = m_hWndParent
         .uid = 1
         .lpszText = vbNullString
         .rc = varRect
@@ -114,5 +144,5 @@ Public Property Let Visible(value As Boolean)
 
 End Property
 
-':) Ulli's VB Code Formatter V2.24.17 (2022-Nov-17 19:42)  Decl: 9  Code: 96  Total: 105 Lines
-':) CommentOnly: 2 (1.9%)  Commented: 0 (0%)  Filled: 66 (62.9%)  Empty: 39 (37.1%)  Max Logic Depth: 2
+':) Ulli's VB Code Formatter V2.24.17 (2022-Nov-18 00:20)  Decl: 39  Code: 96  Total: 135 Lines
+':) CommentOnly: 2 (1.5%)  Commented: 0 (0%)  Filled: 90 (66.7%)  Empty: 45 (33.3%)  Max Logic Depth: 2

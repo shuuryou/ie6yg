@@ -13,6 +13,34 @@ Attribute VB_PredeclaredId = False
 Attribute VB_Exposed = False
 Option Explicit
 
+Private Declare Function EnableWindow Lib "USER32.DLL" (ByVal hWnd As Long, ByVal fEnable As Long) As Long
+
+Private Type COMBOBOXEXITEM
+    mask As Long ' CBEIF..
+    iItem As Long
+    pszText As String
+    cchTextMax As Long
+    iImage As Long
+    iSelectedImage As Long
+    iOverlay As Long
+    iIndent As Long
+    lParam As Long
+End Type
+
+Private Const CB_ERR = (-1)
+Private Const CB_GETCOUNT = &H146
+Private Const CB_FINDSTRING = &H14C
+Private Const CB_FINDSTRINGEXACT = &H158
+
+Private Const CBEIF_TEXT = &H1
+Private Const CBEIF_IMAGE = &H2
+Private Const CBEIF_SELECTEDIMAGE = &H4
+
+Private Const CBEM_SETITEMA = (WM_USER + 5)
+Private Const CBEM_GETITEMA = (WM_USER + 4)
+Private Const CBEM_DELETEITEM = &H144
+Private Const CBEM_INSERTITEMA = (WM_USER + 1)
+
 Private m_hWndIEFrame As Long
 Private m_hWndComboBoxEx As Long
 
@@ -129,7 +157,7 @@ End Property
 
 Private Sub FindAddressBar()
 
-  Dim hwnd As Long
+  Dim hWnd As Long
 
     If m_hWndIEFrame = -1 Then
         modLogging.WriteLineToLog "IEAddressBar: m_hWndIEFrame is bad."
@@ -140,14 +168,14 @@ Private Sub FindAddressBar()
 
     ' Now start going down again and find the first "WorkerA"
 
-    hwnd = FindWindowEx(m_hWndIEFrame, 0&, "WorkerA", vbNullString)
+    hWnd = FindWindowEx(m_hWndIEFrame, 0&, "WorkerA", vbNullString)
 
-    If hwnd = 0 Then
+    If hWnd = 0 Then
         modLogging.WriteLineToLog "IEAddressBar: FindWindowEx WorkerA failed."
 
-        hwnd = FindWindowEx(m_hWndIEFrame, 0&, "WorkerW", vbNullString)
+        hWnd = FindWindowEx(m_hWndIEFrame, 0&, "WorkerW", vbNullString)
 
-        If hwnd = 0 Then
+        If hWnd = 0 Then
             modLogging.WriteLineToLog "IEAddressBar: FindWindowEx WorkerW also failed."
             m_hWndComboBoxEx = -1
             Exit Sub
@@ -156,37 +184,37 @@ Private Sub FindAddressBar()
         End If
     End If
 
-    modLogging.WriteLineToLog "FindAddressBar: WorkerA hWnd is " & Hex$(hwnd)
+    modLogging.WriteLineToLog "FindAddressBar: WorkerA hWnd is " & Hex$(hWnd)
 
     ' ------------------------------------------------------------------------
 
     ' Now find the "ReBarWindow32" containing the address bar
 
-    hwnd = FindWindowEx(hwnd, 0&, "ReBarWindow32", vbNullString)
+    hWnd = FindWindowEx(hWnd, 0&, "ReBarWindow32", vbNullString)
 
-    If hwnd = 0 Then
+    If hWnd = 0 Then
         modLogging.WriteLineToLog "IEAddressBar: FindWindowEx ReBarWindow32 failed."
         m_hWndComboBoxEx = -1
         Exit Sub
     End If
 
-    modLogging.WriteLineToLog "IEAddressBar: ReBarWindow32 hWnd is " & Hex$(hwnd)
+    modLogging.WriteLineToLog "IEAddressBar: ReBarWindow32 hWnd is " & Hex$(hWnd)
 
     ' ------------------------------------------------------------------------
 
     ' Now find the "ComboBoxEx32" to get to the address bar
 
-    hwnd = FindWindowEx(hwnd, 0&, "ComboBoxEx32", vbNullString)
+    hWnd = FindWindowEx(hWnd, 0&, "ComboBoxEx32", vbNullString)
 
-    If hwnd = 0 Then
+    If hWnd = 0 Then
         modLogging.WriteLineToLog "IEAddressBar: FindWindowEx ComboBoxEx32 failed."
         m_hWndComboBoxEx = -1
         Exit Sub
     End If
 
-    modLogging.WriteLineToLog "IEAddressBar: ComboBoxEx32 hWnd is " & Hex$(hwnd)
+    modLogging.WriteLineToLog "IEAddressBar: ComboBoxEx32 hWnd is " & Hex$(hWnd)
 
-    m_hWndComboBoxEx = hwnd
+    m_hWndComboBoxEx = hWnd
 
     modLogging.WriteLineToLog "IEAddressBar: Success!"
 
@@ -216,9 +244,9 @@ Private Sub FindCBEXiImages()
 
 End Sub
 
-Public Property Get hwnd() As Long
+Public Property Get hWnd() As Long
 
-    hwnd = m_hWndComboBoxEx
+    hWnd = m_hWndComboBoxEx
 
 End Property
 
@@ -305,5 +333,5 @@ Public Property Let Text(newText As String)
 
 End Property
 
-':) Ulli's VB Code Formatter V2.24.17 (2022-Nov-17 19:43)  Decl: 9  Code: 287  Total: 296 Lines
-':) CommentOnly: 52 (17.6%)  Commented: 3 (1%)  Filled: 198 (66.9%)  Empty: 98 (33.1%)  Max Logic Depth: 3
+':) Ulli's VB Code Formatter V2.24.17 (2022-Nov-18 00:20)  Decl: 37  Code: 287  Total: 324 Lines
+':) CommentOnly: 52 (16%)  Commented: 4 (1.2%)  Filled: 220 (67.9%)  Empty: 104 (32.1%)  Max Logic Depth: 3

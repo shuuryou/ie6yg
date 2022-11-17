@@ -17,6 +17,24 @@ Option Explicit
 
 Implements SSubTUP.ISubclass
 
+Private Type NMTOOLBAR_SHORT
+    hdr As NMHDR
+    iItem As Long
+End Type
+
+' Shift messages this amount to filter in WndProc
+Private Const TB_IE6YG_SHIFT As Long = 255
+
+Private Const TB_BUTTONCOUNT As Long = (WM_USER + &H18)
+Private Const TB_GETBUTTON As Long = (WM_USER + &H17)
+Private Const TB_ENABLEBUTTON  As Long = (WM_USER + &H1)
+
+Private Const TBN_FIRST As Long = -700
+Private Const TBN_DROPDOWN As Long = (TBN_FIRST - 10)
+
+Private Const TBSTYLE_DROPDOWN As Long = &H8
+Private Const TBSTYLE_AUTOSIZE As Long = &H10
+
 Private m_hWndIEFrame As Long
 Private m_hWndButtonToolbar As Long
 Private m_hWndReBarWindow32 As Long
@@ -271,11 +289,11 @@ Private Property Let ISubclass_MsgResponse(ByVal RHS As SSubTUP.EMsgResponse)
 
 End Property
 
-Private Function ISubclass_WindowProc(ByVal hwnd As Long, ByVal iMsg As Long, ByVal wParam As Long, ByVal lParam As Long) As Long
+Private Function ISubclass_WindowProc(ByVal hWnd As Long, ByVal iMsg As Long, ByVal wParam As Long, ByVal lParam As Long) As Long
 
   Dim command As ToolbarCommand
 
-    If hwnd = m_hWndButtonToolbar Then
+    If hWnd = m_hWndButtonToolbar Then
         If iMsg = TB_ENABLEBUTTON Then
             Exit Function
         End If
@@ -284,18 +302,18 @@ Private Function ISubclass_WindowProc(ByVal hwnd As Long, ByVal iMsg As Long, By
             iMsg = iMsg - TB_IE6YG_SHIFT
         End If
 
-        ISubclass_WindowProc = CallOldWindowProc(hwnd, iMsg, wParam, lParam)
+        ISubclass_WindowProc = CallOldWindowProc(hWnd, iMsg, wParam, lParam)
         Exit Function
     End If
 
-    If hwnd = m_hWndReBarWindow32 Then
+    If hWnd = m_hWndReBarWindow32 Then
         If iMsg = WM_COMMAND Then
             command = ToolbarCommandIdToEnum(wParam)
 
             If command <> CommandUnknown Then
                 RaiseEvent ToolbarButtonPressed(command)
               Else
-                ISubclass_WindowProc = CallOldWindowProc(hwnd, iMsg, wParam, lParam)
+                ISubclass_WindowProc = CallOldWindowProc(hWnd, iMsg, wParam, lParam)
             End If
 
             Exit Function
@@ -324,7 +342,7 @@ Private Function ISubclass_WindowProc(ByVal hwnd As Long, ByVal iMsg As Long, By
             End If
         End If
 
-        ISubclass_WindowProc = CallOldWindowProc(hwnd, iMsg, wParam, lParam)
+        ISubclass_WindowProc = CallOldWindowProc(hWnd, iMsg, wParam, lParam)
         Exit Function
     End If
 
@@ -382,5 +400,5 @@ Private Function ToolbarCommandIdToEnum(idCommand As Long) As ToolbarCommand
 
 End Function
 
-':) Ulli's VB Code Formatter V2.24.17 (2022-Nov-17 19:42)  Decl: 45  Code: 326  Total: 371 Lines
-':) CommentOnly: 24 (6.5%)  Commented: 3 (0.8%)  Filled: 271 (73%)  Empty: 100 (27%)  Max Logic Depth: 5
+':) Ulli's VB Code Formatter V2.24.17 (2022-Nov-18 00:20)  Decl: 63  Code: 326  Total: 389 Lines
+':) CommentOnly: 25 (6.4%)  Commented: 3 (0.8%)  Filled: 284 (73%)  Empty: 105 (27%)  Max Logic Depth: 5

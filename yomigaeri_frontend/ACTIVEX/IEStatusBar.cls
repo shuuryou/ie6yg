@@ -17,6 +17,30 @@ Option Explicit
 
 Implements SSubTUP.ISubclass
 
+Private Declare Function InflateRect Lib "USER32.DLL" (lpRect As RECT, ByVal X As Long, ByVal Y As Long) As Long
+Private Declare Function SetWindowPos Lib "USER32.DLL" (ByVal hWnd As Long, ByVal hWndInsertAfter As Long, ByVal X As Long, ByVal Y As Long, ByVal cx As Long, ByVal cy As Long, ByVal wFlags As Long) As Long
+
+' Shift messages this amount to filter in WndProc
+Private Const SB_IE6YG_SHIFT As Long = 255
+
+Private Const SB_SETTEXTA As Long = WM_USER + 1
+Private Const SB_GETTEXTA = WM_USER + 2
+Private Const SB_GETTEXTLENGTHA = WM_USER + 3
+Private Const SB_SETPARTS As Long = WM_USER + 4
+Private Const SB_GETPARTS As Long = WM_USER + 6
+Private Const SB_SETMINHEIGHT As Long = WM_USER + 8
+Private Const SB_SIMPLE As Long = WM_USER + 9
+Private Const SB_GETRECT As Long = WM_USER + 10
+Private Const SB_SETTEXTW As Long = WM_USER + 11
+Private Const SB_SETICON As Long = WM_USER + 15
+Private Const SB_SETTIPTEXTA As Long = WM_USER + 16
+
+Private Const SBT_NOTABPARSING As Long = &H800
+
+Private Const PBM_GETPOS As Long = WM_USER + 8
+Private Const PBM_SETPOS As Long = WM_USER + 2
+Private Const PBM_SETRANGE As Long = WM_USER + 1
+
 Private m_hWndStatusBar As Long
 Private m_hWndProgressBar As Long
 
@@ -64,12 +88,6 @@ Private m_StateSSLIcon As SSLIconState
 
 Private m_IsStatusBarCurrentlySimple As Boolean
 
-Public Property Get ConnectionIcon() As ConnectionIconState
-
-    ConnectionIcon = m_StateConnectionIcon
-
-End Property
-
 Public Property Let ConnectionIcon(newState As ConnectionIconState)
 
   Dim lngIcon As Long
@@ -78,18 +96,24 @@ Public Property Let ConnectionIcon(newState As ConnectionIconState)
 
     If m_StateConnectionIcon = Connected Then
         lngIcon = m_hIconConnected
-        SendMessage m_hWndStatusBar, SB_SETTIPTEXTA + SB_IE6YG_SHIFT, STATUS_PANE_CONNECTION, m_EngineConnectedText(0)
+        SendMessage m_hWndStatusBar, SB_SETTIPTEXTA + SB_IE6YG_SHIFT, StatusBarPanes.Connection, m_EngineConnectedText(0)
       ElseIf m_StateConnectionIcon = Disconnected Then
-        SendMessage m_hWndStatusBar, SB_SETTIPTEXTA + SB_IE6YG_SHIFT, STATUS_PANE_CONNECTION, m_EngineDisconnectedText(0)
+        SendMessage m_hWndStatusBar, SB_SETTIPTEXTA + SB_IE6YG_SHIFT, StatusBarPanes.Connection, m_EngineDisconnectedText(0)
         lngIcon = m_hIconDisconnected
       ElseIf m_StateConnectionIcon = Connecting Then
-        SendMessage m_hWndStatusBar, SB_SETTIPTEXTA + SB_IE6YG_SHIFT, STATUS_PANE_CONNECTION, m_EngineConnectingText(0)
+        SendMessage m_hWndStatusBar, SB_SETTIPTEXTA + SB_IE6YG_SHIFT, StatusBarPanes.Connection, m_EngineConnectingText(0)
         lngIcon = m_hIconConnecting
       Else
         lngIcon = 0&
     End If
 
-    SendMessage m_hWndStatusBar, SB_SETICON + SB_IE6YG_SHIFT, STATUS_PANE_CONNECTION, ByVal lngIcon
+    SendMessage m_hWndStatusBar, SB_SETICON + SB_IE6YG_SHIFT, StatusBarPanes.Connection, ByVal lngIcon
+
+End Property
+
+Public Property Get ConnectionIcon() As ConnectionIconState
+
+    ConnectionIcon = m_StateConnectionIcon
 
 End Property
 
@@ -226,35 +250,38 @@ Public Sub FixStatusBar()
   Dim nSBWidth As Integer
     nSBWidth = rc.right - rc.left
 
-  Dim arnRtEdge(STATUS_PANES) As Long
+  Dim arnRtEdge(STATUSBAR_PANES) As Long
     arnRtEdge(0) = 1
 
   Dim nIconPaneWidth As Long
-    nIconPaneWidth = GetSystemMetrics(SM_CXSMICON) + _
+    nIconPaneWidth = GetSystemMetrics(SM_CXSMICON) + 2 + _
                      GetSystemMetrics(SM_CXEDGE) * 2
+
+    ' 2 added to CXSMICON above to make icons look less cramped.
+    ' Microsoft didn't do that though.
 
   Dim nWidthReqd As Long
     nWidthReqd = cxZone + cxProgressBar + (nIconPaneWidth * 1)
 
     ' Oh lord, VB6 not even has Max(). What a garbage language.
 
-    arnRtEdge(STATUS_PANE_NAVIGATION) = IIf(1 > nSBWidth - nWidthReqd, 1, nSBWidth - nWidthReqd)
+    arnRtEdge(StatusBarPanes.Navigation) = IIf(1 > nSBWidth - nWidthReqd, 1, nSBWidth - nWidthReqd)
 
     nWidthReqd = nWidthReqd - cxProgressBar
-    arnRtEdge(STATUS_PANE_PROGRESS) = IIf(1 > nSBWidth - nWidthReqd, 1, nSBWidth - nWidthReqd)
+    arnRtEdge(StatusBarPanes.Progress) = IIf(1 > nSBWidth - nWidthReqd, 1, nSBWidth - nWidthReqd)
 
     nWidthReqd = nWidthReqd - nIconPaneWidth
-    arnRtEdge(STATUS_PANE_CONNECTION) = IIf(1 > nSBWidth - nWidthReqd, 1, nSBWidth - nWidthReqd)
+    arnRtEdge(StatusBarPanes.Connection) = IIf(1 > nSBWidth - nWidthReqd, 1, nSBWidth - nWidthReqd)
 
     nWidthReqd = nWidthReqd - nIconPaneWidth
-    arnRtEdge(STATUS_PANE_SSL) = IIf(1 > nSBWidth - nWidthReqd, 1, nSBWidth - nWidthReqd)
+    arnRtEdge(StatusBarPanes.SSL) = IIf(1 > nSBWidth - nWidthReqd, 1, nSBWidth - nWidthReqd)
 
-    arnRtEdge(STATUS_PANE_ZONE) = -1
+    arnRtEdge(StatusBarPanes.Zone) = -1
 
   Dim nParts As Long
     nParts = SendMessage(m_hWndStatusBar, SB_GETPARTS, 0, 0&)
 
-    If nParts <> STATUS_PANES Then
+    If nParts <> STATUSBAR_PANES Then
   Dim n As Integer
         For n = 0 To nParts - 1 Step 1
             SendMessage m_hWndStatusBar, SB_SETTEXTA + SB_IE6YG_SHIFT, n Or SBT_NOTABPARSING, 0&
@@ -264,7 +291,7 @@ Public Sub FixStatusBar()
         SendMessage m_hWndStatusBar, SB_SETPARTS + SB_IE6YG_SHIFT, 0, 0&
     End If
 
-    SendMessage m_hWndStatusBar, SB_SETPARTS + SB_IE6YG_SHIFT, STATUS_PANES, arnRtEdge(0)
+    SendMessage m_hWndStatusBar, SB_SETPARTS + SB_IE6YG_SHIFT, STATUSBAR_PANES, arnRtEdge(0)
 
     If SendMessage(m_hWndStatusBar, SB_GETRECT, 1, rc) <> 0 Then
         InflateRect rc, -1 * GetSystemMetrics(SM_CXEDGE), -1 * GetSystemMetrics(SM_CYEDGE)
@@ -272,13 +299,13 @@ Public Sub FixStatusBar()
         rc.left = rc.top = rc.right = rc.bottom = 0
     End If
 
-    SendMessage m_hWndStatusBar, SB_SETICON + SB_IE6YG_SHIFT, STATUS_PANE_NAVIGATION, ByVal m_hIconWebpage
-    SendMessage m_hWndStatusBar, SB_SETICON + SB_IE6YG_SHIFT, STATUS_PANE_ZONE, ByVal m_hIconZone
+    SendMessage m_hWndStatusBar, SB_SETICON + SB_IE6YG_SHIFT, StatusBarPanes.Navigation, ByVal m_hIconWebpage
+    SendMessage m_hWndStatusBar, SB_SETICON + SB_IE6YG_SHIFT, StatusBarPanes.Zone, ByVal m_hIconZone
 
     SendMessage m_hWndStatusBar, SB_SETMINHEIGHT + SB_IE6YG_SHIFT, _
                 GetSystemMetrics(SM_CYSMICON) + GetSystemMetrics(SM_CYBORDER) * 2, 0&
 
-    SendMessage m_hWndStatusBar, SB_SETTEXTA + SB_IE6YG_SHIFT, STATUS_PANE_ZONE, m_EngineText(0)
+    SendMessage m_hWndStatusBar, SB_SETTEXTA + SB_IE6YG_SHIFT, StatusBarPanes.Zone, m_EngineText(0)
 
     SetWindowPos m_hWndProgressBar, 0&, _
                  rc.left, rc.top, _
@@ -301,19 +328,19 @@ Public Property Get hWndStatusBar() As Long
 
 End Property
 
-Private Property Get ISubclass_MsgResponse() As SSubTUP.EMsgResponse
-
-    ISubclass_MsgResponse = emrConsume
-
-End Property
-
 Private Property Let ISubclass_MsgResponse(ByVal RHS As SSubTUP.EMsgResponse)
 
   ' Unused
 
 End Property
 
-Private Function ISubclass_WindowProc(ByVal hwnd As Long, ByVal iMsg As Long, ByVal wParam As Long, ByVal lParam As Long) As Long
+Private Property Get ISubclass_MsgResponse() As SSubTUP.EMsgResponse
+
+    ISubclass_MsgResponse = emrConsume
+
+End Property
+
+Private Function ISubclass_WindowProc(ByVal hWnd As Long, ByVal iMsg As Long, ByVal wParam As Long, ByVal lParam As Long) As Long
 
     If iMsg = WM_LBUTTONUP Or iMsg = WM_RBUTTONUP Then
         ' Stop IE from displaying its status bar popup menus.
@@ -322,7 +349,7 @@ Private Function ISubclass_WindowProc(ByVal hwnd As Long, ByVal iMsg As Long, By
 
     If iMsg = SB_SIMPLE Then
         m_IsStatusBarCurrentlySimple = (wParam > 0)
-        ISubclass_WindowProc = CallOldWindowProc(hwnd, iMsg, wParam, lParam)
+        ISubclass_WindowProc = CallOldWindowProc(hWnd, iMsg, wParam, lParam)
         Exit Function
     End If
 
@@ -334,7 +361,7 @@ Private Function ISubclass_WindowProc(ByVal hwnd As Long, ByVal iMsg As Long, By
         Or iMsg = SB_SETMINHEIGHT Or iMsg = SB_SETICON) Then
 
         If m_IsStatusBarCurrentlySimple Then
-            ISubclass_WindowProc = CallOldWindowProc(hwnd, iMsg, wParam, lParam)
+            ISubclass_WindowProc = CallOldWindowProc(hWnd, iMsg, wParam, lParam)
         End If
 
         Exit Function
@@ -346,27 +373,9 @@ Private Function ISubclass_WindowProc(ByVal hwnd As Long, ByVal iMsg As Long, By
         iMsg = iMsg - SB_IE6YG_SHIFT
     End If
 
-    ISubclass_WindowProc = CallOldWindowProc(hwnd, iMsg, wParam, lParam)
+    ISubclass_WindowProc = CallOldWindowProc(hWnd, iMsg, wParam, lParam)
 
 End Function
-
-Public Property Get ProgressBarValue() As Integer
-
-  Dim lngRet As Long
-
-    lngRet = SendMessage(m_hWndProgressBar, PBM_GETPOS, 0&, 0&)
-
-    If lngRet < 0 Then
-        lngRet = 0
-    End If
-
-    If lngRet > 100 Then
-        lngRet = 100
-    End If
-
-    ProgressBarValue = lngRet
-
-End Property
 
 Public Property Let ProgressBarValue(ByVal newValue As Integer)
 
@@ -388,6 +397,24 @@ Public Property Let ProgressBarValue(ByVal newValue As Integer)
 
 End Property
 
+Public Property Get ProgressBarValue() As Integer
+
+  Dim lngRet As Long
+
+    lngRet = SendMessage(m_hWndProgressBar, PBM_GETPOS, 0&, 0&)
+
+    If lngRet < 0 Then
+        lngRet = 0
+    End If
+
+    If lngRet > 100 Then
+        lngRet = 100
+    End If
+
+    ProgressBarValue = lngRet
+
+End Property
+
 Public Property Get SSLIcon() As SSLIconState
 
     ConnectionIcon = m_StateConnectionIcon
@@ -402,16 +429,16 @@ Public Property Let SSLIcon(newState As SSLIconState)
 
     If m_StateSSLIcon = OK Then
         lngIcon = m_hIconSSLOK
-        SendMessage m_hWndStatusBar, SB_SETTIPTEXTA + SB_IE6YG_SHIFT, STATUS_PANE_SSL, m_SSLIconOKText(0)
+        SendMessage m_hWndStatusBar, SB_SETTIPTEXTA + SB_IE6YG_SHIFT, StatusBarPanes.SSL, m_SSLIconOKText(0)
       ElseIf m_StateSSLIcon = Bad Then
         lngIcon = m_hIconSSLBad
-        SendMessage m_hWndStatusBar, SB_SETTIPTEXTA + SB_IE6YG_SHIFT, STATUS_PANE_SSL, m_SSLIconBadText(0)
+        SendMessage m_hWndStatusBar, SB_SETTIPTEXTA + SB_IE6YG_SHIFT, StatusBarPanes.SSL, m_SSLIconBadText(0)
       Else
         lngIcon = m_hIconSSLNone
-        SendMessage m_hWndStatusBar, SB_SETTIPTEXTA + SB_IE6YG_SHIFT, STATUS_PANE_SSL, m_SSLIconNoneText(0)
+        SendMessage m_hWndStatusBar, SB_SETTIPTEXTA + SB_IE6YG_SHIFT, StatusBarPanes.SSL, m_SSLIconNoneText(0)
     End If
 
-    SendMessage m_hWndStatusBar, SB_SETICON + SB_IE6YG_SHIFT, STATUS_PANE_SSL, ByVal lngIcon
+    SendMessage m_hWndStatusBar, SB_SETICON + SB_IE6YG_SHIFT, StatusBarPanes.SSL, ByVal lngIcon
 
 End Property
 
@@ -456,14 +483,24 @@ End Property
 
 Private Function ZoneComputePaneSize() As Long
 
-  ' TODO: Use something more sensible than 80
+  ' TODO: Implement text width calculation instead of using 80
 
     ZoneComputePaneSize = 80 + _
                           GetSystemMetrics(SM_CXSMICON) + _
                           GetSystemMetrics(SM_CXVSCROLL) + _
                           GetSystemMetrics(SM_CXEDGE) * 4
 
+    ' The very first version of Microsoft Word for Windows was considered a
+    ' "death march" project. It took forever. It kept slipping. The whole
+    ' team was working ridiculous hours, the project was delayed again, and
+    ' again, and again, and the stress was incredible.
+
+    ' The story goes that one programmer, who had to write the code to
+    ' calculate the height of a line of text, simply wrote "return 12;"
+    ' and waited for the bug report to come in about how his function is not
+    ' always correct.
+
 End Function
 
-':) Ulli's VB Code Formatter V2.24.17 (2022-Nov-17 19:42)  Decl: 50  Code: 404  Total: 454 Lines
-':) CommentOnly: 14 (3.1%)  Commented: 14 (3.1%)  Filled: 311 (68.5%)  Empty: 143 (31.5%)  Max Logic Depth: 3
+':) Ulli's VB Code Formatter V2.24.17 (2022-Nov-18 00:20)  Decl: 74  Code: 417  Total: 491 Lines
+':) CommentOnly: 25 (5.1%)  Commented: 14 (2.9%)  Filled: 340 (69.2%)  Empty: 151 (30.8%)  Max Logic Depth: 3

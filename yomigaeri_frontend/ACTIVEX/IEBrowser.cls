@@ -15,6 +15,16 @@ Attribute VB_Ext_KEY = "SavedWithClassBuilder6" ,"Yes"
 Attribute VB_Ext_KEY = "Top_Level" ,"Yes"
 Option Explicit
 
+Private Declare Function CreateUrlCacheEntry Lib "WININET.DLL" Alias "CreateUrlCacheEntryA" (ByVal lpszUrlName As String, ByVal dwExpectedFileSize As Long, ByVal lpszFileExtension As String, ByVal lpszFileName As String, ByVal dwReserved As Long) As Long
+Private Declare Function CommitUrlCacheEntry Lib "WININET.DLL" Alias "CommitUrlCacheEntryA" (ByVal lpszUrlName As String, ByVal lpszLocalFileName As String, ByRef tftExpireTime As FILETIME, ByRef tftLastModifiedTime As FILETIME, ByVal lCacheEntryType As Long, ByVal lpHeaderInfo As Long, ByVal dwHeaderSize As Long, ByVal lpszFileExtension As String, ByVal dwReserved As Long) As Long
+
+Private Const NORMAL_CACHE_ENTRY As Long = &H1
+
+Private Const IIDSTR_IHTMLElement As String = "{3050f1ff-98b5-11cf-bb82-00aa00bdce0b}"
+Private Const IIDSTR_IWebBrowser2 As String = "{D30C1661-CDAF-11D0-8A3E-00C04FC9E26E}"
+
+Private Const OBJID_CLIENT As Long = -4
+
 Private WithEvents m_Browser As WebBrowser
 Attribute m_Browser.VB_VarHelpID = -1
 
@@ -169,7 +179,7 @@ Public Sub Destroy()
 
 End Sub
 
-Private Sub m_Browser_BeforeNavigate2(ByVal pDisp As Object, url As Variant, Flags As Variant, TargetFrameName As Variant, PostData As Variant, Headers As Variant, Cancel As Boolean)
+Private Sub m_Browser_BeforeNavigate2(ByVal pDisp As Object, url As Variant, flags As Variant, TargetFrameName As Variant, PostData As Variant, Headers As Variant, Cancel As Boolean)
 
     Cancel = True
     modLogging.WriteLineToLog "IEBrowser: Catch and redirect navigating to: " & CStr(url)
@@ -188,5 +198,5 @@ Public Sub SetTitle(newTitle As String)
 
 End Sub
 
-':) Ulli's VB Code Formatter V2.24.17 (2022-Nov-17 19:43)  Decl: 7  Code: 169  Total: 176 Lines
-':) CommentOnly: 33 (18.8%)  Commented: 1 (0.6%)  Filled: 118 (67%)  Empty: 58 (33%)  Max Logic Depth: 3
+':) Ulli's VB Code Formatter V2.24.17 (2022-Nov-18 00:20)  Decl: 17  Code: 169  Total: 186 Lines
+':) CommentOnly: 33 (17.7%)  Commented: 1 (0.5%)  Filled: 124 (66.7%)  Empty: 62 (33.3%)  Max Logic Depth: 3
