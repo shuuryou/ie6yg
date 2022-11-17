@@ -6,6 +6,7 @@ using System.Globalization;
 using System.Web;
 using System.Windows.Forms;
 using yomigaeri_backend.Browser.Handlers;
+using static yomigaeri_backend.Browser.SynchronizerState;
 
 namespace yomigaeri_backend.Browser
 {
@@ -35,6 +36,7 @@ namespace yomigaeri_backend.Browser
 			Program.WebBrowser.LoadHandler = new MyLoadHandler(m_TravelLog, m_SyncState, SynchronizeWithFrontend);
 			Program.WebBrowser.DisplayHandler = new MyDisplayHandler(m_SyncState, SynchronizeWithFrontend);
 			Program.WebBrowser.RequestHandler = new MyRequestHandler(m_SyncState, SynchronizeWithFrontend);
+			Program.WebBrowser.JsDialogHandler = new MyJsDialogHandler(m_SyncState, SynchronizeWithFrontend);
 
 			// This is important! See Handlers/DisplayHandler.cs, OnCursorChange method
 			Cursor.Hide();
@@ -45,7 +47,7 @@ namespace yomigaeri_backend.Browser
 			// DisplayHandler.OnStatusMessage never gets called for some reason.
 			
 			if (e.Browser.IsLoading)
-				return; // It keeps trying to clear it while its displaying "Loading..."
+				return; // It keeps trying to clear it while page load is still in progress *sigh*
 
 			m_SyncState.StatusText = e.Value;
 			SynchronizeWithFrontend();
@@ -145,62 +147,60 @@ namespace yomigaeri_backend.Browser
 
 		private void SynchronizeWithFrontend()
 		{
+			// There is no technical reason that the messages start with
+			// seven letter long commands; they could be longer. It just
+			// emerged as a pattern and now it's here to stay like that.
+
 			#region Visible
 			if (m_SyncState.IsChanged(SynchronizerState.Change.Visible))
 			{
 				if (m_SyncState.Visible)
-					RDPVirtualChannel.Write("VISIBLE");
+					RDPVirtualChannel.Write("VISIBLE TRUE");
 				else
-					RDPVirtualChannel.Write("INVISIB");
+					RDPVirtualChannel.Write("VISIBLE FALSE");
 			}
 			#endregion
 
-			#region CanGoBack
-			if (m_SyncState.IsChanged(SynchronizerState.Change.CanGoBack))
+			#region Toolbar
+			if (m_SyncState.IsChanged(SynchronizerState.Change.Toolbar))
 			{
-				if (m_SyncState.CanGoBack)
-					RDPVirtualChannel.Write("BBACKON");
-				else
-					RDPVirtualChannel.Write("BBACKOF");
+				RDPVirtualChannel.Write(string.Format(CultureInfo.InvariantCulture, "TOOLBAR {0} {1}", "BACK",
+					m_SyncState.ToolbarButtons.HasFlag(FrontendToolbarButtons.Back) ? "TRUE" : "FALSE"));
+
+				RDPVirtualChannel.Write(string.Format(CultureInfo.InvariantCulture, "TOOLBAR {0} {1}", "FORWARD",
+					m_SyncState.ToolbarButtons.HasFlag(FrontendToolbarButtons.Forward) ? "TRUE" : "FALSE"));
+
+				RDPVirtualChannel.Write(string.Format(CultureInfo.InvariantCulture, "TOOLBAR {0} {1}", "HOME",
+					m_SyncState.ToolbarButtons.HasFlag(FrontendToolbarButtons.Home) ? "TRUE" : "FALSE"));
+
+				RDPVirtualChannel.Write(string.Format(CultureInfo.InvariantCulture, "TOOLBAR {0} {1}", "MEDIA",
+					m_SyncState.ToolbarButtons.HasFlag(FrontendToolbarButtons.Media) ? "TRUE" : "FALSE"));
+
+				RDPVirtualChannel.Write(string.Format(CultureInfo.InvariantCulture, "TOOLBAR {0} {1}", "REFRESH",
+					m_SyncState.ToolbarButtons.HasFlag(FrontendToolbarButtons.Refresh) ? "TRUE" : "FALSE"));
+
+				RDPVirtualChannel.Write(string.Format(CultureInfo.InvariantCulture, "TOOLBAR {0} {1}", "STOP",
+					m_SyncState.ToolbarButtons.HasFlag(FrontendToolbarButtons.Stop) ? "TRUE" : "FALSE"));
 			}
 			#endregion
 
-			#region CanGoForward
-			if (m_SyncState.IsChanged(SynchronizerState.Change.CanGoForward))
+			#region MenuBar
+			if (m_SyncState.IsChanged(SynchronizerState.Change.MenuBar))
 			{
-				if (m_SyncState.CanGoForward)
-					RDPVirtualChannel.Write("BFORWON");
-				else
-					RDPVirtualChannel.Write("BFORWOF");
-			}
-			#endregion
+				RDPVirtualChannel.Write(string.Format(CultureInfo.InvariantCulture, "MENUSET {0} {1}", "STOP",
+					m_SyncState.MenuBarItems.HasFlag(FrontendMenuBarItems.Stop) ? "TRUE" : "FALSE"));
 
-			#region CanReload
-			if (m_SyncState.IsChanged(SynchronizerState.Change.CanReload))
-			{
-				if (m_SyncState.CanReload)
-				{
-					RDPVirtualChannel.Write("BREFRON");
-				}
-				else
-				{
-					RDPVirtualChannel.Write("BREFROF");
-				}
-			}
-			#endregion
+				RDPVirtualChannel.Write(string.Format(CultureInfo.InvariantCulture, "MENUSET {0} {1}", "REFRESH",
+					m_SyncState.MenuBarItems.HasFlag(FrontendMenuBarItems.Refresh) ? "TRUE" : "FALSE"));
 
-			#region IsLoading
-			if (m_SyncState.IsChanged(SynchronizerState.Change.IsLoading))
-			{
-				if (m_SyncState.IsLoading)
-				{
-					RDPVirtualChannel.Write("BSTOPON");
-				}
-				else
-				{
-					RDPVirtualChannel.Write("BSTOPOF");
-					RDPVirtualChannel.Write("PROGRES0");
-				}
+				RDPVirtualChannel.Write(string.Format(CultureInfo.InvariantCulture, "MENUSET {0} {1}", "CUT",
+					m_SyncState.MenuBarItems.HasFlag(FrontendMenuBarItems.Cut) ? "TRUE" : "FALSE"));
+
+				RDPVirtualChannel.Write(string.Format(CultureInfo.InvariantCulture, "MENUSET {0} {1}", "COPY",
+					m_SyncState.MenuBarItems.HasFlag(FrontendMenuBarItems.Copy) ? "TRUE" : "FALSE"));
+
+				RDPVirtualChannel.Write(string.Format(CultureInfo.InvariantCulture, "MENUSET {0} {1}", "PASTE",
+					m_SyncState.MenuBarItems.HasFlag(FrontendMenuBarItems.Paste) ? "TRUE" : "FALSE"));
 			}
 			#endregion
 
@@ -208,7 +208,7 @@ namespace yomigaeri_backend.Browser
 			if (m_SyncState.IsChanged(SynchronizerState.Change.AddHistoryItem))
 			{
 				if (!string.IsNullOrEmpty(m_SyncState.Address))
-					RDPVirtualChannel.Write("ADDHIST" +
+					RDPVirtualChannel.Write("ADDHIST " +
 						m_SyncState.PageTitle + '\x1' + m_SyncState.Address);
 
 				m_SyncState.AddHistoryItem = false;
@@ -226,38 +226,38 @@ namespace yomigaeri_backend.Browser
 				if (progress > 100)
 					progress = 100;
 
-				RDPVirtualChannel.Write("PROGRES" + progress.ToString(CultureInfo.InvariantCulture));
+				RDPVirtualChannel.Write("PROGRES " + progress.ToString(CultureInfo.InvariantCulture));
 			}
 			#endregion
 
 			#region Address
 			if (m_SyncState.IsChanged(SynchronizerState.Change.Address))
 			{
-				RDPVirtualChannel.Write("ADDRESS" + m_SyncState.Address);
+				RDPVirtualChannel.Write("ADDRESS " + m_SyncState.Address);
 			}
 			#endregion
 
 			#region StatusText
 			if (m_SyncState.IsChanged(SynchronizerState.Change.StatusText))
 			{
-				RDPVirtualChannel.Write("STATUST" + m_SyncState.StatusText);
+				RDPVirtualChannel.Write("STATUST " + m_SyncState.StatusText);
 			}
 			#endregion
 
 			#region PageTitle
 			if (m_SyncState.IsChanged(SynchronizerState.Change.PageTitle))
 			{
-				RDPVirtualChannel.Write("PGTITLE" + m_SyncState.PageTitle);
+				RDPVirtualChannel.Write("PGTITLE " + m_SyncState.PageTitle);
 			}
 			#endregion
 
 			#region TravelLog
 			if (m_SyncState.IsChanged(SynchronizerState.Change.TravelLog))
 			{
-				RDPVirtualChannel.Write("TRAVLBK" +
+				RDPVirtualChannel.Write("TRAVLBK " +
 					m_TravelLog.MakeMenuStringForFrontend(TravelLog.TravelDirection.Back));
-
-				RDPVirtualChannel.Write("TRAVLFW" +
+				
+				RDPVirtualChannel.Write("TRAVLFW " +
 					m_TravelLog.MakeMenuStringForFrontend(TravelLog.TravelDirection.Forward));
 
 				m_SyncState.TravelLog = false;
@@ -267,31 +267,96 @@ namespace yomigaeri_backend.Browser
 			#region Cursor
 			if (m_SyncState.IsChanged(SynchronizerState.Change.Cursor))
 			{
-				RDPVirtualChannel.Write("SETCURS" + m_SyncState.Cursor);
+				RDPVirtualChannel.Write("SETCURS " + m_SyncState.Cursor);
 			}
 			#endregion
 
 			#region Tooltip
 			if (m_SyncState.IsChanged(SynchronizerState.Change.Tooltip))
 			{
-				RDPVirtualChannel.Write("TOOLTIP" + m_SyncState.Tooltip);
+				RDPVirtualChannel.Write("TOOLTIP " + m_SyncState.Tooltip);
 			}
 			#endregion
 
-			#region SSL Icon
+			#region SSLIcon
 			if (m_SyncState.IsChanged(SynchronizerState.Change.SSLIcon))
 			{
 				switch (m_SyncState.SSLIcon)
 				{
 					case SynchronizerState.SSLIconState.None:
-						RDPVirtualChannel.Write("SSLICOF");
+						RDPVirtualChannel.Write("SSLICON OFF");
 						break;
 					case SynchronizerState.SSLIconState.Secure:
-						RDPVirtualChannel.Write("SSLICON");
+						RDPVirtualChannel.Write("SSLICON OK");
 						break;
 					case SynchronizerState.SSLIconState.SecureBadCert:
-						RDPVirtualChannel.Write("SSLICBD");
+						RDPVirtualChannel.Write("SSLICON BAD");
 						break;
+				}
+			}
+			#endregion
+
+			#region CertificateState
+			if (m_SyncState.IsChanged(SynchronizerState.Change.CertificateState))
+			{
+				RDPVirtualChannel.Write(string.Format("CERSTAT {0}", (int)m_SyncState.CertificateState));
+			}
+			#endregion
+
+			#region CertificateData
+			if (m_SyncState.IsChanged(SynchronizerState.Change.CertificateData))
+			{
+				if (m_SyncState.CertificateData == null)
+					RDPVirtualChannel.Write("CERDATA");
+				else
+					RDPVirtualChannel.Write("CERDATA " + Convert.ToBase64String(m_SyncState.CertificateData));
+			}
+			#endregion
+
+			#region CertificatePrompt
+			if (m_SyncState.IsChanged(SynchronizerState.Change.CertificatePrompt))
+			{
+				RDPVirtualChannel.Write("CERSHOW");
+			}
+			#endregion
+
+			#region JSDialogPrompt
+			if (m_SyncState.IsChanged(SynchronizerState.Change.JSDialogPrompt) && m_SyncState.JSDialogPrompt != null)
+			{
+				switch (m_SyncState.JSDialogPrompt.Type)
+				{
+					case FrontendJSDialogs.Alert:
+						RDPVirtualChannel.Write(string.Format(CultureInfo.InvariantCulture,
+							"JSDIALG ALERT {0}", m_SyncState.JSDialogPrompt.Prompt));
+						break;
+					case FrontendJSDialogs.Confirm:
+						RDPVirtualChannel.Write(string.Format(CultureInfo.InvariantCulture,
+							"JSDIALG CONFIRM {0}", m_SyncState.JSDialogPrompt.Prompt));
+						break;
+					case FrontendJSDialogs.Prompt:
+						// Strings limited to 32767 because it ought to be enough.
+						// Anything longer will probably cause issues somewhere in
+						// the frontend due to the use of VB6.
+
+						string prompt = m_SyncState.JSDialogPrompt.Prompt;
+						if (prompt.Length >= 32767)
+							prompt = prompt.Substring(0, 32767);
+
+						string default_text = m_SyncState.JSDialogPrompt.DefaultText;
+						if (default_text.Length >= 32767)
+							default_text = default_text.Substring(0, 32767);
+
+						RDPVirtualChannel.Write(string.Format(CultureInfo.InvariantCulture,
+							"JSDIALG PROMPT {0:D8}{1}{2:D8}{3}", prompt.Length, prompt,
+							default_text.Length, default_text));
+
+						break;
+					case FrontendJSDialogs.OnBeforeUnload:
+						RDPVirtualChannel.Write(string.Format(CultureInfo.InvariantCulture,
+							"JSDIALG ONBEFOREUNLOAD {0}", m_SyncState.JSDialogPrompt.Prompt));
+						break;
+					default:
+						throw new InvalidOperationException("Unsupported JS dialog type.");
 				}
 			}
 			#endregion
@@ -304,14 +369,10 @@ namespace yomigaeri_backend.Browser
 			if (message == null)
 				throw new ArgumentNullException("message");
 
-			// There is no technical reason that the messages start with
-			// seven letter long commands; they could be longer. It just
-			// emerged as a pattern and now it's here to stay like that.
-
-			#region NAVIGAT -- Navigate to URL
-			if (message.StartsWith("NAVIGAT", StringComparison.Ordinal))
+			#region NAVIGATE -- Navigate to URL
+			if (message.StartsWith("NAVIGATE ", StringComparison.Ordinal))
 			{
-				string url = message.Substring(7);
+				string url = message.Substring(8);
 
 				if (string.IsNullOrEmpty(url))
 					return;
@@ -392,6 +453,55 @@ namespace yomigaeri_backend.Browser
 				// CEF doesn't offer another way, but websites that fuck around with
 				// the HTML5 history API will probably break this easily.
 				Program.WebBrowser.ExecuteScriptAsync("window.history.go", offset);
+			}
+			#endregion
+
+			#region CERTCALLBACK -- Response to OnCertificateError
+			if (message.StartsWith("CERTCALLBACK ", StringComparison.Ordinal))
+			{
+				string response = message.Substring(13).ToUpperInvariant();
+
+				IRequestCallback cb = ((MyRequestHandler)Program.WebBrowser.RequestHandler).SSLCertificate_CurrentErrorCallback;
+
+				if (cb == null || cb.IsDisposed)
+					return;
+
+				if (response == "CONTINUE")
+				{
+					cb.Continue(true);
+					return;
+				}
+
+				cb.Cancel();
+			}
+			#endregion
+
+			#region JSCALLBACK - Response to a JavaScript dialog
+			if (message.StartsWith("JSCALLBACK ", StringComparison.Ordinal))
+			{
+				string response = message.Substring(11);
+				string userInput = string.Empty;
+
+				{
+					// Deal with the input supplied by prompt(), if necessarz
+
+					int idx = response.IndexOf(' ');
+
+					if (idx != -1 && idx + 1 <= response.Length)
+					{
+						userInput = response.Substring(idx + 1);
+						response = response.Substring(0, idx);
+					}
+				}
+
+				IJsDialogCallback cb = ((MyJsDialogHandler)Program.WebBrowser.JsDialogHandler).JSDialog_Callback;
+
+				if (cb == null || cb.IsDisposed)
+					return;
+				
+				bool success = (response.ToUpperInvariant() == "OK");
+
+				cb.Continue(success, userInput);
 			}
 			#endregion
 		}

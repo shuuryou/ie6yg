@@ -4,6 +4,7 @@ using CefSharp.DevTools.Page;
 using System;
 using System.Globalization;
 using System.Web;
+using static yomigaeri_backend.Browser.SynchronizerState;
 
 namespace yomigaeri_backend.Browser.Handlers
 {
@@ -24,10 +25,38 @@ namespace yomigaeri_backend.Browser.Handlers
 
 		protected override void OnLoadingStateChange(IWebBrowser chromiumWebBrowser, LoadingStateChangedEventArgs loadingStateChangedArgs)
 		{
-			m_SyncState.CanGoBack = loadingStateChangedArgs.CanGoBack;
-			m_SyncState.CanGoForward = loadingStateChangedArgs.CanGoForward;
-			m_SyncState.CanReload = loadingStateChangedArgs.CanReload;
-			m_SyncState.IsLoading = loadingStateChangedArgs.IsLoading;
+			if (loadingStateChangedArgs.CanGoBack)
+				m_SyncState.ToolbarButtons |= FrontendToolbarButtons.Back;
+			else
+				m_SyncState.ToolbarButtons &= ~FrontendToolbarButtons.Back;
+
+			if (loadingStateChangedArgs.CanGoForward)
+				m_SyncState.ToolbarButtons |= FrontendToolbarButtons.Forward;
+			else
+				m_SyncState.ToolbarButtons &= ~FrontendToolbarButtons.Forward;
+
+			if (loadingStateChangedArgs.CanReload)
+			{
+				m_SyncState.ToolbarButtons |= FrontendToolbarButtons.Refresh;
+				m_SyncState.MenuBarItems |= FrontendMenuBarItems.Refresh;
+			}
+			else
+			{
+				m_SyncState.ToolbarButtons &= ~FrontendToolbarButtons.Refresh;
+				m_SyncState.MenuBarItems &= ~FrontendMenuBarItems.Refresh;
+			}
+
+			if (loadingStateChangedArgs.IsLoading)
+			{
+				m_SyncState.ToolbarButtons |= FrontendToolbarButtons.Stop;
+				m_SyncState.MenuBarItems |= FrontendMenuBarItems.Stop;
+			}
+			else
+			{
+				m_SyncState.ToolbarButtons &= ~FrontendToolbarButtons.Stop;
+				m_SyncState.MenuBarItems &= ~FrontendMenuBarItems.Stop;
+				m_SyncState.StatusProgress = 0;
+			}
 
 			m_SyncProc.Invoke();
 

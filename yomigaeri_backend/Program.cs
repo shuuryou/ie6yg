@@ -92,7 +92,7 @@ namespace yomigaeri_backend
 
 				try
 				{
-					RDPVirtualChannel.OpenChannel();
+					RDPVirtualChannel.Open();
 				}
 				catch (Win32Exception e)
 				{
@@ -115,7 +115,7 @@ namespace yomigaeri_backend
 			{
 				Logging.WriteLineToLog("Main: Request styling from frontend.");
 
-				RDPVirtualChannel.Write("STYLING");
+				RDPVirtualChannel.Write("GETINFO STYLING");
 
 				string response = null;
 
@@ -159,7 +159,7 @@ namespace yomigaeri_backend
 			{
 				Logging.WriteLineToLog("Main: Request browser language list from frontend.");
 
-				RDPVirtualChannel.Write("LANGLST");
+				RDPVirtualChannel.Write("GETINFO LANGUAGES");
 
 				string response = null;
 
@@ -193,7 +193,7 @@ namespace yomigaeri_backend
 
 			#region Request Initial Window Size from Frontend
 			{
-				RDPVirtualChannel.Write("INITSIZ");
+				RDPVirtualChannel.Write("GETINFO INITIALSIZE");
 
 				string response = null;
 

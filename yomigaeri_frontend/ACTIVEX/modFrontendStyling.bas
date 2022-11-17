@@ -116,7 +116,7 @@ Private Function LongToRGBHex(ByVal lLong As Long) As String
     ' world most colors have a red-part >= 16, it's a good idea to check if
     ' we really need the string op
     If bRed < &H10 Then
-        LongToRGBHex = Right$("00000" & Hex$(lLong), 6)
+        LongToRGBHex = right$("00000" & Hex$(lLong), 6)
       Else
         LongToRGBHex = Hex$(lLong)
     End If
@@ -140,7 +140,7 @@ Public Function MakeStyling(ByRef hDC As Long) As String
     End If
 
     strFont = StrConv(sctNCM.lfMessageFont.lfFaceName, vbUnicode)
-    strFont = Left$(strFont, InStr(strFont, vbNullChar) - 1)
+    strFont = left$(strFont, InStr(strFont, vbNullChar) - 1)
 
     ' Str$ in the font size is important to account for locales that
     ' do not use a period as the decimal separator.
@@ -175,5 +175,5 @@ Public Function MakeStyling(ByRef hDC As Long) As String
 
 End Function
 
-':) Ulli's VB Code Formatter V2.24.17 (2022-Nov-12 08:13)  Decl: 70  Code: 108  Total: 178 Lines
+':) Ulli's VB Code Formatter V2.24.17 (2022-Nov-17 19:43)  Decl: 70  Code: 108  Total: 178 Lines
 ':) CommentOnly: 12 (6.7%)  Commented: 0 (0%)  Filled: 147 (82.6%)  Empty: 31 (17.4%)  Max Logic Depth: 2

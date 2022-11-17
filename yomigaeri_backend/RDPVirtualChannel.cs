@@ -60,7 +60,7 @@ namespace yomigaeri_backend
 			s_hChannel = IntPtr.Zero;
 		}
 
-		public static void OpenChannel()
+		public static void Open()
 		{
 			if (s_hChannel != IntPtr.Zero)
 				return;
@@ -75,10 +75,10 @@ namespace yomigaeri_backend
 
 			s_hChannel = hChannel;
 
-			Logging.WriteLineToLog("RDPVirtualChannel: OpenChannel: Handle is 0x{0:x}", s_hChannel);
+			Logging.WriteLineToLog("RDPVirtualChannel: Open: Handle is 0x{0:x}", s_hChannel);
 		}
 
-		public static void CloseChannel()
+		public static void Close()
 		{
 			if (s_hChannel == IntPtr.Zero)
 				return;
@@ -148,7 +148,7 @@ namespace yomigaeri_backend
 
 		done:
 			if (!string.IsNullOrEmpty(ret))
-				Logging.WriteLineToLog("RDPVirtualChannel: ReadChannel: \"{0}\"", ret);
+				Logging.WriteLineToLog("RDPVirtualChannel: Read: \"{0}\"", ret);
 
 			return ret;
 		}
@@ -174,7 +174,7 @@ namespace yomigaeri_backend
 				throw new IOException(string.Format(CultureInfo.InvariantCulture,
 					"Operation failed. Should write {0:n0} bytes, but wrote {1:n0} bytes.", buf.Length, written));
 
-			Logging.WriteLineToLog("RDPVirtualChannel: WriteChannel: \"{0}\"", message);
+			Logging.WriteLineToLog("RDPVirtualChannel: Write: \"{0}\"", message);
 		}
 	}
 }

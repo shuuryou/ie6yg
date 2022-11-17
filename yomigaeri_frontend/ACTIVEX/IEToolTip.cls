@@ -14,7 +14,7 @@ Attribute VB_Exposed = False
 Option Explicit
 
 Private m_HwndToolTip As Long
-Private m_HwndParent As Long
+Private m_hWndParent As Long
 
 Private m_CurrentText As String
 
@@ -23,7 +23,7 @@ Private m_ToolInfo As TOOLINFO
 
 Private Sub Class_Initialize()
 
-    InitCommonControls
+    m_hWndParent = -1
     m_HwndToolTip = -1
 
 End Sub
@@ -35,10 +35,10 @@ Public Sub Construct(ByVal hWndParent As Long)
     m_CursorSize.X = GetSystemMetrics(SM_CXCURSOR)
     m_CursorSize.Y = GetSystemMetrics(SM_CYCURSOR)
 
-    m_HwndParent = hWndParent
+    m_hWndParent = hWndParent
 
     m_HwndToolTip = CreateWindowEx(WS_EX_TOPMOST, TOOLTIPS_CLASSA, vbNullString, WS_POPUP Or TTS_NOPREFIX Or TTS_ALWAYSTIP, _
-                    CW_USEDEFAULT, CW_USEDEFAULT, CW_USEDEFAULT, CW_USEDEFAULT, m_HwndParent, 0&, _
+                    CW_USEDEFAULT, CW_USEDEFAULT, CW_USEDEFAULT, CW_USEDEFAULT, m_hWndParent, 0&, _
                     App.hInstance, ByVal 0&)
 
     If m_HwndToolTip = 0 Then
@@ -47,12 +47,12 @@ Public Sub Construct(ByVal hWndParent As Long)
         Exit Sub
     End If
 
-    GetClientRect m_HwndParent, varRect
+    GetClientRect m_hWndParent, varRect
 
     With m_ToolInfo
         .cbSize = Len(m_ToolInfo)
         .uFlags = TTF_ABSOLUTE Or TTF_TRACK
-        .hWnd = m_HwndParent
+        .hwnd = m_hWndParent
         .uid = 1
         .lpszText = vbNullString
         .rc = varRect
@@ -114,5 +114,5 @@ Public Property Let Visible(value As Boolean)
 
 End Property
 
-':) Ulli's VB Code Formatter V2.24.17 (2022-Nov-14 08:11)  Decl: 9  Code: 96  Total: 105 Lines
+':) Ulli's VB Code Formatter V2.24.17 (2022-Nov-17 19:42)  Decl: 9  Code: 96  Total: 105 Lines
 ':) CommentOnly: 2 (1.9%)  Commented: 0 (0%)  Filled: 66 (62.9%)  Empty: 39 (37.1%)  Max Logic Depth: 2

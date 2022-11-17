@@ -100,9 +100,10 @@ Public Sub AddToHistory(ByVal url As String, ByVal title As String)
         lngRet = CommitUrlCacheEntry(url, strFileName, ftExpireTime, _
                  ftModifiedTime, NORMAL_CACHE_ENTRY, 0&, 0&, 0&, 0&)
 
-        If lngRet <> 1 Then
-            modLogging.WriteLineToLog "IEBrowse: Can't add history because CommitUrlCacheEntry failed. HRESULT: " & Hex$(Err.LastDllError)
-            Exit Sub
+        If lngRet <> 1 Then ' False
+            ' Sometimes HRESULT is 0x20, but it still works?!?!?
+            modLogging.WriteLineToLog "IEBrowse: CommitUrlCacheEntry failed, but continue anway. HRESULT: " & Hex$(Err.LastDllError)
+            'Exit Sub
         End If
     End If
 
@@ -187,5 +188,5 @@ Public Sub SetTitle(newTitle As String)
 
 End Sub
 
-':) Ulli's VB Code Formatter V2.24.17 (2022-Nov-14 08:11)  Decl: 7  Code: 168  Total: 175 Lines
-':) CommentOnly: 31 (17.7%)  Commented: 0 (0%)  Filled: 117 (66.9%)  Empty: 58 (33.1%)  Max Logic Depth: 3
+':) Ulli's VB Code Formatter V2.24.17 (2022-Nov-17 19:43)  Decl: 7  Code: 169  Total: 176 Lines
+':) CommentOnly: 33 (18.8%)  Commented: 1 (0.6%)  Filled: 118 (67%)  Empty: 58 (33%)  Max Logic Depth: 3

@@ -13,17 +13,17 @@ Public Sub WriteLineToLog(line As String)
 
     intFF = -1
 
-    On Error GoTo eh
+    On Error GoTo EH
 
     intFF = FreeFile
 
     Open Environ$("TEMP") & "\YFEDEBUG.LOG" For Append As #intFF
     Print #intFF, Format$(Now, "dd.mm.yy hh:nn:ss") & ": " & line
 
-eh:
+EH:
     Close #intFF
 
 End Sub
 
-':) Ulli's VB Code Formatter V2.24.17 (2022-Nov-06 08:05)  Decl: 3  Code: 25  Total: 28 Lines
+':) Ulli's VB Code Formatter V2.24.17 (2022-Nov-17 19:43)  Decl: 3  Code: 25  Total: 28 Lines
 ':) CommentOnly: 2 (7.1%)  Commented: 0 (0%)  Filled: 17 (60.7%)  Empty: 11 (39.3%)  Max Logic Depth: 2

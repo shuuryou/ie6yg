@@ -17,14 +17,6 @@ Option Explicit
 
 Implements SSubTUP.ISubclass
 
-Private Const STATUS_PANES As Integer = 5
-Private Const STATUS_PANE_NAVIGATION As Integer = 0
-Private Const STATUS_PANE_PROGRESS As Integer = 1
-Private Const STATUS_PANE_CONNECTION As Integer = 2
-Private Const STATUS_PANE_SSL As Integer = 3
-Private Const STATUS_PANE_ZONE As Integer = 4
-
-Private m_hWndIEFrame As Long
 Private m_hWndStatusBar As Long
 Private m_hWndProgressBar As Long
 
@@ -101,15 +93,14 @@ Public Property Let ConnectionIcon(newState As ConnectionIconState)
 
 End Property
 
-Public Sub Construct(hWndIEFrame As Long)
+Public Sub Construct(hWndStatusBar As Long, hWndProgressBar As Long)
 
   ' VB6 classes can't have a real constructor. *sigh*
 
   Dim lngIconSize As Long
 
-    m_hWndIEFrame = hWndIEFrame
-
-    FindStatusBar
+    m_hWndStatusBar = hWndStatusBar
+    m_hWndProgressBar = hWndProgressBar
 
     If m_hWndStatusBar = -1 Or m_hWndProgressBar = -1 Then
         Exit Sub
@@ -201,40 +192,6 @@ Public Sub Destroy()
     DetachMessage Me, m_hWndStatusBar, SB_SETPARTS + SB_IE6YG_SHIFT
     DetachMessage Me, m_hWndStatusBar, SB_SETMINHEIGHT + SB_IE6YG_SHIFT
     DetachMessage Me, m_hWndStatusBar, SB_SETICON + SB_IE6YG_SHIFT
-
-End Sub
-
-Private Sub FindStatusBar()
-
-  Dim hWndTemp As Long
-
-    If m_hWndIEFrame = -1 Then
-        modLogging.WriteLineToLog "IEStatusBar: m_hWndIEFrame is bad."
-        m_hWndStatusBar = -1
-        Exit Sub
-    End If
-
-    hWndTemp = FindWindowEx(m_hWndIEFrame, 0&, "msctls_statusbar32", vbNullString)
-
-    If hWndTemp = 0 Then
-        modLogging.WriteLineToLog "IEStatusBar: msctls_statusbar32 not found."
-        Exit Sub
-    End If
-
-    m_hWndStatusBar = hWndTemp
-
-    hWndTemp = FindWindowEx(hWndTemp, 0&, "msctls_progress32", vbNullString)
-
-    If hWndTemp = 0 Then
-        modLogging.WriteLineToLog "IEStatusBar: ReBarWindow32 not found."
-        m_hWndStatusBar = -1
-        Exit Sub
-    End If
-
-    m_hWndProgressBar = hWndTemp
-
-    modLogging.WriteLineToLog "IEStatusBar: Found msctls_statusbar32: " & Hex$(m_hWndStatusBar) & " and msctls_progress32: " & Hex$(m_hWndProgressBar)
-    modLogging.WriteLineToLog "IEStatusBar: Success!"
 
 End Sub
 
@@ -356,16 +313,16 @@ Private Property Let ISubclass_MsgResponse(ByVal RHS As SSubTUP.EMsgResponse)
 
 End Property
 
-Private Function ISubclass_WindowProc(ByVal hWnd As Long, ByVal iMsg As Long, ByVal wParam As Long, ByVal lParam As Long) As Long
+Private Function ISubclass_WindowProc(ByVal hwnd As Long, ByVal iMsg As Long, ByVal wParam As Long, ByVal lParam As Long) As Long
 
     If iMsg = WM_LBUTTONUP Or iMsg = WM_RBUTTONUP Then
-        ' TODO: This is where to handle a context menu popup.
+        ' Stop IE from displaying its status bar popup menus.
         Exit Function
     End If
 
     If iMsg = SB_SIMPLE Then
         m_IsStatusBarCurrentlySimple = (wParam > 0)
-        ISubclass_WindowProc = CallOldWindowProc(hWnd, iMsg, wParam, lParam)
+        ISubclass_WindowProc = CallOldWindowProc(hwnd, iMsg, wParam, lParam)
         Exit Function
     End If
 
@@ -377,7 +334,7 @@ Private Function ISubclass_WindowProc(ByVal hWnd As Long, ByVal iMsg As Long, By
         Or iMsg = SB_SETMINHEIGHT Or iMsg = SB_SETICON) Then
 
         If m_IsStatusBarCurrentlySimple Then
-            ISubclass_WindowProc = CallOldWindowProc(hWnd, iMsg, wParam, lParam)
+            ISubclass_WindowProc = CallOldWindowProc(hwnd, iMsg, wParam, lParam)
         End If
 
         Exit Function
@@ -389,7 +346,7 @@ Private Function ISubclass_WindowProc(ByVal hWnd As Long, ByVal iMsg As Long, By
         iMsg = iMsg - SB_IE6YG_SHIFT
     End If
 
-    ISubclass_WindowProc = CallOldWindowProc(hWnd, iMsg, wParam, lParam)
+    ISubclass_WindowProc = CallOldWindowProc(hwnd, iMsg, wParam, lParam)
 
 End Function
 
@@ -508,5 +465,5 @@ Private Function ZoneComputePaneSize() As Long
 
 End Function
 
-':) Ulli's VB Code Formatter V2.24.17 (2022-Nov-14 08:11)  Decl: 58  Code: 439  Total: 497 Lines
-':) CommentOnly: 14 (2.8%)  Commented: 14 (2.8%)  Filled: 341 (68.6%)  Empty: 156 (31.4%)  Max Logic Depth: 3
+':) Ulli's VB Code Formatter V2.24.17 (2022-Nov-17 19:42)  Decl: 50  Code: 404  Total: 454 Lines
+':) CommentOnly: 14 (3.1%)  Commented: 14 (3.1%)  Filled: 311 (68.5%)  Empty: 143 (31.5%)  Max Logic Depth: 3

@@ -16,9 +16,14 @@ Option Explicit
 Implements SSubTUP.ISubclass
 
 Private m_hWndUserControl As Long
+
 Private m_hWndInternetExplorerServer As Long
 Private m_hWndShellDocObjectView As Long
 Private m_hWndIEFrame As Long
+
+Private m_hWndStatusBar As Long
+Private m_hWndProgressBar As Long
+
 Private m_GotSizeMessage As Boolean
 Private m_WasMaximized As Boolean
 Private m_WasMinimized As Boolean
@@ -58,6 +63,7 @@ Private m_MenuEditRefreshEnabled As Boolean
 
 Public Event WindowResized()
 Public Event CommandReceived(command As IECommand)
+Public Event CertificateErrorDialogRequested()
 
 Public Sub Construct(hWndUserControl As Long)
 
@@ -66,6 +72,7 @@ Public Sub Construct(hWndUserControl As Long)
     m_hWndUserControl = hWndUserControl
 
     FindIEFrame
+    FindStatusBar
 
     If m_hWndIEFrame = -1 Then
         Exit Sub
@@ -75,6 +82,7 @@ Public Sub Construct(hWndUserControl As Long)
     AttachMessage Me, m_hWndIEFrame, WM_SIZE
     AttachMessage Me, m_hWndIEFrame, WM_COMMAND
     AttachMessage Me, m_hWndIEFrame, WM_INITMENUPOPUP
+    AttachMessage Me, m_hWndIEFrame, WM_NOTIFY
 
 End Sub
 
@@ -84,6 +92,7 @@ Public Sub Destroy()
     DetachMessage Me, m_hWndIEFrame, WM_SIZE
     DetachMessage Me, m_hWndIEFrame, WM_COMMAND
     DetachMessage Me, m_hWndIEFrame, WM_INITMENUPOPUP
+    DetachMessage Me, m_hWndIEFrame, WM_NOTIFY
 
 End Sub
 
@@ -137,7 +146,7 @@ End Sub
 
 Private Function FindInternetExplorerServer() As Long
 
-  Dim hWnd As Long
+  Dim hwnd As Long
   Dim strClassName As String
 
     If m_hWndUserControl = -1 Then
@@ -146,7 +155,7 @@ Private Function FindInternetExplorerServer() As Long
         Exit Function
     End If
 
-    hWnd = GetParent(m_hWndUserControl)
+    hwnd = GetParent(m_hWndUserControl)
 
     If Err.LastDllError <> 0 Then
         modLogging.WriteLineToLog "IEFrame: GetParent failed in search for InternetExplorer_Server: " & Hex$(Err.LastDllError)
@@ -155,7 +164,7 @@ Private Function FindInternetExplorerServer() As Long
     End If
 
     strClassName = Space$(128)
-    GetClassNameA hWnd, strClassName, 128
+    GetClassNameA hwnd, strClassName, 128
 
     If Err.LastDllError <> 0 Then
         modLogging.WriteLineToLog "IEFrame: GetClassName failed in search for InternetExplorer_Server: " & Hex$(Err.LastDllError)
@@ -171,18 +180,18 @@ Private Function FindInternetExplorerServer() As Long
         Exit Function
     End If
 
-    modLogging.WriteLineToLog "IEFrame: Internet Explorer_Server hWnd is " & Hex$(hWnd)
+    modLogging.WriteLineToLog "IEFrame: Internet Explorer_Server hWnd is " & Hex$(hwnd)
 
-    FindInternetExplorerServer = hWnd
+    FindInternetExplorerServer = hwnd
 
 End Function
 
 Private Function FindShellDocObjectView(ByVal hWndInternetExplorerServer As Long) As Long
 
-  Dim hWnd As Long
+  Dim hwnd As Long
   Dim strClassName As String
 
-    hWnd = GetParent(hWndInternetExplorerServer)
+    hwnd = GetParent(hWndInternetExplorerServer)
 
     If Err.LastDllError <> 0 Then
         modLogging.WriteLineToLog "IEFrame: GetParent failed in search for Shell DocObject View: " & Hex$(Err.LastDllError)
@@ -191,7 +200,7 @@ Private Function FindShellDocObjectView(ByVal hWndInternetExplorerServer As Long
     End If
 
     strClassName = Space$(128)
-    GetClassNameA hWnd, strClassName, 128
+    GetClassNameA hwnd, strClassName, 128
 
     If Err.LastDllError <> 0 Then
         modLogging.WriteLineToLog "IEFrame: GetClassName failed in search for Shell DocObject View: " & Hex$(Err.LastDllError)
@@ -207,11 +216,45 @@ Private Function FindShellDocObjectView(ByVal hWndInternetExplorerServer As Long
         Exit Function
     End If
 
-    modLogging.WriteLineToLog "IEFrame: Shell DocObject View hWnd is " & Hex$(hWnd)
+    modLogging.WriteLineToLog "IEFrame: Shell DocObject View hWnd is " & Hex$(hwnd)
 
-    FindShellDocObjectView = hWnd
+    FindShellDocObjectView = hwnd
 
 End Function
+
+Private Sub FindStatusBar()
+
+  Dim hWndTemp As Long
+
+    If m_hWndIEFrame = -1 Then
+        modLogging.WriteLineToLog "IEFrame: FindStatusBar: m_hWndIEFrame is bad."
+        m_hWndStatusBar = -1
+        Exit Sub
+    End If
+
+    hWndTemp = FindWindowEx(m_hWndIEFrame, 0&, "msctls_statusbar32", vbNullString)
+
+    If hWndTemp = 0 Then
+        modLogging.WriteLineToLog "IEFrame: msctls_statusbar32 not found."
+        Exit Sub
+    End If
+
+    m_hWndStatusBar = hWndTemp
+
+    hWndTemp = FindWindowEx(hWndTemp, 0&, "msctls_progress32", vbNullString)
+
+    If hWndTemp = 0 Then
+        modLogging.WriteLineToLog "IEFrame: ReBarWindow32 not found."
+        m_hWndStatusBar = -1
+        Exit Sub
+    End If
+
+    m_hWndProgressBar = hWndTemp
+
+    modLogging.WriteLineToLog "IEFrame: Found msctls_statusbar32: " & Hex$(m_hWndStatusBar) & " and msctls_progress32: " & Hex$(m_hWndProgressBar)
+    modLogging.WriteLineToLog "IEFrame: FindStatusBar success!"
+
+End Sub
 
 Public Property Get hWndIEFrame() As Long
 
@@ -225,9 +268,21 @@ Public Property Get hWndInternetExplorerServer() As Long
 
 End Property
 
+Public Property Get hWndProgressBar() As Long
+
+    hWndProgressBar = m_hWndProgressBar
+
+End Property
+
 Public Property Get hWndShellDocObjectView() As Long
 
     hWndShellDocObjectView = m_hWndShellDocObjectView
+
+End Property
+
+Public Property Get hWndStatusBar() As Long
+
+    hWndStatusBar = m_hWndStatusBar
 
 End Property
 
@@ -243,22 +298,47 @@ Private Property Let ISubclass_MsgResponse(ByVal RHS As SSubTUP.EMsgResponse)
 
 End Property
 
-Private Function ISubclass_WindowProc(ByVal hWnd As Long, ByVal iMsg As Long, ByVal wParam As Long, ByVal lParam As Long) As Long
+Private Function ISubclass_WindowProc(ByVal hwnd As Long, ByVal iMsg As Long, ByVal wParam As Long, ByVal lParam As Long) As Long
 
-  ' WM_INITMENUPOPUP seems to be the most sane way to get hMenu.
-  ' IE6's menu bar is actually a ReBar and the menu buttons are
-  ' toolbar buttons that pop up menus at the right coordinates.
-  ' IE uses an elaborate procedure to dynamically build the menu
-  ' from several menu fragments, depending on whether it's being
-  ' used as part of Explorer to show the filesystem or whether
-  ' it's being used as a web browser.
-  ' ref. https://learn.microsoft.com/en-us/windows/win32/controls/cc-faq-iemenubar
+    If iMsg = WM_NOTIFY Then
+  Dim hdr As NMHDR
+
+        CopyMemory hdr, ByVal lParam, Len(hdr)
+
+        If hdr.code = NM_DBLCLK And hdr.hwndFrom = m_hWndStatusBar Then
+  Dim hdr2 As NMMOUSE
+
+            CopyMemory hdr2, ByVal lParam, Len(hdr2)
+
+            If hdr2.dwItemSpec = STATUS_PANE_SSL Then
+                modLogging.WriteLineToLog "hi2"
+
+                RaiseEvent CertificateErrorDialogRequested
+                Exit Function
+            End If
+        End If
+
+        ISubclass_WindowProc = SSubTUP.CallOldWindowProc(hwnd, iMsg, wParam, lParam)
+    End If
+
+    ' ------------------------------------------------------------------------
+
+    ' WM_INITMENUPOPUP seems to be the most sane way to get hMenu.
+    ' IE6's menu bar is actually a ReBar and the menu buttons are
+    ' toolbar buttons that pop up menus at the right coordinates.
+    ' IE uses an elaborate procedure to dynamically build the menu
+    ' from several menu fragments, depending on whether it's being
+    ' used as part of Explorer to show the filesystem or whether
+    ' it's being used as a web browser.
+    ' ref. https://learn.microsoft.com/en-us/windows/win32/controls/cc-faq-iemenubar
 
     If iMsg = WM_INITMENUPOPUP Then
         'ISubclass_WindowProc = SSubTUP.CallOldWindowProc(hwnd, iMsg, wParam, lParam)
         ModifyIEMenu wParam
         Exit Function
     End If
+
+    ' ------------------------------------------------------------------------
 
     ' The WM_COMMAND processing takes care of redirecting menu
     ' item clicks and keyboard accelerators and forwards them
@@ -283,19 +363,21 @@ Private Function ISubclass_WindowProc(ByVal hWnd As Long, ByVal iMsg As Long, By
                 Exit Function
             End If
 
-            ISubclass_WindowProc = SSubTUP.CallOldWindowProc(hWnd, iMsg, wParam, lParam)
+            ISubclass_WindowProc = SSubTUP.CallOldWindowProc(hwnd, iMsg, wParam, lParam)
             Exit Function
         End If
 
-        ISubclass_WindowProc = SSubTUP.CallOldWindowProc(hWnd, iMsg, wParam, lParam)
+        ISubclass_WindowProc = SSubTUP.CallOldWindowProc(hwnd, iMsg, wParam, lParam)
     End If
+
+    ' ------------------------------------------------------------------------
 
     ' The idea of the following exercise is to get WindowResized event
     ' to trigger only when the size of the window has actually changed.
     ' That is to say, *only* after the fact. Not before. Not during.
 
     If iMsg = WM_EXITSIZEMOVE Then
-        ISubclass_WindowProc = SSubTUP.CallOldWindowProc(hWnd, iMsg, wParam, lParam)
+        ISubclass_WindowProc = SSubTUP.CallOldWindowProc(hwnd, iMsg, wParam, lParam)
 
         If m_GotSizeMessage Then
             ' This way, because WM_EXITSIZEMOVE won't tell you whether
@@ -308,7 +390,7 @@ Private Function ISubclass_WindowProc(ByVal hWnd As Long, ByVal iMsg As Long, By
     End If
 
     If iMsg = WM_SIZE Then
-        ISubclass_WindowProc = SSubTUP.CallOldWindowProc(hWnd, iMsg, wParam, lParam)
+        ISubclass_WindowProc = SSubTUP.CallOldWindowProc(hwnd, iMsg, wParam, lParam)
 
         m_GotSizeMessage = True
 
@@ -353,9 +435,9 @@ Public Property Get MenuEditCopyEnabled() As Boolean
 
 End Property
 
-Public Property Let MenuEditCopyEnabled(enabled As Boolean)
+Public Property Let MenuEditCopyEnabled(Enabled As Boolean)
 
-    m_MenuEditCopyEnabled = enabled
+    m_MenuEditCopyEnabled = Enabled
 
 End Property
 
@@ -365,9 +447,9 @@ Public Property Get MenuEditCutEnabled() As Boolean
 
 End Property
 
-Public Property Let MenuEditCutEnabled(enabled As Boolean)
+Public Property Let MenuEditCutEnabled(Enabled As Boolean)
 
-    m_MenuEditCutEnabled = enabled
+    m_MenuEditCutEnabled = Enabled
 
 End Property
 
@@ -377,9 +459,9 @@ Public Property Get MenuEditPasteEnabled() As Boolean
 
 End Property
 
-Public Property Let MenuEditPasteEnabled(enabled As Boolean)
+Public Property Let MenuEditPasteEnabled(Enabled As Boolean)
 
-    m_MenuEditPasteEnabled = enabled
+    m_MenuEditPasteEnabled = Enabled
 
 End Property
 
@@ -389,9 +471,9 @@ Public Property Get MenuEditRefreshEnabled() As Boolean
 
 End Property
 
-Public Property Let MenuEditRefreshEnabled(enabled As Boolean)
+Public Property Let MenuEditRefreshEnabled(Enabled As Boolean)
 
-    m_MenuEditRefreshEnabled = enabled
+    m_MenuEditRefreshEnabled = Enabled
 
 End Property
 
@@ -401,9 +483,9 @@ Public Property Get MenuEditStopEnabled() As Boolean
 
 End Property
 
-Public Property Let MenuEditStopEnabled(enabled As Boolean)
+Public Property Let MenuEditStopEnabled(Enabled As Boolean)
 
-    m_MenuEditStopEnabled = enabled
+    m_MenuEditStopEnabled = Enabled
 
 End Property
 
@@ -503,5 +585,5 @@ Private Function TranslateToIECommand(LoWord As Integer) As IECommand
 
 End Function
 
-':) Ulli's VB Code Formatter V2.24.17 (2022-Nov-14 08:11)  Decl: 47  Code: 447  Total: 494 Lines
-':) CommentOnly: 43 (8.7%)  Commented: 5 (1%)  Filled: 360 (72.9%)  Empty: 134 (27.1%)  Max Logic Depth: 4
+':) Ulli's VB Code Formatter V2.24.17 (2022-Nov-17 19:43)  Decl: 53  Code: 523  Total: 576 Lines
+':) CommentOnly: 46 (8%)  Commented: 5 (0.9%)  Filled: 412 (71.5%)  Empty: 164 (28.5%)  Max Logic Depth: 4

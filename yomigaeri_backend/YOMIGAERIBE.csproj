@@ -123,6 +123,7 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Browser\Handlers\MyJsDialogHandler.cs" />
     <Compile Include="Browser\SynchronizerState.cs" />
     <Compile Include="ControlExtensions.cs" />
     <Compile Include="FrontendStyling.cs" />

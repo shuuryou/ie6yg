@@ -110,11 +110,15 @@ Private WithEvents m_IEToolbar As IEToolbar
 Attribute m_IEToolbar.VB_VarHelpID = -1
 Private m_IEToolTip As IEToolTip
 
+Private m_CertCurrentState As CertificateStates
+
 Private m_HideRDP As Boolean
 
 Private m_CursorCurrent As Long
 Private m_CursorHCURSOR As Long
 Private m_CursorHCURSORIsCustom As Boolean
+
+Private m_CertTempFile As String
 
 Private Sub BackendUpdateWindowSize()
 
@@ -125,6 +129,464 @@ Private Sub BackendUpdateWindowSize()
     rdpClient.SendOnVirtualChannel VIRTUAL_CHANNEL_NAME, "WINSIZE" & _
                                    (UserControl.Width / Screen.TwipsPerPixelX) & "," & _
                                    (UserControl.Height / Screen.TwipsPerPixelY)
+
+End Sub
+
+Private Sub HandleADDHIST(ByRef data As String)
+
+  Dim strUrl As String
+  Dim strTitle As String
+  Dim intPos As Integer
+
+    If Len(data) = 0 Then
+        modLogging.WriteLineToLog "HandleADDHIST: Refuse because data is too short."
+        Exit Sub
+    End If
+
+    intPos = InStr(1, data, Chr$(1), vbBinaryCompare)
+
+    If intPos = 0 Then
+        modLogging.WriteLineToLog "HandleADDHIST: Refuse because data is invalid."
+        Exit Sub
+    End If
+
+    strTitle = left$(data, intPos - 1)
+    strUrl = Mid$(data, intPos + 1)
+
+    If strUrl = "" Then
+        modLogging.WriteLineToLog "HandleADDHIST: Refuse because there is no URL."
+    End If
+
+    ' IUrlHistory gracefully deals with an empty title by making up a sensible one.
+
+    m_IEBrowser.AddToHistory strUrl, strTitle
+
+End Sub
+
+Private Sub HandleADDRESS(ByRef data As String)
+
+    m_IEAddressBar.Text = data
+
+End Sub
+
+Private Sub HandleCERDATA(ByRef data As String)
+
+  Dim bytCertData() As Byte
+  Dim intFF As Integer
+
+    If Len(data) = 0 Then
+        modLogging.WriteLineToLog "HandleCERDATA: Clear old certificate."
+
+        On Error GoTo EH
+        intFF = FreeFile
+        Open m_CertTempFile For Binary Access Write Lock Read Write As #intFF
+        Close #intFF
+        On Error GoTo 0
+
+        modLogging.WriteLineToLog "HandleCERDATA: Cleared temp file: " & m_CertTempFile
+
+        Exit Sub
+    End If
+
+    bytCertData = modBase64.Base64Decode(data)
+
+    intFF = FreeFile
+
+    On Error GoTo EH
+    Open m_CertTempFile For Binary Access Write Lock Write As #intFF
+    Put #intFF, 1, bytCertData
+    Close #intFF
+    On Error GoTo 0
+
+    Erase bytCertData
+
+    modLogging.WriteLineToLog "HandleCERDATA: Wrote out PEM file to: " & m_CertTempFile
+
+Exit Sub
+
+EH:
+    modLogging.WriteLineToLog "HandleCERDATA: Internal error: " & Err.Number & " (" & Err.DESCRIPTION & ")"
+
+    On Error Resume Next
+        Kill m_CertTempFile
+    On Error GoTo 0
+
+End Sub
+
+Private Sub HandleCERSHOW()
+
+  Dim frmErrDlg As frmCertificateError
+
+    Set frmErrDlg = New frmCertificateError
+
+    frmErrDlg.CertificateState = m_CertCurrentState
+    frmErrDlg.CertificateFile = m_CertTempFile
+    frmErrDlg.ParentWindowHandle = m_IEFrame.hWndIEFrame
+    frmErrDlg.Show vbModal
+
+    If frmErrDlg.result = vbYes Then
+        rdpClient.SendOnVirtualChannel VIRTUAL_CHANNEL_NAME, "CERTCALLBACK CONTINUE"
+      Else
+        rdpClient.SendOnVirtualChannel VIRTUAL_CHANNEL_NAME, "CERTCALLBACK CANCEL"
+    End If
+
+    Set frmErrDlg = Nothing
+
+End Sub
+
+Private Sub HandleCERSTAT(ByRef data As String)
+
+    If Len(data) = 0 Then
+        modLogging.WriteLineToLog "HandleCERSTAT: Failed because data is too short."
+        Exit Sub
+    End If
+
+    On Error Resume Next
+        m_CertCurrentState = CInt(data)
+    On Error GoTo 0
+
+    modLogging.WriteLineToLog "HandleCERSTAT: State becomes: " & m_CertCurrentState
+
+End Sub
+
+Private Sub HandleGETINFO(ByRef data As String)
+
+    Select Case UCase$(data)
+      Case "STYLING"
+        rdpClient.SendOnVirtualChannel VIRTUAL_CHANNEL_NAME, modFrontendStyling.MakeStyling(UserControl.hDC)
+      Case "LANGUAGES"
+        rdpClient.SendOnVirtualChannel VIRTUAL_CHANNEL_NAME, modFrontendStyling.GetAcceptLanguage()
+      Case "INITIALSIZE"
+        rdpClient.SendOnVirtualChannel VIRTUAL_CHANNEL_NAME, _
+                                       (UserControl.Width / Screen.TwipsPerPixelX) & "," & _
+                                       (UserControl.Height / Screen.TwipsPerPixelY)
+      Case Else:
+        modLogging.WriteLineToLog "HandleGETINFO: Refuse because of invalid argument."
+    End Select
+
+End Sub
+
+Private Sub HandleJSDIALG(ByRef data As String)
+
+  Dim intPos As Integer
+
+  Dim intLenPrompt As Integer
+  Dim intLenDefault As Integer
+
+  Dim strType As String
+
+  Dim strPrompt As String
+
+  Dim strDefault As String
+  Dim strResponse As String
+
+  Dim result As VbMsgBoxResult
+
+    If Len(data) < 7 Then
+        ' Shortest possible would be "ALERT "
+        modLogging.WriteLineToLog "HandleJSDIALG: Failed because data is too short."
+        Exit Sub
+    End If
+
+    intPos = InStr(1, data, " ", vbBinaryCompare)
+
+    If intPos = 0 Then
+        modLogging.WriteLineToLog "HandleJSDIALG: Refuse because data is invalid."
+        Exit Sub
+    End If
+
+    strType = left$(data, intPos - 1)
+    strPrompt = Mid$(data, intPos + 1)
+
+    Select Case UCase$(strType)
+      Case "ALERT"
+        result = MsgBox(strPrompt, vbOKOnly Or vbExclamation, LoadResString(300))
+      Case "CONFIRM"
+        result = MsgBox(strPrompt, vbOKCancel Or vbQuestion, LoadResString(300))
+      Case "PROMPT"
+        ' strPrompt has more data here. It looks like this:
+        ' "00000005hello00000006world!"
+        '  ^ prompt     ^ default
+
+        On Error GoTo EH
+        intLenPrompt = CInt(left$(strPrompt, 8))
+        intLenDefault = Mid$(strPrompt, 8 + intLenPrompt + 1, 8)
+        On Error GoTo 0
+
+        modLogging.WriteLineToLog "HandleJSDIALG: Parsed lengths: " & intLenPrompt & ", " & intLenDefault
+
+        strDefault = right$(strPrompt, intLenDefault)
+        strPrompt = Mid$(strPrompt, 8 + 1, intLenPrompt)
+
+        strResponse = InputBox(LoadResString(304) & vbCrLf & vbCrLf & strPrompt, LoadResString(303), strDefault)
+
+        If Len(strResponse) <> 0 Then
+            rdpClient.SendOnVirtualChannel VIRTUAL_CHANNEL_NAME, "JSCALLBACK OK " & strResponse
+            Exit Sub
+        End If
+
+        ' TODO: BUG This is not how prompt() behaves. An empty response doesn't
+        ' indicate Cancel was pressed; you can press OK with an empty response.
+        ' But to fix it a custom InputBox has to be created. VB6 InputBox can't
+        ' differentiate between OK and Cancel if the response is empty.
+        result = vbCancel
+      Case "ONBEFOREUNLOAD"
+        strPrompt = LoadResString(301) & vbCrLf & vbCrLf & strPrompt & vbCrLf & vbCrLf & LoadResString(302)
+
+        result = MsgBox(strPrompt, vbOKCancel Or vbExclamation, LoadResString(300))
+      Case Else
+        modLogging.WriteLineToLog "HandleJSDIALG: Refuse because type is invalid: " & strType
+    End Select
+
+    If result = vbOK Then
+        rdpClient.SendOnVirtualChannel VIRTUAL_CHANNEL_NAME, "JSCALLBACK OK"
+      Else
+        rdpClient.SendOnVirtualChannel VIRTUAL_CHANNEL_NAME, "JSCALLBACK CANCEL"
+    End If
+
+Exit Sub
+
+EH:
+    modLogging.WriteLineToLog "HandleJSDIALG: Protocol error. " & Err.Number & " " & Err.DESCRIPTION
+    rdpClient.SendOnVirtualChannel VIRTUAL_CHANNEL_NAME, "JSCALLBACK FAIL"
+
+End Sub
+
+Private Sub HandleMENUSET(ByRef data As String)
+
+  Dim strCommand As String
+  Dim blnState As Boolean
+  Dim intPos As Integer
+
+  ' MENUSET IDENTIFIER STATE
+
+    intPos = InStr(1, data, " ", vbBinaryCompare) ' Space between IDENTIFIER and STATE
+
+    If intPos = 0 Then
+        modLogging.WriteLineToLog "HandleMENUSET: Refuse because separator not found."
+        Exit Sub
+    End If
+
+    If intPos + 1 > Len(data) Then
+        modLogging.WriteLineToLog "HandleMENUSET: Refuse because data is invalid."
+        Exit Sub
+    End If
+
+    strCommand = UCase$(left$(data, intPos - 1))
+    blnState = (UCase$(Mid$(data, intPos + 1)) = "TRUE")
+
+    Select Case strCommand
+      Case "CUT"
+        m_IEFrame.MenuEditCutEnabled = blnState
+      Case "COPY"
+        m_IEFrame.MenuEditCopyEnabled = blnState
+      Case "PASTE"
+        m_IEFrame.MenuEditPasteEnabled = blnState
+      Case "REFRESH"
+        m_IEFrame.MenuEditRefreshEnabled = blnState
+      Case "STOP"
+        m_IEFrame.MenuEditStopEnabled = blnState
+      Case Else
+        modLogging.WriteLineToLog "HandleMENUSET: Refuse because command """ & strCommand & """ is invalid."
+    End Select
+
+End Sub
+
+Private Sub HandlePGTITLE(ByRef data As String)
+
+    m_IEBrowser.SetTitle data
+
+End Sub
+
+Private Sub HandlePROGRES(ByRef data As String)
+
+  Dim intProgress As Integer
+
+    If Len(data) = 0 Then
+        modLogging.WriteLineToLog "HandlePROGRES: Refuse because data is too short."
+        Exit Sub
+    End If
+
+    On Error Resume Next
+        intProgress = CInt(data)
+        m_IEStatusBar.ProgressBarValue = intProgress
+    On Error GoTo 0
+
+End Sub
+
+Private Sub HandleSETCURS(ByRef data As String)
+
+  Dim cursorid As Long
+
+    If Len(data) = 0 Then
+        modLogging.WriteLineToLog "HandleSETCURS: Refuse because data is too short."
+        Exit Sub
+    End If
+
+    cursorid = -1
+
+    On Error Resume Next
+        cursorid = CLng(data)
+    On Error GoTo 0
+
+    If cursorid = -1 Then
+        modLogging.WriteLineToLog "HandleSETCURS: SETCURS: Refuse because data is invalid."
+        Exit Sub
+    End If
+
+    SetFrontendCursor cursorid
+
+End Sub
+
+Private Sub HandleSSLICON(ByRef data As String)
+
+    Select Case UCase$(data)
+      Case "OK"
+        m_IEStatusBar.SSLIcon = SSLIconState.OK
+      Case "BAD"
+        m_IEStatusBar.SSLIcon = SSLIconState.Bad
+      Case "OFF"
+        m_IEStatusBar.SSLIcon = SSLIconState.None
+      Case Else
+        modLogging.WriteLineToLog "HandleSSLICON: Refuse because data is invalid."
+    End Select
+
+End Sub
+
+Private Sub HandleSTATUST(ByRef data As String)
+
+    If Len(data) = 0 Then
+        ' Show what IE would show when there's no status
+        m_IEStatusBar.Text = LoadResString(108) ' Done
+        Exit Sub
+    End If
+
+    m_IEStatusBar.Text = data
+
+End Sub
+
+Private Sub HandleTOOLBAR(ByRef data As String)
+
+  Dim strCommand As String
+  Dim blnState As Boolean
+  Dim intPos As Integer
+
+  ' TOOLBAR IDENTIFIER STATE
+
+    intPos = InStr(1, data, " ", vbBinaryCompare) ' Space between IDENTIFIER and STATE
+
+    If intPos = 0 Then
+        modLogging.WriteLineToLog "HandleTOOLBAR: Refuse because separator not found."
+        Exit Sub
+    End If
+
+    If intPos + 1 > Len(data) Then
+        modLogging.WriteLineToLog "HandleTOOLBAR: Refuse because data is invalid."
+        Exit Sub
+    End If
+
+    strCommand = UCase$(left$(data, intPos - 1))
+    blnState = (UCase$(Mid$(data, intPos + 1)) = "TRUE")
+
+    Select Case strCommand
+      Case "BACK"
+        m_IEToolbar.SetToolbarCommandState CommandBack, blnState
+      Case "FORWARD"
+        m_IEToolbar.SetToolbarCommandState CommandForward, blnState
+      Case "STOP"
+        m_IEToolbar.SetToolbarCommandState CommandStop, blnState
+      Case "REFRESH"
+        m_IEToolbar.SetToolbarCommandState CommandRefresh, blnState
+      Case "HOME"
+        ' Ignored for now.
+        'm_IEToolbar.SetToolbarCommandState CommandHome, blnState
+      Case "MEDIA"
+        ' Ignored for now.
+        'm_IEToolbar.SetToolbarCommandState CommandMedia, blnState
+      Case Else
+        modLogging.WriteLineToLog "HandleTOOLBAR: Refuse because command """ & strCommand & """ is invalid."
+
+    End Select
+
+End Sub
+
+Private Sub HandleTOOLTIP(ByRef data As String)
+
+    If Len(data) = 0 Then
+        m_IEToolTip.Visible = False
+        Exit Sub
+    End If
+
+    m_IEToolTip.Text = data
+    m_IEToolTip.Visible = True
+
+End Sub
+
+Private Sub HandleTRAVELLOG(back As Boolean, data As String)
+
+  Dim items() As String
+  Dim i As Integer
+  Dim gotone As Boolean
+
+    If Len(data) = 0 Then
+        modLogging.WriteLineToLog "HandleTRAVELLOG: Refuse because data is too short."
+        Exit Sub
+    End If
+
+    items = Split(data, Chr$(1), , vbBinaryCompare)
+
+    If UBound(items) <> 4 Then
+        ' {0, 1, 2, 3, 4}, so UBound is 4 in VB6, because of course it is.
+        ' UBound is the maximum index of an array that is valid/accessible.
+        ' It's technically not the item count, just always abused as such.
+
+        modLogging.WriteLineToLog "Cannot set back menu because data is bad: " & UBound(items)
+        Exit Sub
+    End If
+
+    ' items is now Title,Title,Title,Title,Title
+
+    ' Item 99 is required because it is illegal in VB6 for all menu items to be
+    ' set to Visible = False at the same time.
+
+    If back Then
+        mnuHistoryBackItem(99).Visible = True
+      Else
+        mnuHistoryForwardItem(99).Visible = True
+    End If
+
+    gotone = False
+
+    For i = 0 To 4 Step 1
+        If back Then
+            mnuHistoryBackItem(i).Caption = items(i)
+            mnuHistoryBackItem(i).Visible = Len(items(i)) > 0
+
+            ' gotone = gotone or mnuHistoryBackItem(i).Visible
+            ' will always evaluate to True. VB6 is painful. :(
+            gotone = (gotone = True) Or (mnuHistoryBackItem(i).Visible = True)
+          Else
+            mnuHistoryForwardItem(i).Caption = items(i)
+            mnuHistoryForwardItem(i).Visible = Len(items(i)) > 0
+
+            gotone = (gotone = True) Or (mnuHistoryForwardItem(i).Visible = True)
+        End If
+    Next i
+
+    If back Then
+        mnuHistoryBackItem(99).Visible = Not gotone
+      Else
+        mnuHistoryForwardItem(99).Visible = Not gotone
+    End If
+
+End Sub
+
+Private Sub HandleVISIBLE(ByRef data As String)
+
+    m_HideRDP = (UCase$(data) <> "TRUE")
+    PositionRDPClient
+
+    m_IEAddressBar.Enabled = Not m_HideRDP
 
 End Sub
 
@@ -140,14 +602,14 @@ Private Property Let ISubclass_MsgResponse(ByVal RHS As SSubTUP.EMsgResponse)
 
 End Property
 
-Private Function ISubclass_WindowProc(ByVal hWnd As Long, ByVal iMsg As Long, ByVal wParam As Long, ByVal lParam As Long) As Long
+Private Function ISubclass_WindowProc(ByVal hwnd As Long, ByVal iMsg As Long, ByVal wParam As Long, ByVal lParam As Long) As Long
 
   ' https://devblogs.microsoft.com/oldnewthing/20050525-27/?p=35543
 
     If iMsg = WM_SETCURSOR Then
         If m_CursorHCURSOR = 0 Then
             ' Don't have one yet, so just forward to VBRUN.
-            ISubclass_WindowProc = SSubTUP.CallOldWindowProc(hWnd, iMsg, wParam, lParam)
+            ISubclass_WindowProc = SSubTUP.CallOldWindowProc(hwnd, iMsg, wParam, lParam)
             Exit Function
         End If
 
@@ -155,7 +617,7 @@ Private Function ISubclass_WindowProc(ByVal hWnd As Long, ByVal iMsg As Long, By
         Exit Function
     End If
 
-    ISubclass_WindowProc = SSubTUP.CallOldWindowProc(hWnd, iMsg, wParam, lParam)
+    ISubclass_WindowProc = SSubTUP.CallOldWindowProc(hwnd, iMsg, wParam, lParam)
 
 End Function
 
@@ -166,9 +628,30 @@ Private Sub m_IEBrowser_NavigationIntercepted(destinationURL As String)
     End If
 
     rdpClient.SendOnVirtualChannel VIRTUAL_CHANNEL_NAME, _
-                                   "NAVIGAT" & destinationURL
+                                   "NAVIGATE " & destinationURL
 
     rdpClient.SetFocus
+
+End Sub
+
+Private Sub m_IEFrame_CertificateErrorDialogRequested()
+
+  Dim frmErrDlg As frmCertificateError
+
+    If m_CertCurrentState = CertificateStates.None Then
+        MsgBox LoadResString(220), vbOKOnly Or vbInformation, LoadResString(219)
+        Exit Sub
+    End If
+
+    Set frmErrDlg = New frmCertificateError
+
+    frmErrDlg.NoPromptMode = True
+    frmErrDlg.CertificateState = m_CertCurrentState
+    frmErrDlg.CertificateFile = m_CertTempFile
+    frmErrDlg.ParentWindowHandle = m_IEFrame.hWndIEFrame
+    frmErrDlg.Show vbModal
+
+    Set frmErrDlg = Nothing
 
 End Sub
 
@@ -251,23 +734,23 @@ Private Sub m_IEToolbar_ToolbarMenuRequested(command As ToolbarCommand)
 
 End Sub
 
-Private Sub mnuHistoryBackItem_Click(Index As Integer)
+Private Sub mnuHistoryBackItem_Click(index As Integer)
 
     If rdpClient.Connected <> 1 Then
         Exit Sub
     End If
 
-    rdpClient.SendOnVirtualChannel VIRTUAL_CHANNEL_NAME, "MNUBACK" & (Index + 1)
+    rdpClient.SendOnVirtualChannel VIRTUAL_CHANNEL_NAME, "MNUBACK" & (index + 1)
 
 End Sub
 
-Private Sub mnuHistoryForwardItem_Click(Index As Integer)
+Private Sub mnuHistoryForwardItem_Click(index As Integer)
 
     If rdpClient.Connected <> 1 Then
         Exit Sub
     End If
 
-    rdpClient.SendOnVirtualChannel VIRTUAL_CHANNEL_NAME, "MNUFORW" & (Index + 1)
+    rdpClient.SendOnVirtualChannel VIRTUAL_CHANNEL_NAME, "MNUFORW" & (index + 1)
 
 End Sub
 
@@ -291,208 +774,68 @@ Private Sub rdpClient_OnChannelReceivedData(ByVal chanName As String, ByVal data
 
     modLogging.WriteLineToLog "OnChannelReceivedData: " & data
 
-    ' STYLING: Send colors of the client running frontend to backend
-    ' LANGLST: Gets IE Accept-Language language list from registry or "<EMPTY>" if unset
-    ' ADDRESS: Set IE address bar text to content following after "ADDRESS"
-    ' ADDHIST: Add to IE history following after "ADDHIST" in the format URL\tTitle
-    ' VISIBLE: Makes the RDP client visible
-    ' INVISIB: Makes the RDP client invisible
-    ' BBACKON: Toolbar BACK button ON
-    ' BBACKOF: Toolbar BACK button OFF
-    ' BFORWON: Toolbar FORWARD button ON
-    ' BFORWOF: Toolbar FORWARD button OFF
-    ' BSTOPON: Toolbar STOP button ON
-    ' BSTOPOF: Toolbar STOP button OFF
-    ' BREFRON: Toolbar REFRESH button ON
-    ' BREFROF: Toolbar REFRESH button OFF
-    ' BHOMEON: Toolbar HOME button ON
-    ' BHOMEOF: Toolbar HOME button OFF
-    ' BMEDION: Toolbar MEDIA button ON
-    ' BMEDIOF: Toolbar MEDIA button OFF
-    ' PGTITLE: Set the title of the page to the content following after "PGTITLE"
-    ' SSLICON: Make the SSL icon visible with OK state
-    ' SSLICBD: Make the SSL icon visible with error state
-    ' SSLICOF: Make the SSL icon invisible
-    ' PROGRES: Set the value of the progress bar (value 0-100 follows after "PROGRES")
-    ' STATUST: Set IE status bar text to content following after "STATUST"
-    ' M_CUTON: Enable menu item Edit>Cut
-    ' M_CUTOF: Disable menu item Edit>Cut
-    ' MCOPYON: Enable menu item Edit>Copy
-    ' MCOPYOF: Disable menu item Edit>Copy
-    ' MPASTON: Enable menu item Edit>Paste
-    ' MPASTOF: Disable menu item Edit>Paste
-    ' TRAVLBK: Modify the travel log of the Back button (see implementation)
-    ' TRAVLFW: Modify the travel log of the Forward button (see implementation)
-    ' INITSIZ: Make frontend send initial window size to backend (width,height)
-    ' SETCURS: Set cursor based on ID number following after "SETCURS"
-    ' TOOLTIP: Show a Win32 tooltip at mouse position with text following after "TOOLTIP"
+    ' GETINFO: Get info about the client system
+    ' ADDRESS: Set IE address bar text to the argument
+    ' ADDHIST: Add to IE history in the format URL\tTitle
+    ' VISIBLE: Makes the RDP client visible if argument is "TRUE", invisible otherwise
+    ' TOOLBAR: Turn toolbar items on or off
+    ' PGTITLE: Set the title of the page to the argument
+    ' SSLICON: Set the SSL icon in the status bar
+    ' PROGRES: Set the value of the progress bar (argument value 0-100)
+    ' STATUST: Set IE status bar text to the argument
+    ' MENUSET: Turn menu items on or off
+    ' TRAVLBK: Modify the travel log of the Back button
+    ' TRAVLFW: Modify the travel log of the Forward button
+    ' SETCURS: Set cursor based on ID number in the argument
+    ' TOOLTIP: Show a Win32 tooltip at mouse position with text in argument
+    ' CERSTAT: Update SSL certificate status flags based on argument
+    ' CERDATA: Retrieve SSL certificate from backend as PEM file
+    ' CERSHOW: Show Security Alert prompt
+    ' JSDIALG: Show a JavaScript dialog
 
-    Select Case left$(UCase$(data), 7)
-      Case "STYLING"
-        rdpClient.SendOnVirtualChannel VIRTUAL_CHANNEL_NAME, modFrontendStyling.MakeStyling(UserControl.hDC)
-      Case "LANGLST"
-        rdpClient.SendOnVirtualChannel VIRTUAL_CHANNEL_NAME, modFrontendStyling.GetAcceptLanguage()
+  Dim strCommand As String
+  Dim strData As String
+
+    strCommand = left$(UCase$(data), 7)
+    strData = Mid$(data, 9) ' There's a space after the command
+
+    Select Case strCommand
+      Case "GETINFO"
+        HandleGETINFO strData
       Case "ADDRESS"
-        If Len(data) = 7 Then
-            m_IEAddressBar.Text = vbNullString
-            Exit Sub
-        End If
-
-        m_IEAddressBar.Text = Mid$(data, 8)
+        HandleADDRESS strData
       Case "ADDHIST"
-        If Len(data) < 8 Then
-            modLogging.WriteLineToLog "OnChannelReceivedData: ADDHIST: Refuse because data is too short."
-            Exit Sub
-        End If
-
-        intPos = InStr(1, data, Chr$(1), vbBinaryCompare)
-
-        If intPos = 0 Then
-            modLogging.WriteLineToLog "OnChannelReceivedData: ADDHIST: Refuse because of bad data."
-            Exit Sub
-        End If
-
-  Dim values(0 To 1) As String
-        values(0) = Trim$(Mid$(data, 8, intPos - 8))
-        values(1) = Trim$(Mid$(data, intPos + 1))
-
-        If values(0) = "" Then
-            modLogging.WriteLineToLog "OnChannelReceivedData: ADDHIST: Refuse because there is no URL."
-        End If
-
-        ' IUrlHistory gracefully deals with an empty title by making up a sensible one.
-
-        m_IEBrowser.AddToHistory values(1), values(0)
+        HandleADDHIST strData
       Case "VISIBLE"
-        m_HideRDP = False
-        PositionRDPClient
-      Case "INVISIB"
-        m_HideRDP = True
-        PositionRDPClient
-      Case "BBACKON"
-        m_IEToolbar.SetToolbarCommandState CommandBack, True
-      Case "BBACKOF"
-        m_IEToolbar.SetToolbarCommandState CommandBack, False
-      Case "BFORWON"
-        m_IEToolbar.SetToolbarCommandState CommandForward, True
-      Case "BFORWOF"
-        m_IEToolbar.SetToolbarCommandState CommandForward, False
-      Case "BSTOPON"
-        m_IEToolbar.SetToolbarCommandState CommandStop, True
-        m_IEFrame.MenuEditStopEnabled = True
-      Case "BSTOPOF"
-        m_IEToolbar.SetToolbarCommandState CommandStop, False
-        m_IEFrame.MenuEditStopEnabled = True
-      Case "BREFRON"
-        m_IEToolbar.SetToolbarCommandState CommandRefresh, True
-        m_IEFrame.MenuEditRefreshEnabled = True
-      Case "BREFROF"
-        m_IEToolbar.SetToolbarCommandState CommandRefresh, False
-        m_IEFrame.MenuEditRefreshEnabled = False
-      Case "BHOMEON"
-        m_IEToolbar.SetToolbarCommandState CommandHome, True
-      Case "BHOMEOF"
-        m_IEToolbar.SetToolbarCommandState CommandHome, False
-      Case "BMEDION"
-        m_IEToolbar.SetToolbarCommandState CommandMedia, True
-      Case "BMEDIOF"
-        m_IEToolbar.SetToolbarCommandState CommandMedia, False
+        HandleVISIBLE strData
+      Case "TOOLBAR"
+        HandleTOOLBAR strData
       Case "PGTITLE"
-        If Len(data) = 7 Then
-            m_IEBrowser.SetTitle vbNullString
-            Exit Sub
-        End If
-
-        m_IEBrowser.SetTitle Mid$(data, 8)
+        HandlePGTITLE strData
       Case "SSLICON"
-        m_IEStatusBar.SSLIcon = SSLIconState.OK
-      Case "SSLICBD"
-        m_IEStatusBar.SSLIcon = SSLIconState.Bad
-      Case "SSLICOF"
-        m_IEStatusBar.SSLIcon = SSLIconState.None
+        HandleSSLICON strData
       Case "PROGRES"
-        If Len(data) < 8 Then
-            modLogging.WriteLineToLog "OnChannelReceivedData: PROGRES: Refuse because data is too short."
-            Exit Sub
-        End If
-
-        On Error Resume Next
-            values(0) = CInt(Mid$(data, 8))
-            m_IEStatusBar.ProgressBarValue = values(0)
-        On Error GoTo 0
+        HandlePROGRES strData
       Case "STATUST"
-        If Len(data) < 8 Then
-            ' Show what IE would show when there's no status
-            m_IEStatusBar.Text = LoadResString(108) ' Done
-            Exit Sub
-        End If
-        m_IEStatusBar.Text = Mid$(data, 8)
-      Case "M_CUTON"
-
-        m_IEFrame.MenuEditCutEnabled = True
-      Case "M_CUTOF"
-
-        m_IEFrame.MenuEditCutEnabled = False
-      Case "MCOPYON"
-
-        m_IEFrame.MenuEditCopyEnabled = True
-      Case "MCOPYOF"
-
-        m_IEFrame.MenuEditCopyEnabled = False
-      Case "MPASTON"
-
-        m_IEFrame.MenuEditPasteEnabled = True
-      Case "MPASTOF"
-
-        m_IEFrame.MenuEditPasteEnabled = False
+        HandleSTATUST strData
+      Case "MENUSET"
+        HandleMENUSET strData
       Case "TRAVLBK"
-
-        If Len(data) < 8 Then
-            modLogging.WriteLineToLog "OnChannelReceivedData: TRAVLBK: Refuse because data is too short."
-            Exit Sub
-        End If
-
-        SetHistoryMenu True, Mid$(data, 8)
+        HandleTRAVELLOG False, strData
       Case "TRAVLFW"
-
-        If Len(data) < 8 Then
-            modLogging.WriteLineToLog "OnChannelReceivedData: TRAVLFW: Refuse because data is too short."
-            Exit Sub
-        End If
-
-        SetHistoryMenu False, Mid$(data, 8)
-      Case "INITSIZ"
-
-        rdpClient.SendOnVirtualChannel VIRTUAL_CHANNEL_NAME, _
-                                       (UserControl.Width / Screen.TwipsPerPixelX) & "," & _
-                                       (UserControl.Height / Screen.TwipsPerPixelY)
+        HandleTRAVELLOG True, strData
       Case "SETCURS"
-
-        If Len(data) < 8 Then
-            modLogging.WriteLineToLog "OnChannelReceivedData: SETCURS: Refuse because data is too short."
-            Exit Sub
-        End If
-
-  Dim cursorid As Long
-        cursorid = -1
-        On Error Resume Next
-            cursorid = CLng(Mid$(data, 8))
-        On Error GoTo 0
-
-        If cursorid = -1 Then
-            modLogging.WriteLineToLog "OnChannelReceivedData: SETCURS: Refuse because data is invalid."
-            Exit Sub
-        End If
-
-        SetFrontendCursor cursorid
+        HandleSETCURS strData
       Case "TOOLTIP"
-        If Len(data) = 7 Then
-            m_IEToolTip.Visible = False
-            Exit Sub
-        End If
-
-        m_IEToolTip.Text = Mid$(data, 8)
-        m_IEToolTip.Visible = True
+        HandleTOOLTIP strData
+      Case "CERDATA"
+        HandleCERDATA strData
+      Case "CERSTAT"
+        HandleCERSTAT strData
+      Case "CERSHOW"
+        HandleCERSHOW
+      Case "JSDIALG"
+        HandleJSDIALG strData
       Case Else
         modLogging.WriteLineToLog "OnChannelReceivedData: Unknown command ignored."
     End Select
@@ -555,63 +898,9 @@ Private Sub SetFrontendCursor(cursorid As Long)
 
 End Sub
 
-Private Sub SetHistoryMenu(back As Boolean, backend_data As String)
-
-  Dim items() As String
-  Dim i As Integer
-  Dim gotone As Boolean
-
-    items = Split(backend_data, Chr$(1), , vbBinaryCompare)
-
-    If UBound(items) <> 4 Then
-        ' {0, 1, 2, 3, 4}, so UBound is 4 in VB6, because of course it is.
-        ' UBound is the maximum index of an array that is valid/accessible.
-        ' It's technically not the item count, just always abused as such.
-
-        modLogging.WriteLineToLog "Cannot set back menu because data is bad: " & UBound(items)
-        Exit Sub
-    End If
-
-    ' items is now Title,Title,Title,Title,Title
-
-    ' Item 99 is required because it is illegal in VB6 for all menu items to be
-    ' set to Visible = False at the same time.
-
-    If back Then
-        mnuHistoryBackItem(99).Visible = True
-      Else
-        mnuHistoryForwardItem(99).Visible = True
-    End If
-
-    gotone = False
-
-    For i = 0 To 4 Step 1
-        If back Then
-            mnuHistoryBackItem(i).Caption = items(i)
-            mnuHistoryBackItem(i).Visible = Len(items(i)) > 0
-
-            ' gotone = gotone or mnuHistoryBackItem(i).Visible
-            ' will always evaluate to True. VB6 is painful. :(
-            gotone = (gotone = True) Or (mnuHistoryBackItem(i).Visible = True)
-          Else
-            mnuHistoryForwardItem(i).Caption = items(i)
-            mnuHistoryForwardItem(i).Visible = Len(items(i)) > 0
-
-            gotone = (gotone = True) Or (mnuHistoryForwardItem(i).Visible = True)
-        End If
-    Next i
-
-    If back Then
-        mnuHistoryBackItem(99).Visible = Not gotone
-      Else
-        mnuHistoryForwardItem(99).Visible = Not gotone
-    End If
-
-End Sub
-
 Private Sub tmrResize_Timer()
 
-    tmrResize.enabled = False
+    tmrResize.Enabled = False
 
     BackendUpdateWindowSize
 
@@ -660,6 +949,12 @@ Private Sub UserControl_Initialize()
     ' TS_PERF_ENABLE_DESKTOP_COMPOSITION
     rdpClient.ColorDepth = 24
 
+    m_CertTempFile = TempName()
+    On Error Resume Next
+        Kill m_CertTempFile
+    On Error GoTo 0
+    m_CertTempFile = Replace$(UCase$(m_CertTempFile), ".TMP", ".CER")
+
 End Sub
 
 Private Sub UserControl_ReadProperties(PropBag As PropertyBag)
@@ -688,7 +983,7 @@ Private Sub UserControl_Resize()
         Exit Sub
     End If
 
-    tmrResize.enabled = True
+    tmrResize.Enabled = True
 
 End Sub
 
@@ -697,15 +992,16 @@ Private Sub UserControl_Show()
   ' Will be fired when the control is actually shown on the website.
   ' UserControl_Initialize still has the control floating in space.
 
-    SSubTUP.AttachMessage Me, UserControl.hWnd, WM_SETCURSOR
+    SSubTUP.AttachMessage Me, UserControl.hwnd, WM_SETCURSOR
 
-    m_IEFrame.Construct UserControl.hWnd
+    m_IEFrame.Construct UserControl.hwnd
     m_IEAddressBar.Construct m_IEFrame.hWndIEFrame
     m_IEBrowser.Construct m_IEFrame.hWndInternetExplorerServer
-    m_IEStatusBar.Construct m_IEFrame.hWndIEFrame
+    m_IEStatusBar.Construct m_IEFrame.hWndStatusBar, m_IEFrame.hWndProgressBar
     m_IEToolbar.Construct m_IEFrame.hWndIEFrame
-    m_IEToolTip.Construct UserControl.hWnd
+    m_IEToolTip.Construct UserControl.hwnd
 
+    m_IEAddressBar.Enabled = False
     m_IEBrowser.SetTitle ""
 
     m_IEToolbar.SetToolbarCommandState CommandBack, False
@@ -729,7 +1025,7 @@ Private Sub UserControl_Terminate()
         SetCursor IDC_ARROW
     End If
 
-    SSubTUP.DetachMessage Me, UserControl.hWnd, WM_SETCURSOR
+    SSubTUP.DetachMessage Me, UserControl.hwnd, WM_SETCURSOR
 
     m_IEFrame.Destroy
     m_IEStatusBar.Destroy
@@ -743,7 +1039,11 @@ Private Sub UserControl_Terminate()
     Set m_IEBrowser = Nothing
     Set m_IEToolTip = Nothing
 
+    On Error Resume Next
+        Kill m_CertTempFile
+    On Error GoTo 0
+
 End Sub
 
-':) Ulli's VB Code Formatter V2.24.17 (2022-Nov-14 08:11)  Decl: 18  Code: 632  Total: 650 Lines
-':) CommentOnly: 59 (9.1%)  Commented: 8 (1.2%)  Filled: 491 (75.5%)  Empty: 159 (24.5%)  Max Logic Depth: 3
+':) Ulli's VB Code Formatter V2.24.17 (2022-Nov-17 19:42)  Decl: 22  Code: 928  Total: 950 Lines
+':) CommentOnly: 56 (5.9%)  Commented: 11 (1.2%)  Filled: 686 (72.2%)  Empty: 264 (27.8%)  Max Logic Depth: 3

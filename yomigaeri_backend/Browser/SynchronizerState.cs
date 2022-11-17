@@ -1,39 +1,142 @@
-﻿using System.Collections;
+﻿using System;
+using System.Collections;
 
 namespace yomigaeri_backend.Browser
 {
 	internal class SynchronizerState
 	{
-		private readonly BitArray m_Changes;
-		public enum Change : int
+		private const int CHANGE_ITEMS = 16;
+
+		private readonly BitArray m_Changes = new BitArray(CHANGE_ITEMS);
+
+		#region Enums
+		// ATTENTION:
+		// Enums have to be shorts so they don't overflow the VB6 Integer type.
+
+		public enum Change : short
 		{
 			Visible = 0,
-			CanGoBack = 1,
-			CanGoForward = 2,
-			CanReload = 3,
-			IsLoading = 4,
-			StatusText = 5,
-			StatusProgress = 6,
-			Address = 7,
-			PageTitle = 8,
-			AddHistoryItem = 9,
-			EnableTextCut = 10,
-			EnableTextCopy = 11,
-			EnableTextPaste = 12,
-			TravelLog = 13,
-			Cursor = 14,
-			Tooltip = 15,
-			SSLIcon = 16
+			Toolbar = 1,
+			StatusText = 2,
+			StatusProgress = 3,
+			Address = 4,
+			PageTitle = 5,
+			AddHistoryItem = 6,
+			MenuBar = 7,
+			TravelLog = 8,
+			Cursor = 9,
+			Tooltip = 10,
+			SSLIcon = 11,
+			CertificateState = 12,
+			CertificateData = 13,
+			CertificatePrompt = 14,
+			JSDialogPrompt = 15
 		}
 
-		private const int CHANGE_ITEMS = 17;
-
-		public enum SSLIconState
+		public enum SSLIconState : short
 		{
 			None = 0,
 			Secure = 1,
 			SecureBadCert = 2
 		}
+
+		[Flags]
+		public enum FrontendCertificateStates : short
+		{
+			None = 0,
+			OverallOK = 1 << 0,
+			OverallBad = 1 << 1,
+			UntrustedIssuer = 1 << 2,
+			TrustedIssuer = 1 << 3,
+			DateValid = 1 << 4,
+			DateInvalid = 1 << 5,
+			NameValid = 1 << 6,
+			NameInvalid = 1 << 7,
+			StrongCert = 1 << 8,
+			WeakCert = 1 << 9,
+			Revoked = 1 << 10,
+			DateInvalidTooLong = 1 << 11,
+			ChromeCTFail = 1 << 12
+		}
+
+		[Flags]
+		public enum FrontendToolbarButtons : short
+		{
+			None = 0,
+			Back = 1 << 0,
+			Forward = 1 << 1,
+			Stop = 1 << 2,
+			Refresh = 1 << 3,
+			Home = 1 << 4,
+			Media = 1 << 5
+		}
+
+		[Flags]
+		public enum FrontendMenuBarItems : short
+		{
+			None = 0,
+			Stop = 1 << 0,
+			Refresh = 1 << 1,
+			Cut = 1 << 2,
+			Copy = 1 << 3,
+			Paste = 1 << 4
+		}
+
+		public enum FrontendJSDialogs : short
+		{
+			None = 0,
+			Prompt = 1,
+			Alert = 2,
+			Confirm = 3,
+			OnBeforeUnload = 4
+		}
+		#endregion
+
+		#region FrontendJSDialogData Data Holder
+		public class FrontendJSDialogData
+		{
+			public FrontendJSDialogData(FrontendJSDialogs type, string prompt, string defaultText = null)
+			{
+				Type = type;
+
+				if (prompt == null)
+					Prompt = string.Empty;
+				else
+					Prompt = prompt;
+
+				if (defaultText != null)
+					DefaultText = defaultText;
+			}
+
+			public FrontendJSDialogs Type { get; private set; }
+
+			public string Prompt { get; private set; }
+
+			public string DefaultText { get; private set; } // only for JS prompt() function.
+
+			public override bool Equals(object obj)
+			{
+				if (obj == null)
+					return false;
+
+				FrontendJSDialogData other = obj as FrontendJSDialogData;
+
+				if (other == null)
+					return false;
+
+				return (other.Type == this.Type && other.Prompt == this.Prompt && other.DefaultText == this.DefaultText);
+			}
+
+			public override int GetHashCode()
+			{
+				return (Type, Prompt, DefaultText).GetHashCode();
+			}
+		}
+		#endregion
+
+		#region State Properties
+		// ATTENTION:
+		// If you add things, modify the Change enum and CHANGE_ITEMS constant.
 
 		private bool m_Visible;
 		public bool Visible
@@ -49,58 +152,31 @@ namespace yomigaeri_backend.Browser
 			}
 		}
 
-		private bool m_CanGoBack;
-		public bool CanGoBack
+		private FrontendToolbarButtons m_ToolbarButtons;
+		public FrontendToolbarButtons ToolbarButtons
 		{
-			get { return m_CanGoBack; }
+			get { return m_ToolbarButtons; }
 			set
 			{
-				if (m_CanGoBack == value)
+				if (m_ToolbarButtons == value)
 					return;
 
-				m_CanGoBack = value;
-				m_Changes[(int)Change.CanGoBack] = true;
+				m_ToolbarButtons = value;
+				m_Changes[(int)Change.Toolbar] = true;
 			}
 		}
 
-		private bool m_CanGoForward;
-		public bool CanGoForward
+		private FrontendMenuBarItems m_MenuBarItems;
+		public FrontendMenuBarItems MenuBarItems
 		{
-			get { return m_CanGoForward; }
+			get { return m_MenuBarItems; }
 			set
 			{
-				if (m_CanGoForward == value)
+				if (m_MenuBarItems == value)
 					return;
 
-				m_CanGoForward = value;
-				m_Changes[(int)Change.CanGoForward] = true;
-			}
-		}
-
-		private bool m_CanReload;
-		public bool CanReload
-		{
-			get { return m_CanReload; }
-			set
-			{
-				if (m_CanReload == value)
-					return;
-
-				m_CanReload = value;
-				m_Changes[(int)Change.CanReload] = true;
-			}
-		}
-
-		private bool m_IsLoading;
-		public bool IsLoading
-		{
-			get { return m_IsLoading; }
-			set
-			{
-				if (m_IsLoading == value)
-					return;
-				m_IsLoading = value;
-				m_Changes[(int)Change.IsLoading] = true;
+				m_MenuBarItems = value;
+				m_Changes[(int)Change.MenuBar] = true;
 			}
 		}
 
@@ -169,45 +245,6 @@ namespace yomigaeri_backend.Browser
 			}
 		}
 
-		private bool m_EnableTextCut;
-		public bool EnableTextCut
-		{
-			get { return m_EnableTextCut; }
-			set
-			{
-				if (m_EnableTextCut == value)
-					return;
-				m_EnableTextCut = value;
-				m_Changes[(int)Change.EnableTextCut] = true;
-			}
-		}
-
-		private bool m_EnableTextCopy;
-		public bool EnableTextCopy
-		{
-			get { return m_EnableTextCopy; }
-			set
-			{
-				if (m_EnableTextCopy == value)
-					return;
-				m_EnableTextCopy = value;
-				m_Changes[(int)Change.EnableTextCopy] = true;
-			}
-		}
-
-		private bool m_EnableTextPaste;
-		public bool EnableTextPaste
-		{
-			get { return m_EnableTextPaste; }
-			set
-			{
-				if (m_EnableTextPaste == value)
-					return;
-				m_EnableTextPaste = value;
-				m_Changes[(int)Change.EnableTextPaste] = true;
-			}
-		}
-
 		private bool m_TravelLog;
 		public bool TravelLog
 		{
@@ -237,7 +274,7 @@ namespace yomigaeri_backend.Browser
 		private string m_Tooltip;
 		public string Tooltip
 		{
-			get { return m_Tooltip;  }
+			get { return m_Tooltip; }
 			set
 			{
 				if (m_Tooltip == value)
@@ -262,11 +299,61 @@ namespace yomigaeri_backend.Browser
 			}
 		}
 
-		public SynchronizerState()
+		private FrontendCertificateStates m_CertificateState;
+		public FrontendCertificateStates CertificateState
 		{
-			m_Changes = new BitArray(CHANGE_ITEMS);
+			get { return m_CertificateState; }
+			set
+			{
+				if (m_CertificateState == value)
+					return;
+
+				m_CertificateState = value;
+				m_Changes[(int)Change.CertificateState] = true;
+			}
 		}
 
+		private byte[] m_CertificateData;
+		public byte[] CertificateData
+		{
+			get { return m_CertificateData; }
+			set
+			{
+				if (m_CertificateData == value)
+					return;
+
+				m_CertificateData = value;
+				m_Changes[(int)Change.CertificateData] = true;
+			}
+		}
+
+		private bool m_CertificatePrompt;
+		public bool CertificatePrompt
+		{
+			get { return m_CertificatePrompt; }
+			set
+			{
+				m_CertificatePrompt = value;
+				m_Changes[(int)Change.CertificatePrompt] = value;
+			}
+		}
+		private FrontendJSDialogData m_JSDialogPrompt;
+		public FrontendJSDialogData JSDialogPrompt
+		{
+			get { return m_JSDialogPrompt; }
+			set
+			{
+				if (m_JSDialogPrompt == value)
+					return;
+
+				m_JSDialogPrompt = value;
+
+				m_Changes[(int)Change.JSDialogPrompt] = true;
+			}
+		}
+		#endregion
+
+		#region Helper Methods
 		public void SyncAll()
 		{
 			m_Changes.SetAll(true);
@@ -281,5 +368,6 @@ namespace yomigaeri_backend.Browser
 		{
 			return m_Changes[(int)what];
 		}
+		#endregion
 	}
 }
