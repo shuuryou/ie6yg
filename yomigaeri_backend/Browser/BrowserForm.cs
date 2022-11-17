@@ -6,12 +6,30 @@ using System.Globalization;
 using System.Web;
 using System.Windows.Forms;
 using yomigaeri_backend.Browser.Handlers;
-using static yomigaeri_backend.Browser.SynchronizerState;
 
 namespace yomigaeri_backend.Browser
 {
 	public partial class BrowserForm : Form
 	{
+		#region Win32 FindReplaceFlags
+		[Flags]
+		private enum Win32FindReplaceFlags
+		{
+			FR_DOWN = 0x1,
+			FR_WHOLEWORD = 0x2,
+			FR_MATCHCASE = 0x4,
+			FR_ENABLEHOOK = 0x100,
+			FR_ENABLETEMPLATE = 0x200,
+			FR_NOUPDOWN = 0x400,
+			FR_NOMATCHCASE = 0x800,
+			FR_NOWHOLEWORD = 0x1000,
+			FR_ENABLETEMPLATEHANDLE = 0x2000,
+			FR_HIDEUPDOWN = 0x4000,
+			FR_HIDEMATCHCASE = 0x8000,
+			FR_HIDEWHOLEWORD = 0x10000
+		}
+		#endregion
+
 		private readonly SynchronizerState m_SyncState;
 		private readonly TravelLog m_TravelLog;
 
@@ -30,7 +48,7 @@ namespace yomigaeri_backend.Browser
 			Controls.Add(Program.WebBrowser);
 
 			Program.WebBrowser.StatusMessage += WebBrowser_StatusMessage;
-			
+
 			Program.WebBrowser.IsBrowserInitializedChanged += WebBrowser_IsBrowserInitializedChanged;
 
 			Program.WebBrowser.LoadHandler = new MyLoadHandler(m_TravelLog, m_SyncState, SynchronizeWithFrontend);
@@ -45,7 +63,7 @@ namespace yomigaeri_backend.Browser
 		private void WebBrowser_StatusMessage(object sender, StatusMessageEventArgs e)
 		{
 			// DisplayHandler.OnStatusMessage never gets called for some reason.
-			
+
 			if (e.Browser.IsLoading)
 				return; // It keeps trying to clear it while page load is still in progress *sigh*
 
@@ -93,7 +111,7 @@ namespace yomigaeri_backend.Browser
 				Program.WebBrowser.SetMainFrameDocumentContentAsync(error_html);
 				return;
 			}
-			
+
 			if (string.IsNullOrEmpty(message))
 				return;
 
@@ -165,22 +183,22 @@ namespace yomigaeri_backend.Browser
 			if (m_SyncState.IsChanged(SynchronizerState.Change.Toolbar))
 			{
 				RDPVirtualChannel.Write(string.Format(CultureInfo.InvariantCulture, "TOOLBAR {0} {1}", "BACK",
-					m_SyncState.ToolbarButtons.HasFlag(FrontendToolbarButtons.Back) ? "TRUE" : "FALSE"));
+					m_SyncState.ToolbarButtons.HasFlag(SynchronizerState.FrontendToolbarButtons.Back) ? "TRUE" : "FALSE"));
 
 				RDPVirtualChannel.Write(string.Format(CultureInfo.InvariantCulture, "TOOLBAR {0} {1}", "FORWARD",
-					m_SyncState.ToolbarButtons.HasFlag(FrontendToolbarButtons.Forward) ? "TRUE" : "FALSE"));
+					m_SyncState.ToolbarButtons.HasFlag(SynchronizerState.FrontendToolbarButtons.Forward) ? "TRUE" : "FALSE"));
 
 				RDPVirtualChannel.Write(string.Format(CultureInfo.InvariantCulture, "TOOLBAR {0} {1}", "HOME",
-					m_SyncState.ToolbarButtons.HasFlag(FrontendToolbarButtons.Home) ? "TRUE" : "FALSE"));
+					m_SyncState.ToolbarButtons.HasFlag(SynchronizerState.FrontendToolbarButtons.Home) ? "TRUE" : "FALSE"));
 
 				RDPVirtualChannel.Write(string.Format(CultureInfo.InvariantCulture, "TOOLBAR {0} {1}", "MEDIA",
-					m_SyncState.ToolbarButtons.HasFlag(FrontendToolbarButtons.Media) ? "TRUE" : "FALSE"));
+					m_SyncState.ToolbarButtons.HasFlag(SynchronizerState.FrontendToolbarButtons.Media) ? "TRUE" : "FALSE"));
 
 				RDPVirtualChannel.Write(string.Format(CultureInfo.InvariantCulture, "TOOLBAR {0} {1}", "REFRESH",
-					m_SyncState.ToolbarButtons.HasFlag(FrontendToolbarButtons.Refresh) ? "TRUE" : "FALSE"));
+					m_SyncState.ToolbarButtons.HasFlag(SynchronizerState.FrontendToolbarButtons.Refresh) ? "TRUE" : "FALSE"));
 
 				RDPVirtualChannel.Write(string.Format(CultureInfo.InvariantCulture, "TOOLBAR {0} {1}", "STOP",
-					m_SyncState.ToolbarButtons.HasFlag(FrontendToolbarButtons.Stop) ? "TRUE" : "FALSE"));
+					m_SyncState.ToolbarButtons.HasFlag(SynchronizerState.FrontendToolbarButtons.Stop) ? "TRUE" : "FALSE"));
 			}
 			#endregion
 
@@ -188,19 +206,19 @@ namespace yomigaeri_backend.Browser
 			if (m_SyncState.IsChanged(SynchronizerState.Change.MenuBar))
 			{
 				RDPVirtualChannel.Write(string.Format(CultureInfo.InvariantCulture, "MENUSET {0} {1}", "STOP",
-					m_SyncState.MenuBarItems.HasFlag(FrontendMenuBarItems.Stop) ? "TRUE" : "FALSE"));
+					m_SyncState.MenuBarItems.HasFlag(SynchronizerState.FrontendMenuBarItems.Stop) ? "TRUE" : "FALSE"));
 
 				RDPVirtualChannel.Write(string.Format(CultureInfo.InvariantCulture, "MENUSET {0} {1}", "REFRESH",
-					m_SyncState.MenuBarItems.HasFlag(FrontendMenuBarItems.Refresh) ? "TRUE" : "FALSE"));
+					m_SyncState.MenuBarItems.HasFlag(SynchronizerState.FrontendMenuBarItems.Refresh) ? "TRUE" : "FALSE"));
 
 				RDPVirtualChannel.Write(string.Format(CultureInfo.InvariantCulture, "MENUSET {0} {1}", "CUT",
-					m_SyncState.MenuBarItems.HasFlag(FrontendMenuBarItems.Cut) ? "TRUE" : "FALSE"));
+					m_SyncState.MenuBarItems.HasFlag(SynchronizerState.FrontendMenuBarItems.Cut) ? "TRUE" : "FALSE"));
 
 				RDPVirtualChannel.Write(string.Format(CultureInfo.InvariantCulture, "MENUSET {0} {1}", "COPY",
-					m_SyncState.MenuBarItems.HasFlag(FrontendMenuBarItems.Copy) ? "TRUE" : "FALSE"));
+					m_SyncState.MenuBarItems.HasFlag(SynchronizerState.FrontendMenuBarItems.Copy) ? "TRUE" : "FALSE"));
 
 				RDPVirtualChannel.Write(string.Format(CultureInfo.InvariantCulture, "MENUSET {0} {1}", "PASTE",
-					m_SyncState.MenuBarItems.HasFlag(FrontendMenuBarItems.Paste) ? "TRUE" : "FALSE"));
+					m_SyncState.MenuBarItems.HasFlag(SynchronizerState.FrontendMenuBarItems.Paste) ? "TRUE" : "FALSE"));
 			}
 			#endregion
 
@@ -256,7 +274,7 @@ namespace yomigaeri_backend.Browser
 			{
 				RDPVirtualChannel.Write("TRAVLBK " +
 					m_TravelLog.MakeMenuStringForFrontend(TravelLog.TravelDirection.Back));
-				
+
 				RDPVirtualChannel.Write("TRAVLFW " +
 					m_TravelLog.MakeMenuStringForFrontend(TravelLog.TravelDirection.Forward));
 
@@ -325,15 +343,15 @@ namespace yomigaeri_backend.Browser
 			{
 				switch (m_SyncState.JSDialogPrompt.Type)
 				{
-					case FrontendJSDialogs.Alert:
+					case SynchronizerState.FrontendJSDialogs.Alert:
 						RDPVirtualChannel.Write(string.Format(CultureInfo.InvariantCulture,
 							"JSDIALG ALERT {0}", m_SyncState.JSDialogPrompt.Prompt));
 						break;
-					case FrontendJSDialogs.Confirm:
+					case SynchronizerState.FrontendJSDialogs.Confirm:
 						RDPVirtualChannel.Write(string.Format(CultureInfo.InvariantCulture,
 							"JSDIALG CONFIRM {0}", m_SyncState.JSDialogPrompt.Prompt));
 						break;
-					case FrontendJSDialogs.Prompt:
+					case SynchronizerState.FrontendJSDialogs.Prompt:
 						// Strings limited to 32767 because it ought to be enough.
 						// Anything longer will probably cause issues somewhere in
 						// the frontend due to the use of VB6.
@@ -351,7 +369,7 @@ namespace yomigaeri_backend.Browser
 							default_text.Length, default_text));
 
 						break;
-					case FrontendJSDialogs.OnBeforeUnload:
+					case SynchronizerState.FrontendJSDialogs.OnBeforeUnload:
 						RDPVirtualChannel.Write(string.Format(CultureInfo.InvariantCulture,
 							"JSDIALG ONBEFOREUNLOAD {0}", m_SyncState.JSDialogPrompt.Prompt));
 						break;
@@ -459,6 +477,9 @@ namespace yomigaeri_backend.Browser
 			#region CERTCALLBACK -- Response to OnCertificateError
 			if (message.StartsWith("CERTCALLBACK ", StringComparison.Ordinal))
 			{
+				// CERTCALLBACK CONTINUE
+				// CERTCALLBACK CANCEL
+
 				string response = message.Substring(13).ToUpperInvariant();
 
 				IRequestCallback cb = ((MyRequestHandler)Program.WebBrowser.RequestHandler).SSLCertificate_CurrentErrorCallback;
@@ -479,11 +500,14 @@ namespace yomigaeri_backend.Browser
 			#region JSCALLBACK - Response to a JavaScript dialog
 			if (message.StartsWith("JSCALLBACK ", StringComparison.Ordinal))
 			{
+				// All except prompt(): JSCALLBACK OK
+				// All:                 JSCALLBACK CANCEL
+				// prompt():            JSCALLBACK OK abcdef...
 				string response = message.Substring(11);
 				string userInput = string.Empty;
 
 				{
-					// Deal with the input supplied by prompt(), if necessarz
+					// Deal with the input supplied by prompt(), if necessary
 
 					int idx = response.IndexOf(' ');
 
@@ -498,10 +522,49 @@ namespace yomigaeri_backend.Browser
 
 				if (cb == null || cb.IsDisposed)
 					return;
-				
+
 				bool success = (response.ToUpperInvariant() == "OK");
 
 				cb.Continue(success, userInput);
+			}
+			#endregion
+
+			#region FIND -- Find in page
+			if (message.StartsWith("FIND ", StringComparison.Ordinal))
+			{
+				// FIND [NewFind=1 or 0] [Flags=00000000] [Text]
+				// NewFind: Whether to start a new search or continue an old one
+				// Flags:   See Win32FindReplaceFlags
+				// Text:    Text to find
+				// Sample:
+				// FIND 1 00000000 abcdef...
+
+				if (message == "FIND END")
+				{
+					Program.WebBrowser.StopFinding(true);
+					return;
+				}
+
+				if (message.Length < 17)
+				{
+					Logging.WriteLineToLog("BrowserForm: ProcessMessage: FIND command has bad format.");
+					return;
+				}
+
+				bool new_find = (message[5] == '1');
+
+				if (!int.TryParse(message.Substring(7, 8), NumberStyles.None, CultureInfo.InvariantCulture, out int flags_int))
+				{
+					Logging.WriteLineToLog("BrowserForm: ProcessMessage: FIND command has bad flags format.");
+					return;
+				}
+
+				Win32FindReplaceFlags flags = (Win32FindReplaceFlags)flags_int;
+
+				Program.WebBrowser.Find(message.Substring(16),
+					flags.HasFlag(Win32FindReplaceFlags.FR_DOWN),
+					flags.HasFlag(Win32FindReplaceFlags.FR_MATCHCASE),
+					!new_find);
 			}
 			#endregion
 		}

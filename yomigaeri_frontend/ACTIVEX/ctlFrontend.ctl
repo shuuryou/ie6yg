@@ -117,6 +117,10 @@ Private WithEvents m_IEToolbar As IEToolbar
 Attribute m_IEToolbar.VB_VarHelpID = -1
 Private m_IEToolTip As IEToolTip
 
+Private WithEvents m_FindReplace As cFindReplace
+Attribute m_FindReplace.VB_VarHelpID = -1
+Private m_NewFind As Boolean
+
 Private m_CertCurrentState As CertificateStates
 
 Private m_HideRDP As Boolean
@@ -157,7 +161,7 @@ Private Sub HandleADDHIST(ByRef data As String)
         Exit Sub
     End If
 
-    strTitle = left$(data, intPos - 1)
+    strTitle = Left$(data, intPos - 1)
     strUrl = Mid$(data, intPos + 1)
 
     If strUrl = "" Then
@@ -302,7 +306,7 @@ Private Sub HandleJSDIALG(ByRef data As String)
         Exit Sub
     End If
 
-    strType = left$(data, intPos - 1)
+    strType = Left$(data, intPos - 1)
     strPrompt = Mid$(data, intPos + 1)
 
     Select Case UCase$(strType)
@@ -316,13 +320,13 @@ Private Sub HandleJSDIALG(ByRef data As String)
         '  ^ prompt     ^ default
 
         On Error GoTo EH
-        intLenPrompt = CInt(left$(strPrompt, 8))
+        intLenPrompt = CInt(Left$(strPrompt, 8))
         intLenDefault = Mid$(strPrompt, 8 + intLenPrompt + 1, 8)
         On Error GoTo 0
 
         modLogging.WriteLineToLog "HandleJSDIALG: Parsed lengths: " & intLenPrompt & ", " & intLenDefault
 
-        strDefault = right$(strPrompt, intLenDefault)
+        strDefault = Right$(strPrompt, intLenDefault)
         strPrompt = Mid$(strPrompt, 8 + 1, intLenPrompt)
 
         strResponse = InputBox(LoadResString(304) & vbCrLf & vbCrLf & strPrompt, LoadResString(303), strDefault)
@@ -379,7 +383,7 @@ Private Sub HandleMENUSET(ByRef data As String)
         Exit Sub
     End If
 
-    strCommand = UCase$(left$(data, intPos - 1))
+    strCommand = UCase$(Left$(data, intPos - 1))
     blnState = (UCase$(Mid$(data, intPos + 1)) = "TRUE")
 
     Select Case strCommand
@@ -492,7 +496,7 @@ Private Sub HandleTOOLBAR(ByRef data As String)
         Exit Sub
     End If
 
-    strCommand = UCase$(left$(data, intPos - 1))
+    strCommand = UCase$(Left$(data, intPos - 1))
     blnState = (UCase$(Mid$(data, intPos + 1)) = "TRUE")
 
     Select Case strCommand
@@ -628,11 +632,39 @@ Private Function ISubclass_WindowProc(ByVal hWnd As Long, ByVal iMsg As Long, By
 
 End Function
 
+Private Sub m_FindReplace_DialogClosed()
+
+    If rdpClient.Connected <> 1 Then
+        Exit Sub
+    End If
+
+    rdpClient.SendOnVirtualChannel VIRTUAL_CHANNEL_NAME, "FIND END"
+
+End Sub
+
+Private Sub m_FindReplace_FindNext(ByVal sToFind As String, ByVal eFlags As CommonDialogDirect6.EFindReplaceFlags)
+
+  Dim strCommand As String
+
+    If rdpClient.Connected <> 1 Then
+        Exit Sub
+    End If
+
+    strCommand = "FIND " & IIf(m_NewFind, "1", "0") & " " & Format$(CLng(eFlags), "00000000") & " " & sToFind
+
+    m_NewFind = False
+
+    rdpClient.SendOnVirtualChannel VIRTUAL_CHANNEL_NAME, strCommand
+
+End Sub
+
 Private Sub m_IEBrowser_NavigationIntercepted(destinationURL As String)
 
     If rdpClient.Connected <> 1 Then
         Exit Sub
     End If
+    
+    m_FindReplace.CloseDialog
 
     rdpClient.SendOnVirtualChannel VIRTUAL_CHANNEL_NAME, _
                                    "NAVIGATE " & destinationURL
@@ -676,7 +708,8 @@ Private Sub m_IEFrame_CommandReceived(command As IECommand)
       Case IECommand.CommandEditStop
         rdpClient.SendOnVirtualChannel VIRTUAL_CHANNEL_NAME, "BTNSTOP"
       Case IECommand.CommandEditFind
-        MsgBox "Not implemented yet.", vbInformation, "Lame!" ' XXX TODO
+        m_NewFind = True
+        m_FindReplace.VBFindText m_IEFrame.hWndIEFrame, , FR_NOWHOLEWORD Or FR_DOWN
       Case IECommand.CommandFavoritesAdd
         MsgBox "Not implemented yet.", vbInformation, "Lame!" ' XXX TODO
       Case IECommand.CommandFileProperties
@@ -805,7 +838,7 @@ Private Sub rdpClient_OnChannelReceivedData(ByVal chanName As String, ByVal data
   Dim strCommand As String
   Dim strData As String
 
-    strCommand = left$(UCase$(data), 7)
+    strCommand = Left$(UCase$(data), 7)
     strData = Mid$(data, 9) ' There's a space after the command
 
     Select Case strCommand
@@ -941,6 +974,8 @@ Private Sub UserControl_Initialize()
     Set m_IEToolbar = New IEToolbar
     Set m_IEToolTip = New IEToolTip
 
+    Set m_FindReplace = New cFindReplace
+
     rdpClient.CreateVirtualChannels VIRTUAL_CHANNEL_NAME
 
     rdpClient.AdvancedSettings3.EnableAutoReconnect = True
@@ -1048,11 +1083,13 @@ Private Sub UserControl_Terminate()
     Set m_IEBrowser = Nothing
     Set m_IEToolTip = Nothing
 
+    Set m_FindReplace = Nothing
+
     On Error Resume Next
         Kill m_CertTempFile
     On Error GoTo 0
 
 End Sub
 
-':) Ulli's VB Code Formatter V2.24.17 (2022-Nov-18 00:20)  Decl: 29  Code: 930  Total: 959 Lines
-':) CommentOnly: 56 (5.8%)  Commented: 15 (1.6%)  Filled: 693 (72.3%)  Empty: 266 (27.7%)  Max Logic Depth: 3
+':) Ulli's VB Code Formatter V2.24.17 (2022-Nov-18 05:21)  Decl: 32  Code: 961  Total: 993 Lines
+':) CommentOnly: 56 (5.6%)  Commented: 14 (1.4%)  Filled: 715 (72%)  Empty: 278 (28%)  Max Logic Depth: 3

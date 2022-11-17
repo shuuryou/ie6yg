@@ -22,10 +22,10 @@ Public Const IMAGE_ICON = 1
 Public Declare Function GetClientRect Lib "USER32.DLL" (ByVal hWnd As Long, lpRect As RECT) As Long
 
 Public Type RECT
-    left As Long
-    top As Long
-    right As Long
-    bottom As Long
+    Left As Long
+    Top As Long
+    Right As Long
+    Bottom As Long
 End Type
 
 Public Const SWP_NOSIZE As Long = &H1
@@ -52,6 +52,14 @@ Private Navigation, Progress, Connection, SSL, Zone ':) Line inserted by Formatt
 #End If ':) Line inserted by Formatter
 
 Public Const STATUSBAR_PANES As Integer = 5
+
+#If False Then
+' F***ING VB6 IDE KEEPS CHANGING THE CASE OF THESE RANDOMLY!
+' This makes it stop.
+Private hWnd
+Private Left
+Private Right
+#End If
 
 Public Function HiWord(lDWord As Long) As Integer
 
@@ -100,7 +108,7 @@ Public Function TempName() As String
         Err.Raise Err.LastDllError
     End If
 
-    strTempDir = left$(strBuffer, lngRet)
+    strTempDir = Left$(strBuffer, lngRet)
 
     lngRet = GetTempFileName(strTempDir, "iyg", 0, strBuffer)
 
@@ -118,12 +126,12 @@ Public Function TrimNull(ByVal Text As String) As String
 
     lngPos = InStr(Text, vbNullChar)
     If lngPos > 0 Then
-        Text = left$(Text, lngPos - 1)
+        Text = Left$(Text, lngPos - 1)
     End If
 
     TrimNull = Text
 
 End Function
 
-':) Ulli's VB Code Formatter V2.24.17 (2022-Nov-18 00:20)  Decl: 53  Code: 75  Total: 128 Lines
-':) CommentOnly: 7 (5.5%)  Commented: 3 (2.3%)  Filled: 84 (65.6%)  Empty: 44 (34.4%)  Max Logic Depth: 2
+':) Ulli's VB Code Formatter V2.24.17 (2022-Nov-18 05:21)  Decl: 61  Code: 75  Total: 136 Lines
+':) CommentOnly: 9 (6.6%)  Commented: 3 (2.2%)  Filled: 91 (66.9%)  Empty: 45 (33.1%)  Max Logic Depth: 2

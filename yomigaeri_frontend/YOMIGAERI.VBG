@@ -1,3 +1,4 @@
 VBGROUP 5.0
 StartupProject=ACTIVEX\ACTIVEX.VBP
 Project=Support\SSubTimerUnicode\SubTimer.vbp
+Project=Support\CommonDialog6\CMDLGD6.vbp

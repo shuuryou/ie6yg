@@ -1,0 +1,7 @@
+cMemory = 0, 0, 0, 0, C
+GCommonDialog = 0, 0, 0, 0, C
+cCommonDialog = 198, 198, 1139, 627, C
+mDialogHook = 0, 0, 0, 0, C
+mPublicTypes = 0, 0, 0, 0, C
+mFindReplaceHook = 176, 176, 1117, 605, C
+cFindReplace = 22, 22, 963, 451, C
