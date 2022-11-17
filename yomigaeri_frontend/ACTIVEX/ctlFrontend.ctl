@@ -821,9 +821,9 @@ Private Sub rdpClient_OnChannelReceivedData(ByVal chanName As String, ByVal data
       Case "MENUSET"
         HandleMENUSET strData
       Case "TRAVLBK"
-        HandleTRAVELLOG False, strData
-      Case "TRAVLFW"
         HandleTRAVELLOG True, strData
+      Case "TRAVLFW"
+        HandleTRAVELLOG False, strData
       Case "SETCURS"
         HandleSETCURS strData
       Case "TOOLTIP"
