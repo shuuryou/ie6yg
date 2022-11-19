@@ -1,6 +1,7 @@
 ﻿using CefSharp;
 using System;
 using System.Collections.Generic;
+using yomigaeri_shared;
 
 namespace yomigaeri_backend.Browser
 {

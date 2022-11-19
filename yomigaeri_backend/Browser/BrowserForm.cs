@@ -6,6 +6,7 @@ using System.Globalization;
 using System.Web;
 using System.Windows.Forms;
 using yomigaeri_backend.Browser.Handlers;
+using yomigaeri_shared;
 
 namespace yomigaeri_backend.Browser
 {
@@ -33,9 +34,13 @@ namespace yomigaeri_backend.Browser
 		private readonly SynchronizerState m_SyncState;
 		private readonly TravelLog m_TravelLog;
 
+		private bool m_ExitAfterDownload;
+
 		public BrowserForm()
 		{
 			InitializeComponent();
+
+			m_ExitAfterDownload = false;
 
 			SystemEvents.SessionSwitch += SystemEvents_SessionSwitch;
 
@@ -55,6 +60,9 @@ namespace yomigaeri_backend.Browser
 			Program.WebBrowser.DisplayHandler = new MyDisplayHandler(m_SyncState, SynchronizeWithFrontend);
 			Program.WebBrowser.RequestHandler = new MyRequestHandler(m_SyncState, SynchronizeWithFrontend);
 			Program.WebBrowser.JsDialogHandler = new MyJsDialogHandler(m_SyncState, SynchronizeWithFrontend);
+			Program.WebBrowser.DownloadHandler = new MyDownloadHandler(m_SyncState, SynchronizeWithFrontend);
+
+			((MyDownloadHandler)Program.WebBrowser.DownloadHandler).AllDownloadsCompleted += DownloadHandler_AllDownloadsCompleted;
 
 			// This is important! See Handlers/DisplayHandler.cs, OnCursorChange method
 			Cursor.Hide();
@@ -83,41 +91,6 @@ namespace yomigaeri_backend.Browser
 				Program.WebBrowser.Dispose();
 			}
 			base.Dispose(disposing);
-		}
-
-
-		private void VirtualChannelTimer_Tick(object sender, EventArgs e)
-		{
-			// TODO This is not the nicest way but it works until something better comes along.
-
-			string message = null;
-
-			try
-			{
-				message = RDPVirtualChannel.Read(true);
-			}
-			catch (Exception ex)
-			{
-				Logging.WriteLineToLog("BrowserForm: VirtualChannelTimer: Failed in ReadChannel: {0}", ex.ToString());
-
-				VirtualChannelTimer.Enabled = false;
-
-				string error_html = Resources.BACKENDERROR_HTML;
-
-				error_html = error_html.Replace("%TITLE_TEXT%", HttpUtility.HtmlEncode(Resources.E_BackendVirtualChannel_Title));
-				error_html = error_html.Replace("%INTRODUCTION_TEXT%", HttpUtility.HtmlEncode(Resources.E_BackendVirtualChannel_Text));
-				error_html = error_html.Replace("%ERROR_TEXT%", HttpUtility.HtmlEncode(ex.Message));
-
-				Program.WebBrowser.SetMainFrameDocumentContentAsync(error_html);
-				return;
-			}
-
-			if (string.IsNullOrEmpty(message))
-				return;
-
-			Logging.WriteLineToLog("BrowserForm: VirtualChannelTimer: Get message: \"{0}\"", message);
-
-			ProcessMessage(message);
 		}
 
 		private void WebBrowser_IsBrowserInitializedChanged(object sender, EventArgs e)
@@ -158,8 +131,68 @@ namespace yomigaeri_backend.Browser
 				case SessionSwitchReason.ConsoleDisconnect:
 				case SessionSwitchReason.RemoteDisconnect:
 					VirtualChannelTimer.Enabled = false;
-					Application.Exit();
+
+					// Only exit here if there are no downloads running. If there
+					// are active downloads, the event handler will take care of
+					// exiting once there are none left.
+
+					if (((MyDownloadHandler)Program.WebBrowser.DownloadHandler).DownloadsInProgress)
+						m_ExitAfterDownload = true;
+					else
+						Application.Exit();
+
 					return;
+			}
+		}
+
+		private void DownloadHandler_AllDownloadsCompleted(object sender, EventArgs e)
+		{
+			if (m_ExitAfterDownload)
+				Application.Exit();
+		}
+
+		private void VirtualChannelTimer_Tick(object sender, EventArgs e)
+		{
+			// TODO This is not the nicest way but it works until something better comes along.
+
+			string message;
+
+			try
+			{
+				message = RDPVirtualChannel.Read(true);
+			}
+			catch (Exception ex)
+			{
+				Logging.WriteLineToLog("BrowserForm: VirtualChannelTimer: Failed in ReadChannel: {0}", ex.ToString());
+
+				VirtualChannelTimer.Enabled = false;
+
+				string error_html = Resources.BACKENDERROR_HTML;
+
+				error_html = error_html.Replace("%TITLE_TEXT%", HttpUtility.HtmlEncode(Resources.E_BackendVirtualChannel_Title));
+				error_html = error_html.Replace("%INTRODUCTION_TEXT%", HttpUtility.HtmlEncode(Resources.E_BackendVirtualChannel_Text));
+				error_html = error_html.Replace("%ERROR_TEXT%", HttpUtility.HtmlEncode(ex.Message));
+
+				Program.WebBrowser.SetMainFrameDocumentContentAsync(error_html);
+				return;
+			}
+
+			if (string.IsNullOrEmpty(message))
+				return;
+
+			Logging.WriteLineToLog("BrowserForm: VirtualChannelTimer: Get message: \"{0}\"", message);
+
+			ProcessMessage(message);
+		}
+
+		private void ExitTimer_Tick(object sender, EventArgs e)
+		{
+			// TODO This is not the nicest way but it works until something better comes along.
+
+			if (!((MyDownloadHandler)Program.WebBrowser.DownloadHandler).DownloadsInProgress)
+			{
+				ExitTimer.Enabled = false;
+				Application.Exit();
 			}
 		}
 
@@ -379,6 +412,13 @@ namespace yomigaeri_backend.Browser
 			}
 			#endregion
 
+			#region DownloadStart
+			if (m_SyncState.IsChanged(SynchronizerState.Change.CertificateData))
+			{
+				RDPVirtualChannel.Write("DWNLOAD " + m_SyncState.DownloadStart);
+			}
+			#endregion
+
 			m_SyncState.SyncNone();
 		}
 
@@ -568,5 +608,6 @@ namespace yomigaeri_backend.Browser
 			}
 			#endregion
 		}
+
 	}
 }

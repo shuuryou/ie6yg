@@ -2,6 +2,7 @@
 using System.Drawing;
 using System.Globalization;
 using System.Runtime.InteropServices;
+using yomigaeri_shared;
 
 namespace yomigaeri_backend
 {

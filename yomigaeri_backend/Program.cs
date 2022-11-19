@@ -7,12 +7,13 @@ using System.Globalization;
 using System.IO;
 using System.Threading;
 using System.Windows.Forms;
+using yomigaeri_shared;
 
 namespace yomigaeri_backend
 {
 	public static class Program
 	{
-		internal static FuckINI Settings { get; private set; }
+		internal static IniFileReader Settings { get; private set; }
 		internal static ChromiumWebBrowser WebBrowser { get; private set; }
 		
 
@@ -22,7 +23,7 @@ namespace yomigaeri_backend
 			#region Open Logger
 			try
 			{
-				Logging.OpenLog();
+				Logging.OpenLog("YGBACKEND");
 			}
 			catch (Exception e)
 			{
@@ -48,14 +49,14 @@ namespace yomigaeri_backend
 			#region Read INI File
 			{
 				string ini_file_location =
-					Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "backend.ini");
+					Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "config.ini");
 
 				Logging.WriteLineToLog("Main: Now going to load settings from \"{0}\".",
 					ini_file_location);
 
 				try
 				{
-					Settings = new FuckINI(ini_file_location);
+					Settings = new IniFileReader(ini_file_location);
 				}
 				catch (Exception e)
 				{
@@ -189,7 +190,7 @@ namespace yomigaeri_backend
 			}
 			#endregion
 
-			int initial_width = 250, initial_height = 25;
+			int initial_width = 250, initial_height = 250;
 
 			#region Request Initial Window Size from Frontend
 			{
@@ -250,6 +251,31 @@ namespace yomigaeri_backend
 
 				MessageBox.Show(err, Resources.E_InitErrorTitle,
 					MessageBoxButtons.OK, MessageBoxIcon.Error);
+			}
+			#endregion
+
+			string download_temp_directory = null;
+
+			#region Create Download Temp Dir
+			try
+			{
+				download_temp_directory = Settings.Get("Downloads", "DownloadTempDir");
+
+				if (!Directory.Exists(download_temp_directory))
+					Directory.CreateDirectory(download_temp_directory);
+
+			} catch (Exception e)
+			{
+				string err = string.Format(CultureInfo.CurrentUICulture,
+					Resources.E_InitErrorDownloadTempDir,
+					download_temp_directory, e.Message);
+
+				Logging.WriteLineToLog("Main: Error creating temporary directory \"{0}\" for downloads: {1}", 
+					download_temp_directory, e);
+
+				MessageBox.Show(err, Resources.E_InitErrorTitle,
+					MessageBoxButtons.OK, MessageBoxIcon.Error);
+
 			}
 			#endregion
 

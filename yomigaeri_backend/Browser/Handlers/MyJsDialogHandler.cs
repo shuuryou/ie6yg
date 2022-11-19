@@ -3,7 +3,7 @@ using System;
 
 namespace yomigaeri_backend.Browser.Handlers
 {
-	internal class MyJsDialogHandler : CefSharp.Handler.JsDialogHandler
+	internal sealed class MyJsDialogHandler : CefSharp.Handler.JsDialogHandler
 	{
 		private readonly SynchronizerState m_SyncState;
 		private readonly Action m_SyncProc;

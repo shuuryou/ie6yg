@@ -5,6 +5,7 @@ using System.IO;
 using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading;
+using yomigaeri_shared;
 
 namespace yomigaeri_backend
 {

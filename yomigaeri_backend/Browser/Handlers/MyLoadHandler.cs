@@ -1,14 +1,13 @@
 ﻿using CefSharp;
-using CefSharp.DevTools;
-using CefSharp.DevTools.Page;
 using System;
 using System.Globalization;
 using System.Web;
+using yomigaeri_shared;
 using static yomigaeri_backend.Browser.SynchronizerState;
 
 namespace yomigaeri_backend.Browser.Handlers
 {
-	internal class MyLoadHandler : CefSharp.Handler.LoadHandler
+	internal sealed class MyLoadHandler : CefSharp.Handler.LoadHandler
 	{
 		private const string SEARCH_URL_DEFAULT = "https://www.startpage.com/sp/search?query=%s";
 
@@ -84,9 +83,7 @@ namespace yomigaeri_backend.Browser.Handlers
 			}
 
 			{
-				string search_url = Program.Settings.Get("IE6YG", "ErrorPageSearchURL");
-				if (string.IsNullOrEmpty(search_url))
-					search_url = SEARCH_URL_DEFAULT;
+				string search_url = Program.Settings.Get("ErrorPage", "ErrorPageSearchURL", SEARCH_URL_DEFAULT);
 
 				search_url = search_url.Replace("%s", HttpUtility.UrlEncode(loadErrorArgs.FailedUrl));
 

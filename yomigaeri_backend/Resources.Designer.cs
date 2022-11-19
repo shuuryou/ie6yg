@@ -192,6 +192,16 @@ namespace yomigaeri_backend {
         }
         
         /// <summary>
+        ///   Looks up a localized string similar to Could not create temporary directory for downloads &quot;{0}&quot;:
+        ///{1}.
+        /// </summary>
+        internal static string E_InitErrorDownloadTempDir {
+            get {
+                return ResourceManager.GetString("E_InitErrorDownloadTempDir", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Looks up a localized string similar to Sorry, the backend is meant to be used via Remote Desktop only..
         /// </summary>
         internal static string E_InitErrorNotTerminalSession {

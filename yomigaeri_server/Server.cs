@@ -18,6 +18,13 @@ namespace yomigaeri_server
 
 		private readonly CancellationTokenSource m_Cancel;
 
+		private enum ReplyDownloadResult
+		{
+			DownloadSuccess = 0,
+			ReplyWithFailure = 1,
+			Bail = 2
+		}
+
 		public Server(IPAddress listenAddr, int listenPort, string contentDir)
 		{
 			if (listenAddr == null)
@@ -46,7 +53,14 @@ namespace yomigaeri_server
 			m_HttpServer.Start(HTTP_SERVER_MAX_BACKLOG);
 			m_HttpServerThread.Start(m_Cancel.Token);
 
+#if DEBUG
 			m_HttpServerThread.Join();
+#endif
+		}
+
+		public void Terminate()
+		{
+			m_Cancel.Cancel();
 		}
 
 		private void HttpServerMain(object cancelToken)
@@ -83,7 +97,7 @@ namespace yomigaeri_server
 
 			if (token.IsCancellationRequested)
 			{
-				Logging.WriteLineToLog("HTTP server main thread exiting cleanly.");
+				Logging.WriteLineToLog("HttpServerMain: HTTP server main thread exiting cleanly.");
 				return;
 			}
 
@@ -134,10 +148,20 @@ namespace yomigaeri_server
 
 					if (parts[1].StartsWith("/dl/", StringComparison.Ordinal))
 					{
-						if (ReplyDownload(parts[1], sw))
-							goto done;
-						else
-							goto servererror;
+						ReplyDownloadResult result = ReplyDownload(parts[1], sw);
+
+						switch (result)
+						{
+							case ReplyDownloadResult.DownloadSuccess:
+								// Everything went well
+								goto done;
+							case ReplyDownloadResult.Bail:
+								// Socket error during download (client vanished/cancelled download)
+								goto bail;
+							case ReplyDownloadResult.ReplyWithFailure:
+								// Bad request from the client or bad data from the backend
+								goto servererror;
+						}
 					}
 
 					// Arbitrary files. Dangerous. :-(
@@ -195,8 +219,9 @@ namespace yomigaeri_server
 				done:
 					ns.Flush();
 					client.Close();
-					return;
 
+				bail:
+					;
 				}
 			}
 			catch (Exception e)
@@ -207,7 +232,7 @@ namespace yomigaeri_server
 			Logging.WriteLineToLog("HttpAnswerConnection: End processing connection from {0}.", client_addr);
 		}
 
-		private bool ReplyDownload(string url, StreamWriter output)
+		private ReplyDownloadResult ReplyDownload(string url, StreamWriter output)
 		{
 			string random_id = url.Substring(4);
 
@@ -220,7 +245,7 @@ namespace yomigaeri_server
 			if (!File.Exists(download_meta))
 			{
 				Logging.WriteLineToLog("ReplyDownload: Download ID {0}: download meta not found.", random_id);
-				return false;
+				return ReplyDownloadResult.ReplyWithFailure;
 			}
 
 			IniFileReader reader = new IniFileReader(download_meta);
@@ -233,6 +258,8 @@ namespace yomigaeri_server
 			 * "Download", "URL", downloadItem.Url
 			 * "Download", "SuggestedFileName", downloadItem.SuggestedFileName
 			 * "Download", "LocalFile", download_file
+			 * 
+			 * Not all of them are used (yet) below.
 			 */
 
 			string download_file = reader.Get("Download", "LocalFile");
@@ -240,7 +267,7 @@ namespace yomigaeri_server
 			if (!File.Exists(download_file))
 			{
 				Logging.WriteLineToLog("ReplyDownload: Download ID {0}: download file not found.", random_id);
-				return false;
+				return ReplyDownloadResult.ReplyWithFailure;
 			}
 
 			long total_bytes;
@@ -252,7 +279,7 @@ namespace yomigaeri_server
 				if (!flag)
 				{
 					Logging.WriteLineToLog("ReplyDownload: Download ID {0}: Could not get file size of download.", random_id);
-					return false;
+					return ReplyDownloadResult.ReplyWithFailure;
 				}
 			}
 
@@ -261,7 +288,14 @@ namespace yomigaeri_server
 			string suggested_file_name = reader.Get("Download", "SuggestedFileName");
 
 			if (string.IsNullOrEmpty(content_disposition))
-				content_disposition = string.Format(CultureInfo.InvariantCulture, "attachment; filename=\"{0}\"", suggested_file_name);
+			{
+				if (string.IsNullOrEmpty(suggested_file_name))
+					content_disposition = "attachment";
+				else
+					content_disposition = string.Format(CultureInfo.InvariantCulture, "attachment; filename=\"{0}\"", suggested_file_name);
+			}
+
+			// From here we're finished with all preparations.
 
 			output.WriteLine("HTTP/1.0 200 OK");
 			output.WriteLine(string.Format(CultureInfo.InvariantCulture, "Content-Type: {0}", mime_type));
@@ -305,7 +339,21 @@ namespace yomigaeri_server
 
 					if (read > 0)
 					{
-						output.BaseStream.Write(buf, 0, read);
+						try
+						{
+							output.BaseStream.Write(buf, 0, read);
+						} catch (IOException)
+						{
+							// Client probably vanished (download cancelled).
+
+							// This should make the backend cancel the download
+							// and delete download_file.
+
+							File.Delete(download_meta);
+
+							return ReplyDownloadResult.Bail;
+						}
+
 						copied_bytes += read;
 						bail = 0;
 					}
@@ -317,14 +365,18 @@ namespace yomigaeri_server
 						Thread.Sleep(500);
 						bail++;
 
-						if (bail > short.MaxValue)
+						if (bail == short.MaxValue)
 						{
+							// Something is very wrong.
+
 							Logging.WriteLineToLog("ReplyDownload: Breaking out of infinite loop.");
 
-							// Can't return false, because that would cause the
-							// a HTTP status error to be barfed onto the end of
-							// whatever was downloaded so far.
-							return true;
+							// This should make the backend cancel the download
+							// and delete download_file.
+
+							File.Delete(download_meta);
+
+							return ReplyDownloadResult.Bail;
 						}
 					}
 
@@ -334,11 +386,20 @@ namespace yomigaeri_server
 					// MyDownloadHandler.cs about this poor man's IPC.
 
 					if (total_bytes != 0 && copied_bytes == total_bytes)
-						return true;
+						break;
 					else if (total_bytes == 0 && !File.Exists(download_meta))
-						return true;
+						break;
 				}
 			}
+
+			output.BaseStream.Flush();
+
+			// If we get here it means the download completed successfully.
+
+			File.Delete(download_meta);
+			File.Delete(download_file);
+
+			return ReplyDownloadResult.DownloadSuccess;
 		}
 
 		private void ReplyRequest(int response_code, string response_name, StreamWriter output, string content = null)
@@ -362,20 +423,6 @@ namespace yomigaeri_server
 				output.Write(content);
 
 			output.Flush();
-		}
-		private class WebClientEx : WebClient
-		{
-			public CookieContainer CookieContainer { get; set; } = new CookieContainer();
-
-			protected override WebRequest GetWebRequest(Uri uri)
-			{
-				WebRequest request = base.GetWebRequest(uri);
-				if (request is HttpWebRequest)
-				{
-					(request as HttpWebRequest).CookieContainer = CookieContainer;
-				}
-				return request;
-			}
 		}
 	}
 }

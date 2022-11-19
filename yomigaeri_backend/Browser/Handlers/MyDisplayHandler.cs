@@ -2,10 +2,11 @@
 using CefSharp.Enums;
 using CefSharp.Structs;
 using System;
+using yomigaeri_shared;
 
 namespace yomigaeri_backend.Browser.Handlers
 {
-	internal class MyDisplayHandler : CefSharp.Handler.DisplayHandler
+	internal sealed class MyDisplayHandler : CefSharp.Handler.DisplayHandler
 	{
 		private readonly SynchronizerState m_SyncState;
 		private readonly Action m_SyncProc;

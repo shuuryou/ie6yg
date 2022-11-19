@@ -152,6 +152,10 @@
     <value>Could not open the virtual channel to the frontend:
 {0}</value>
   </data>
+  <data name="E_InitErrorDownloadTempDir" xml:space="preserve">
+    <value>Could not create temporary directory for downloads "{0}":
+{1}</value>
+  </data>
   <data name="E_InitErrorNotTerminalSession" xml:space="preserve">
     <value>Sorry, the backend is meant to be used via Remote Desktop only.</value>
   </data>

@@ -248,7 +248,7 @@ Public Sub FixStatusBar()
     cxProgressBar = 100
 
   Dim nSBWidth As Integer
-    nSBWidth = rc.right - rc.left
+    nSBWidth = rc.Right - rc.Left
 
   Dim arnRtEdge(STATUSBAR_PANES) As Long
     arnRtEdge(0) = 1
@@ -296,7 +296,7 @@ Public Sub FixStatusBar()
     If SendMessage(m_hWndStatusBar, SB_GETRECT, 1, rc) <> 0 Then
         InflateRect rc, -1 * GetSystemMetrics(SM_CXEDGE), -1 * GetSystemMetrics(SM_CYEDGE)
       Else
-        rc.left = rc.top = rc.right = rc.bottom = 0
+        rc.Left = rc.Top = rc.Right = rc.Bottom = 0
     End If
 
     SendMessage m_hWndStatusBar, SB_SETICON + SB_IE6YG_SHIFT, StatusBarPanes.Navigation, ByVal m_hIconWebpage
@@ -308,8 +308,8 @@ Public Sub FixStatusBar()
     SendMessage m_hWndStatusBar, SB_SETTEXTA + SB_IE6YG_SHIFT, StatusBarPanes.Zone, m_EngineText(0)
 
     SetWindowPos m_hWndProgressBar, 0&, _
-                 rc.left, rc.top, _
-                 rc.right - rc.left, rc.bottom - rc.top, _
+                 rc.Left, rc.Top, _
+                 rc.Right - rc.Left, rc.Bottom - rc.Top, _
                  SWP_NOZORDER Or SWP_NOACTIVATE Or SWP_SHOWWINDOW
 
     SendMessage m_hWndProgressBar, PBM_SETRANGE, 0&, ByVal MAKELPARAM(0, 100)
@@ -391,7 +391,10 @@ Public Property Let ProgressBarValue(ByVal newValue As Integer)
         Exit Property
     End If
 
-    FixStatusBar ' TODO: Why is this needed for it to work?
+    ' TODO: Why is this needed for it to work?
+    If Not m_IsStatusBarCurrentlySimple Then
+        FixStatusBar
+    End If
 
     SendMessage m_hWndProgressBar, PBM_SETPOS, newValue, 0&
 
@@ -502,5 +505,5 @@ Private Function ZoneComputePaneSize() As Long
 
 End Function
 
-':) Ulli's VB Code Formatter V2.24.17 (2022-Nov-18 00:20)  Decl: 74  Code: 417  Total: 491 Lines
-':) CommentOnly: 25 (5.1%)  Commented: 14 (2.9%)  Filled: 340 (69.2%)  Empty: 151 (30.8%)  Max Logic Depth: 3
+':) Ulli's VB Code Formatter V2.24.17 (2022-Nov-18 16:14)  Decl: 74  Code: 420  Total: 494 Lines
+':) CommentOnly: 26 (5.3%)  Commented: 13 (2.6%)  Filled: 343 (69.4%)  Empty: 151 (30.6%)  Max Logic Depth: 3

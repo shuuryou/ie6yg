@@ -19,6 +19,7 @@ namespace yomigaeri_backend.Browser
 			this.components = new System.ComponentModel.Container();
 			System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(BrowserForm));
 			this.VirtualChannelTimer = new System.Windows.Forms.Timer(this.components);
+			this.ExitTimer = new System.Windows.Forms.Timer(this.components);
 			this.SuspendLayout();
 			// 
 			// VirtualChannelTimer
@@ -26,6 +27,11 @@ namespace yomigaeri_backend.Browser
 			this.VirtualChannelTimer.Enabled = true;
 			this.VirtualChannelTimer.Interval = 500;
 			this.VirtualChannelTimer.Tick += new System.EventHandler(this.VirtualChannelTimer_Tick);
+			// 
+			// ExitTimer
+			// 
+			this.ExitTimer.Interval = 5000;
+			this.ExitTimer.Tick += new System.EventHandler(this.ExitTimer_Tick);
 			// 
 			// BrowserForm
 			// 
@@ -50,5 +56,6 @@ namespace yomigaeri_backend.Browser
 		#endregion
 
 		private System.Windows.Forms.Timer VirtualChannelTimer;
+		private System.Windows.Forms.Timer ExitTimer;
 	}
 }

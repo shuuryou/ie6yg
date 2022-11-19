@@ -1,11 +1,12 @@
 ﻿using System;
 using System.Collections;
+using System.Globalization;
 
 namespace yomigaeri_backend.Browser
 {
 	internal class SynchronizerState
 	{
-		private const int CHANGE_ITEMS = 16;
+		private const int CHANGE_ITEMS = 17;
 
 		private readonly BitArray m_Changes = new BitArray(CHANGE_ITEMS);
 
@@ -30,8 +31,9 @@ namespace yomigaeri_backend.Browser
 			CertificateState = 12,
 			CertificateData = 13,
 			CertificatePrompt = 14,
-			JSDialogPrompt = 15
-		}
+			JSDialogPrompt = 15,
+			DownloadStart = 16,
+		} // Remember to adjust the CHANGE_ITEMS constant!
 
 		public enum SSLIconState : short
 		{
@@ -119,9 +121,8 @@ namespace yomigaeri_backend.Browser
 				if (obj == null)
 					return false;
 
-				FrontendJSDialogData other = obj as FrontendJSDialogData;
 
-				if (other == null)
+				if (!(obj is FrontendJSDialogData other))
 					return false;
 
 				return (other.Type == this.Type && other.Prompt == this.Prompt && other.DefaultText == this.DefaultText);
@@ -349,6 +350,22 @@ namespace yomigaeri_backend.Browser
 				m_JSDialogPrompt = value;
 
 				m_Changes[(int)Change.JSDialogPrompt] = true;
+			}
+		}
+
+		private string m_DownloadStart;
+
+		public string DownloadStart
+		{
+			get { return m_DownloadStart; }
+			set
+			{
+				if (m_DownloadStart == value)
+					return;
+
+				m_DownloadStart = value;
+
+				m_Changes[(int)Change.DownloadStart] = true;
 			}
 		}
 		#endregion

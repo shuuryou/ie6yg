@@ -3,7 +3,11 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 16
 VisualStudioVersion = 16.0.32929.386
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "YOMIGAERIBE", "YOMIGAERIBE.csproj", "{BDE3F443-CC00-4B96-9E30-89580386A1D2}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "YGBACKEND", "YGBACKEND.csproj", "{BDE3F443-CC00-4B96-9E30-89580386A1D2}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "YGSHARED", "..\yomigarei_shared\YGSHARED.csproj", "{B9BCEB27-082A-46C8-9015-25D6C2BDC4F2}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "YGSERVER", "..\yomigaeri_server\YGSERVER.csproj", "{D474E0C5-AD74-416C-A8C1-52C6C4907C50}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -14,6 +18,13 @@ Global
 		{BDE3F443-CC00-4B96-9E30-89580386A1D2}.Debug|x86.ActiveCfg = Debug|x86
 		{BDE3F443-CC00-4B96-9E30-89580386A1D2}.Debug|x86.Build.0 = Debug|x86
 		{BDE3F443-CC00-4B96-9E30-89580386A1D2}.Release|x86.ActiveCfg = Release|x86
+		{BDE3F443-CC00-4B96-9E30-89580386A1D2}.Release|x86.Build.0 = Release|x86
+		{B9BCEB27-082A-46C8-9015-25D6C2BDC4F2}.Debug|x86.ActiveCfg = Debug|x86
+		{B9BCEB27-082A-46C8-9015-25D6C2BDC4F2}.Debug|x86.Build.0 = Debug|x86
+		{B9BCEB27-082A-46C8-9015-25D6C2BDC4F2}.Release|x86.ActiveCfg = Release|x86
+		{D474E0C5-AD74-416C-A8C1-52C6C4907C50}.Debug|x86.ActiveCfg = Debug|x86
+		{D474E0C5-AD74-416C-A8C1-52C6C4907C50}.Debug|x86.Build.0 = Debug|x86
+		{D474E0C5-AD74-416C-A8C1-52C6C4907C50}.Release|x86.ActiveCfg = Release|x86
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
