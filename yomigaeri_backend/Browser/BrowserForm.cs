@@ -86,6 +86,7 @@ namespace yomigaeri_backend.Browser
 				SystemEvents.SessionSwitch -= SystemEvents_SessionSwitch;
 				Program.WebBrowser.StatusMessage -= WebBrowser_StatusMessage;
 				Program.WebBrowser.IsBrowserInitializedChanged -= WebBrowser_IsBrowserInitializedChanged;
+				((MyDownloadHandler)Program.WebBrowser.DownloadHandler).AllDownloadsCompleted -= DownloadHandler_AllDownloadsCompleted;
 
 				components.Dispose();
 				Program.WebBrowser.Dispose();
@@ -123,7 +124,7 @@ namespace yomigaeri_backend.Browser
 
 		private void SystemEvents_SessionSwitch(object sender, SessionSwitchEventArgs e)
 		{
-			Logging.WriteLineToLog("BrowserForm: SystemEvents_SessionSwitch: Reason: {0}", e.Reason);
+			Logging.WriteLineToLog("BrowserForm: SystemEvents_SessionSwitch: {0}", e.Reason);
 
 			switch (e.Reason)
 			{
@@ -137,18 +138,29 @@ namespace yomigaeri_backend.Browser
 					// exiting once there are none left.
 
 					if (((MyDownloadHandler)Program.WebBrowser.DownloadHandler).DownloadsInProgress)
+					{
+						Logging.WriteLineToLog("BrowserForm: SystemEvents_SessionSwitch: Downloads in progress. Don't exit, set exit flag.");
 						m_ExitAfterDownload = true;
+					}
 					else
+					{
+						Logging.WriteLineToLog("BrowserForm: SystemEvents_SessionSwitch: Exit immediately.");
 						Application.Exit();
-
-					return;
+					}
+					break;
 			}
 		}
 
 		private void DownloadHandler_AllDownloadsCompleted(object sender, EventArgs e)
 		{
+			Logging.WriteLineToLog("BrowserForm: DownloadHandler_AllDownloadsCompleted: All downloads completed.");
+
 			if (m_ExitAfterDownload)
+			{
+				Logging.WriteLineToLog("BrowserForm: DownloadHandler_AllDownloadsCompleted: Exit because exit flag is set.");
 				Application.Exit();
+			}
+				
 		}
 
 		private void VirtualChannelTimer_Tick(object sender, EventArgs e)
@@ -183,17 +195,6 @@ namespace yomigaeri_backend.Browser
 			Logging.WriteLineToLog("BrowserForm: VirtualChannelTimer: Get message: \"{0}\"", message);
 
 			ProcessMessage(message);
-		}
-
-		private void ExitTimer_Tick(object sender, EventArgs e)
-		{
-			// TODO This is not the nicest way but it works until something better comes along.
-
-			if (!((MyDownloadHandler)Program.WebBrowser.DownloadHandler).DownloadsInProgress)
-			{
-				ExitTimer.Enabled = false;
-				Application.Exit();
-			}
 		}
 
 		private void SynchronizeWithFrontend()

@@ -226,7 +226,7 @@
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <PropertyGroup>
-    <PostBuildEvent>xcopy /E /Y "$(TargetDir)." "D:\VMs\Windows 10 LTSC\shared\"</PostBuildEvent>
+    <PostBuildEvent>xcopy /I /E /Y "$(TargetDir)." "D:\VMs\Windows 10 LTSC\shared\"</PostBuildEvent>
   </PropertyGroup>
   <Target Name="EnsureNuGetPackageBuildImports" BeforeTargets="PrepareForBuild">
     <PropertyGroup>

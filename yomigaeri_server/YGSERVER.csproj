@@ -92,4 +92,7 @@
     </None>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
+  <PropertyGroup>
+    <PostBuildEvent>xcopy /I /E /Y "$(TargetDir)." "D:\VMs\Windows 10 LTSC\shared\server\"</PostBuildEvent>
+  </PropertyGroup>
 </Project>
