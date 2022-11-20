@@ -59,6 +59,7 @@
     <Reference Include="System.ServiceProcess" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="ApacheMimeTypes.cs" />
     <Compile Include="Server.cs" />
     <Compile Include="YGSERVICE.cs">
       <SubType>Component</SubType>

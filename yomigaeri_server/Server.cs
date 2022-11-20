@@ -81,13 +81,12 @@ namespace yomigaeri_server
 			}
 			catch (SocketException e)
 			{
-
 				if ((e.SocketErrorCode == SocketError.Interrupted))
 				{
-					Logging.WriteLineToLog("HttpServerMain: HTTP socket shut down.", e.ToString());
+					Logging.WriteLineToLog("HttpServerMain: HTTP socket shut down.", e);
 				}
 
-				Logging.WriteLineToLog("HttpServerMain: HTTP server socket error: {0}", e.ToString());
+				Logging.WriteLineToLog("HttpServerMain: HTTP server socket error: {0}", e);
 			}
 			catch (ThreadAbortException)
 			{
@@ -114,7 +113,7 @@ namespace yomigaeri_server
 
 			IPAddress client_addr = ((IPEndPoint)client.Client.RemoteEndPoint).Address;
 
-			Logging.WriteLineToLog("HttpAnswerConnection: Start processing connection from {0}.", client_addr);
+			Logging.WriteLineToLog("HttpAnswerConnection: Start processing connection from {0}", client_addr);
 
 			try
 			{
@@ -122,33 +121,34 @@ namespace yomigaeri_server
 				using (StreamReader sr = new StreamReader(ns))
 				using (StreamWriter sw = new StreamWriter(ns))
 				{
-					string request = sr.ReadLine();
+					string request_uri;
 
-					// Deal with the other end hanging up the phone without
-					// talking.
-					if (string.IsNullOrEmpty(request))
-						return;
-
-					string[] parts = request.Split(' ');
-
-					while (!string.IsNullOrEmpty(request))
 					{
-						// Skip the other crap. I'm not going to implement the
-						// entire HTTP specification or create the next nginx
-						// just for this project.
-						request = sr.ReadLine();
+						string header = sr.ReadLine();
+
+						if (string.IsNullOrEmpty(header))
+							return; // Browser vanished without sending headers
+
+						if (!header.StartsWith("GET ", StringComparison.Ordinal))
+							goto badrequest;
+
+						int idx = header.LastIndexOf(' ');
+
+						if (idx == -1)
+							request_uri = header.Substring(4);
+						else
+							request_uri = header.Substring(4, idx - 4);
+
+						while (!string.IsNullOrEmpty(header))
+						{
+							// Skip any other headers that the browser sends
+							header = sr.ReadLine();
+						}
 					}
 
-					if (parts.Length != 3 || parts[0] != "GET" || !parts[2].StartsWith("HTTP/1", StringComparison.Ordinal))
+					if (request_uri.StartsWith("/dl/", StringComparison.Ordinal))
 					{
-						Logging.WriteLineToLog("HttpAnswerConnection: Respond with 401 Bad Request for request: {0}", request);
-						ReplyRequest(401, "Bad Request", sw);
-						goto done;
-					}
-
-					if (parts[1].StartsWith("/dl/", StringComparison.Ordinal))
-					{
-						ReplyDownloadResult result = ReplyDownload(parts[1], sw);
+						ReplyDownloadResult result = ReplyDownload(request_uri, sw);
 
 						switch (result)
 						{
@@ -159,15 +159,15 @@ namespace yomigaeri_server
 								// Socket error during download (client vanished/cancelled download)
 								goto bail;
 							case ReplyDownloadResult.ReplyWithFailure:
-								// Bad request from the client or bad data from the backend
+								// Bad random_id from the client or bad data from the backend
 								goto servererror;
 						}
 					}
 
 					// Arbitrary files. Dangerous. :-(
 
-					if (parts[1] == "/")
-						parts[1] = "/index.html";
+					if (string.IsNullOrWhiteSpace(request_uri) || request_uri == "/")
+						request_uri = "/index.html";
 
 					/* DANGER DANGER DANGER
 					 * 
@@ -185,33 +185,42 @@ namespace yomigaeri_server
 					 * *sigh*
 					 */
 
-					string file = m_ContentDir + Path.DirectorySeparatorChar + parts[1];
-					file = Path.GetFullPath(file);
+					string request_file = m_ContentDir + Path.DirectorySeparatorChar + request_uri;
+					request_file = Path.GetFullPath(request_file);
 
 					// Prevent path traversal attacks
-					if (!file.StartsWith(m_ContentDir, StringComparison.OrdinalIgnoreCase))
+					if (!request_file.StartsWith(m_ContentDir, StringComparison.OrdinalIgnoreCase))
 					{
-						Logging.WriteLineToLog("HttpAnswerConnection: Path traversal attack blocked for request: {0}", request);
+						Logging.WriteLineToLog("HttpAnswerConnection: Path traversal attack blocked for {0}",
+							client_addr);
+
 						goto notfound;
 					}
 
-					if (!File.Exists(file))
+					if (!File.Exists(request_file))
 					{
-						Logging.WriteLineToLog("HttpAnswerConnection: Cannot find file \"{0}\" on disk for request: {1}", file, request);
+						Logging.WriteLineToLog("HttpAnswerConnection: Cannot find file \"{0}\" on disk for {1}",
+							request_file, client_addr);
+
 						goto notfound;
 					}
 
-					ReplyRequest(200, "OK", sw, File.ReadAllText(file));
+					ReplyRequest(200, "OK", sw, request_file);
+					goto done;
+
+				badrequest:
+					Logging.WriteLineToLog("HttpAnswerConnection: Respond with 401 Bad Request for {0}", client_addr);
+					ReplyRequest(401, "Bad Request", sw);
 					goto done;
 
 				notfound:
-					Logging.WriteLineToLog("HttpAnswerConnection: Respond with 404 Not Found for request: {0}", request);
+					Logging.WriteLineToLog("HttpAnswerConnection: Respond with 404 Not Found for {0}", client_addr);
 
 					ReplyRequest(404, "Not Found", sw);
 					goto done;
 
 				servererror:
-					Logging.WriteLineToLog("HttpAnswerConnection: Respond with 500 Internal Server Error for request: {0}", request);
+					Logging.WriteLineToLog("HttpAnswerConnection: Respond with 500 Internal Server Error for {0}", client_addr);
 
 					ReplyRequest(500, "Internal Server Error", sw);
 					goto done;
@@ -226,10 +235,10 @@ namespace yomigaeri_server
 			}
 			catch (Exception e)
 			{
-				Logging.WriteLineToLog("HttpAnswerConnection: Error processing connection: {0}", e);
+				Logging.WriteLineToLog("HttpAnswerConnection: Error processing connection for {0}: {1}", client_addr, e);
 			}
 
-			Logging.WriteLineToLog("HttpAnswerConnection: End processing connection from {0}.", client_addr);
+			Logging.WriteLineToLog("HttpAnswerConnection: End processing connection for {0}", client_addr);
 		}
 
 		private ReplyDownloadResult ReplyDownload(string url, StreamWriter output)
@@ -295,7 +304,9 @@ namespace yomigaeri_server
 					content_disposition = string.Format(CultureInfo.InvariantCulture, "attachment; filename=\"{0}\"", suggested_file_name);
 			}
 
-			// From here we're finished with all preparations.
+			/*
+			 * Finished with all of the preparations, so send headers.
+			 */
 
 			output.WriteLine("HTTP/1.0 200 OK");
 			output.WriteLine(string.Format(CultureInfo.InvariantCulture, "Content-Type: {0}", mime_type));
@@ -310,7 +321,14 @@ namespace yomigaeri_server
 			output.WriteLine();
 			output.Flush();
 
-			// From here, no longer use StreamWriter; only use its BaseStream.
+			/*
+			 * Send the actual binary file contents next.
+			 */
+
+			// If unable to write to the downloading browser for 30 seconds,
+			// will throw an IOException and in the loop below and cause the
+			// method to bail.
+			output.BaseStream.WriteTimeout = 30000;
 
 			short bail = 0;
 
@@ -323,7 +341,7 @@ namespace yomigaeri_server
 				byte[] buf = new byte[8192];
 				int read;
 
-				// This needs to be an infinite loop rather than Stream.CopyTo
+				// Next needs to be an infinite loop rather than Stream.CopyTo
 				// or whatever other cool way you normally use with streams,
 				// because here we are reading a file that Chromium is still
 				// actively writing to. The file is still growing while being
@@ -342,12 +360,14 @@ namespace yomigaeri_server
 						try
 						{
 							output.BaseStream.Write(buf, 0, read);
-						} catch (IOException)
+						}
+						catch (IOException)
 						{
-							// Client probably vanished (download cancelled).
+							// Client probably vanished (download cancelled),
+							// or timeout writing to client (DOS attack?)
 
-							// This should make the backend cancel the download
-							// and delete download_file.
+							// Deleting download_meta should make the backend
+							// cancel the download and delete download_file.
 
 							File.Delete(download_meta);
 
@@ -363,16 +383,16 @@ namespace yomigaeri_server
 						// download file.
 
 						Thread.Sleep(500);
-						bail++;
 
-						if (bail == short.MaxValue)
+						if (++bail == 600)
 						{
-							// Something is very wrong.
+							// Something is wrong if there is no data arriving
+							// in download_file within 5 minutes.
 
 							Logging.WriteLineToLog("ReplyDownload: Breaking out of infinite loop.");
 
-							// This should make the backend cancel the download
-							// and delete download_file.
+							// Deleting download_meta should make the backend
+							// cancel the download and delete download_file.
 
 							File.Delete(download_meta);
 
@@ -380,21 +400,29 @@ namespace yomigaeri_server
 						}
 					}
 
-					// The first check is obvious. If the size of the download 
-					// isn't known, the backend will delete the meta file once
-					// it thinks the download is compete. See the comments in
-					// MyDownloadHandler.cs about this poor man's IPC.
-
 					if (total_bytes != 0 && copied_bytes == total_bytes)
+					{
+						// This will handle the majority of the cases.
+
 						break;
+					}
 					else if (total_bytes == 0 && !File.Exists(download_meta))
+					{
+						// If the size of the download isn't known, the backend
+						// will delete the meta file once the download is done.
+						// See the comments in MyDownloadHandler.cs about this
+						// poor man's IPC.
+
 						break;
+					}
 				}
 			}
 
-			output.BaseStream.Flush();
+			/*
+			 * Getting here means the download completed successfully.
+			 */
 
-			// If we get here it means the download completed successfully.
+			output.BaseStream.Flush();
 
 			File.Delete(download_meta);
 			File.Delete(download_file);
@@ -402,27 +430,55 @@ namespace yomigaeri_server
 			return ReplyDownloadResult.DownloadSuccess;
 		}
 
-		private void ReplyRequest(int response_code, string response_name, StreamWriter output, string content = null)
+		private void ReplyRequest(int response_code, string response_name, StreamWriter output)
 		{
 			output.WriteLine(string.Format(CultureInfo.InvariantCulture, "HTTP/1.0 {0} {1}", response_code, response_name));
 			output.WriteLine("Content-Type: text/html");
-
-			if (content == null)
-				output.WriteLine(string.Format(CultureInfo.InvariantCulture, "Content-Length: {0}", response_name.Length));
-			else
-				output.WriteLine(string.Format(CultureInfo.InvariantCulture, "Content-Length: {0}", content.Length));
+			output.WriteLine(string.Format(CultureInfo.InvariantCulture, "Content-Length: {0}", response_name.Length));
 
 			output.WriteLine(string.Format(CultureInfo.InvariantCulture, "Date: {0:R}", DateTime.Now));
 			output.WriteLine("Server: IE6YG Minimal HTTP Server");
 			output.WriteLine("Connection: Close");
 			output.WriteLine();
 
-			if (content == null)
-				output.Write(response_name);
-			else
-				output.Write(content);
+			output.Write(response_name);
 
 			output.Flush();
+		}
+
+		private void ReplyRequest(int response_code, string response_name, StreamWriter output, string content_file)
+		{
+			using (FileStream fs = File.OpenRead(content_file))
+			{
+				output.WriteLine(string.Format(CultureInfo.InvariantCulture, "HTTP/1.0 {0} {1}", response_code, response_name));
+				output.WriteLine(string.Format(CultureInfo.InvariantCulture, "Content-Type: {0}", GetMimeType(content_file)));
+				output.WriteLine(string.Format(CultureInfo.InvariantCulture, "Content-Length: {0}", fs.Length));
+				output.WriteLine(string.Format(CultureInfo.InvariantCulture, "Date: {0:R}", DateTime.Now));
+				output.WriteLine("Server: IE6YG Minimal HTTP Server");
+				output.WriteLine("Connection: Close");
+				output.WriteLine();
+				output.Flush();
+
+				fs.CopyTo(output.BaseStream);
+
+				output.BaseStream.Flush();
+			}
+		}
+
+		private string GetMimeType(string fileName)
+		{
+			const string MIME_TYPE_DEFAULT = "application/unknown";
+
+			string ext = Path.GetExtension(fileName).ToLower();
+
+			if (string.IsNullOrEmpty(ext))
+				return MIME_TYPE_DEFAULT;
+
+			if (ext[0] == '.')
+				ext = ext.Substring(1);
+
+			return ApacheMimeTypes.MimeTypes.ContainsKey(ext) ?
+				ApacheMimeTypes.MimeTypes[ext] : MIME_TYPE_DEFAULT;
 		}
 	}
 }
