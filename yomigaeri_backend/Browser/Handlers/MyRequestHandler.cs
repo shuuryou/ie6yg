@@ -2,7 +2,6 @@
 using System;
 using System.Security.Cryptography.X509Certificates;
 using System.Text;
-using yomigaeri_shared;
 using static yomigaeri_backend.Browser.SynchronizerState;
 
 namespace yomigaeri_backend.Browser.Handlers

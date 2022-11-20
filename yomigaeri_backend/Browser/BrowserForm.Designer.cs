@@ -40,6 +40,7 @@ namespace yomigaeri_backend.Browser
 			this.ShowInTaskbar = false;
 			this.StartPosition = System.Windows.Forms.FormStartPosition.Manual;
 			this.Text = "IE6YG Browser Window";
+			this.FormClosing += new System.Windows.Forms.FormClosingEventHandler(this.BrowserForm_FormClosing);
 			this.Shown += new System.EventHandler(this.BrowserForm_Shown);
 			this.ResizeBegin += new System.EventHandler(this.BrowserForm_ResizeBegin);
 			this.ResizeEnd += new System.EventHandler(this.BrowserForm_ResizeEnd);

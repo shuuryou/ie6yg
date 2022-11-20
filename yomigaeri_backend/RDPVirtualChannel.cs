@@ -86,6 +86,8 @@ namespace yomigaeri_backend
 
 			bool ok = WTSVirtualChannelClose(s_hChannel);
 
+			s_hChannel = IntPtr.Zero;
+
 			if (!ok)
 				throw new Win32Exception();
 		}
@@ -94,6 +96,12 @@ namespace yomigaeri_backend
 		{
 			s_hChannel = IntPtr.Zero;
 		}
+
+		public static bool IsOpen
+		{
+			get { return s_hChannel != IntPtr.Zero; }
+		}
+
 
 		public static string ReadUntilResponse(int timeout = 5)
 		{
@@ -169,7 +177,17 @@ namespace yomigaeri_backend
 			}
 
 			if (!ok)
-				throw new Win32Exception();
+			{
+				Win32Exception e = new Win32Exception();
+
+				if (e.ErrorCode == unchecked((int)0x80004005))
+				{
+					Logging.WriteLineToLog("RDPVirtualChannel: Write: Client vanished. No process is at the other end of the pipe.");
+					return;
+				}
+				
+				throw e;
+			}
 
 			if (written != buf.Length)
 				throw new IOException(string.Format(CultureInfo.InvariantCulture,

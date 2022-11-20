@@ -23,7 +23,7 @@ namespace yomigaeri_shared
 				throw new ArgumentException("Prefix is invalid");
 
 			LogFile = TempName(prefix.ToUpperInvariant());
-			s_LogWriter = new StreamWriter(LogFile, true, Encoding.UTF8);
+			s_LogWriter = new StreamWriter(LogFile, false, Encoding.UTF8);
 
 		}
 

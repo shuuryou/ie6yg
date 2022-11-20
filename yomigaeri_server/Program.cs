@@ -1,12 +1,7 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
-using System.IO.Pipes;
-using System.Linq;
 using System.Net;
-using System.ServiceProcess;
-using System.Text;
 using yomigaeri_shared;
 
 namespace yomigaeri_server
@@ -19,6 +14,8 @@ namespace yomigaeri_server
 		{
 			Logging.OpenLog("YGSERVER");
 
+			Logging.WriteBannerToLog("IE6 Yomigaeri's Server");
+
 			string ini_file_location =
 				Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "config.ini");
 
@@ -28,6 +25,7 @@ namespace yomigaeri_server
 			string server_root;
 			IPAddress server_ip;
 			int server_port;
+			string js_template;
 
 			try
 			{
@@ -36,6 +34,7 @@ namespace yomigaeri_server
 				server_ip = IPAddress.Parse(Settings.Get("Server", "IPAddress", string.Empty));
 				server_port = int.Parse(Settings.Get("Server", "Port"), NumberStyles.None, CultureInfo.InvariantCulture);
 				server_root = Settings.Get("Server", "RootDirectory");
+				js_template = Settings.Get("Server", "JavascriptTemplate");
 			}
 			catch (Exception e)
 			{
@@ -45,11 +44,13 @@ namespace yomigaeri_server
 
 			Logging.WriteLineToLog("Main: Settings were loaded successfully.");
 
+			// TODO: Use service instead of console app
+
 			Logging.WriteLineToLog("Main: Starting server.");
 
 			try
 			{
-				Server server = new Server(server_ip, server_port, server_root);
+				Server server = new Server(server_ip, server_port, server_root, js_template);
 
 				server.Begin();
 			} catch (Exception e)

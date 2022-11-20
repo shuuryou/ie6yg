@@ -129,9 +129,13 @@ namespace yomigaeri_backend.Browser
 			switch (e.Reason)
 			{
 				case SessionSwitchReason.SessionLogoff:
-				case SessionSwitchReason.ConsoleDisconnect:
+					Application.Exit();
+					break;
+
 				case SessionSwitchReason.RemoteDisconnect:
+				case SessionSwitchReason.ConsoleDisconnect:
 					VirtualChannelTimer.Enabled = false;
+					RDPVirtualChannel.Close();
 
 					// Only exit here if there are no downloads running. If there
 					// are active downloads, the event handler will take care of
@@ -203,224 +207,234 @@ namespace yomigaeri_backend.Browser
 			// seven letter long commands; they could be longer. It just
 			// emerged as a pattern and now it's here to stay like that.
 
-			#region Visible
-			if (m_SyncState.IsChanged(SynchronizerState.Change.Visible))
+			lock (m_SyncState)
 			{
-				if (m_SyncState.Visible)
-					RDPVirtualChannel.Write("VISIBLE TRUE");
-				else
-					RDPVirtualChannel.Write("VISIBLE FALSE");
-			}
-			#endregion
-
-			#region Toolbar
-			if (m_SyncState.IsChanged(SynchronizerState.Change.Toolbar))
-			{
-				RDPVirtualChannel.Write(string.Format(CultureInfo.InvariantCulture, "TOOLBAR {0} {1}", "BACK",
-					m_SyncState.ToolbarButtons.HasFlag(SynchronizerState.FrontendToolbarButtons.Back) ? "TRUE" : "FALSE"));
-
-				RDPVirtualChannel.Write(string.Format(CultureInfo.InvariantCulture, "TOOLBAR {0} {1}", "FORWARD",
-					m_SyncState.ToolbarButtons.HasFlag(SynchronizerState.FrontendToolbarButtons.Forward) ? "TRUE" : "FALSE"));
-
-				RDPVirtualChannel.Write(string.Format(CultureInfo.InvariantCulture, "TOOLBAR {0} {1}", "HOME",
-					m_SyncState.ToolbarButtons.HasFlag(SynchronizerState.FrontendToolbarButtons.Home) ? "TRUE" : "FALSE"));
-
-				RDPVirtualChannel.Write(string.Format(CultureInfo.InvariantCulture, "TOOLBAR {0} {1}", "MEDIA",
-					m_SyncState.ToolbarButtons.HasFlag(SynchronizerState.FrontendToolbarButtons.Media) ? "TRUE" : "FALSE"));
-
-				RDPVirtualChannel.Write(string.Format(CultureInfo.InvariantCulture, "TOOLBAR {0} {1}", "REFRESH",
-					m_SyncState.ToolbarButtons.HasFlag(SynchronizerState.FrontendToolbarButtons.Refresh) ? "TRUE" : "FALSE"));
-
-				RDPVirtualChannel.Write(string.Format(CultureInfo.InvariantCulture, "TOOLBAR {0} {1}", "STOP",
-					m_SyncState.ToolbarButtons.HasFlag(SynchronizerState.FrontendToolbarButtons.Stop) ? "TRUE" : "FALSE"));
-			}
-			#endregion
-
-			#region MenuBar
-			if (m_SyncState.IsChanged(SynchronizerState.Change.MenuBar))
-			{
-				RDPVirtualChannel.Write(string.Format(CultureInfo.InvariantCulture, "MENUSET {0} {1}", "STOP",
-					m_SyncState.MenuBarItems.HasFlag(SynchronizerState.FrontendMenuBarItems.Stop) ? "TRUE" : "FALSE"));
-
-				RDPVirtualChannel.Write(string.Format(CultureInfo.InvariantCulture, "MENUSET {0} {1}", "REFRESH",
-					m_SyncState.MenuBarItems.HasFlag(SynchronizerState.FrontendMenuBarItems.Refresh) ? "TRUE" : "FALSE"));
-
-				RDPVirtualChannel.Write(string.Format(CultureInfo.InvariantCulture, "MENUSET {0} {1}", "CUT",
-					m_SyncState.MenuBarItems.HasFlag(SynchronizerState.FrontendMenuBarItems.Cut) ? "TRUE" : "FALSE"));
-
-				RDPVirtualChannel.Write(string.Format(CultureInfo.InvariantCulture, "MENUSET {0} {1}", "COPY",
-					m_SyncState.MenuBarItems.HasFlag(SynchronizerState.FrontendMenuBarItems.Copy) ? "TRUE" : "FALSE"));
-
-				RDPVirtualChannel.Write(string.Format(CultureInfo.InvariantCulture, "MENUSET {0} {1}", "PASTE",
-					m_SyncState.MenuBarItems.HasFlag(SynchronizerState.FrontendMenuBarItems.Paste) ? "TRUE" : "FALSE"));
-			}
-			#endregion
-
-			#region AddHistoryItem
-			if (m_SyncState.IsChanged(SynchronizerState.Change.AddHistoryItem))
-			{
-				if (!string.IsNullOrEmpty(m_SyncState.Address))
-					RDPVirtualChannel.Write("ADDHIST " +
-						m_SyncState.PageTitle + '\x1' + m_SyncState.Address);
-
-				m_SyncState.AddHistoryItem = false;
-			}
-			#endregion
-
-			#region StatusProgress
-			if (m_SyncState.IsChanged(SynchronizerState.Change.StatusProgress))
-			{
-				int progress = m_SyncState.StatusProgress;
-
-				if (progress < 0)
-					progress = 0;
-
-				if (progress > 100)
-					progress = 100;
-
-				RDPVirtualChannel.Write("PROGRES " + progress.ToString(CultureInfo.InvariantCulture));
-			}
-			#endregion
-
-			#region Address
-			if (m_SyncState.IsChanged(SynchronizerState.Change.Address))
-			{
-				RDPVirtualChannel.Write("ADDRESS " + m_SyncState.Address);
-			}
-			#endregion
-
-			#region StatusText
-			if (m_SyncState.IsChanged(SynchronizerState.Change.StatusText))
-			{
-				RDPVirtualChannel.Write("STATUST " + m_SyncState.StatusText);
-			}
-			#endregion
-
-			#region PageTitle
-			if (m_SyncState.IsChanged(SynchronizerState.Change.PageTitle))
-			{
-				RDPVirtualChannel.Write("PGTITLE " + m_SyncState.PageTitle);
-			}
-			#endregion
-
-			#region TravelLog
-			if (m_SyncState.IsChanged(SynchronizerState.Change.TravelLog))
-			{
-				RDPVirtualChannel.Write("TRAVLBK " +
-					m_TravelLog.MakeMenuStringForFrontend(TravelLog.TravelDirection.Back));
-
-				RDPVirtualChannel.Write("TRAVLFW " +
-					m_TravelLog.MakeMenuStringForFrontend(TravelLog.TravelDirection.Forward));
-
-				m_SyncState.TravelLog = false;
-			}
-			#endregion
-
-			#region Cursor
-			if (m_SyncState.IsChanged(SynchronizerState.Change.Cursor))
-			{
-				RDPVirtualChannel.Write("SETCURS " + m_SyncState.Cursor);
-			}
-			#endregion
-
-			#region Tooltip
-			if (m_SyncState.IsChanged(SynchronizerState.Change.Tooltip))
-			{
-				RDPVirtualChannel.Write("TOOLTIP " + m_SyncState.Tooltip);
-			}
-			#endregion
-
-			#region SSLIcon
-			if (m_SyncState.IsChanged(SynchronizerState.Change.SSLIcon))
-			{
-				switch (m_SyncState.SSLIcon)
+				if (!RDPVirtualChannel.IsOpen)
 				{
-					case SynchronizerState.SSLIconState.None:
-						RDPVirtualChannel.Write("SSLICON OFF");
-						break;
-					case SynchronizerState.SSLIconState.Secure:
-						RDPVirtualChannel.Write("SSLICON OK");
-						break;
-					case SynchronizerState.SSLIconState.SecureBadCert:
-						RDPVirtualChannel.Write("SSLICON BAD");
-						break;
+					Logging.WriteLineToLog("BrowserForm: SynchronizeWithFrontend: RDP Virtual Channel is closed.");
+					return;
 				}
-			}
-			#endregion
 
-			#region CertificateState
-			if (m_SyncState.IsChanged(SynchronizerState.Change.CertificateState))
-			{
-				RDPVirtualChannel.Write(string.Format("CERSTAT {0}", (int)m_SyncState.CertificateState));
-			}
-			#endregion
-
-			#region CertificateData
-			if (m_SyncState.IsChanged(SynchronizerState.Change.CertificateData))
-			{
-				if (m_SyncState.CertificateData == null)
-					RDPVirtualChannel.Write("CERDATA");
-				else
-					RDPVirtualChannel.Write("CERDATA " + Convert.ToBase64String(m_SyncState.CertificateData));
-			}
-			#endregion
-
-			#region CertificatePrompt
-			if (m_SyncState.IsChanged(SynchronizerState.Change.CertificatePrompt))
-			{
-				RDPVirtualChannel.Write("CERSHOW");
-			}
-			#endregion
-
-			#region JSDialogPrompt
-			if (m_SyncState.IsChanged(SynchronizerState.Change.JSDialogPrompt) && m_SyncState.JSDialogPrompt != null)
-			{
-				switch (m_SyncState.JSDialogPrompt.Type)
+				#region Visible
+				if (m_SyncState.IsChanged(SynchronizerState.Change.Visible))
 				{
-					case SynchronizerState.FrontendJSDialogs.Alert:
-						RDPVirtualChannel.Write(string.Format(CultureInfo.InvariantCulture,
-							"JSDIALG ALERT {0}", m_SyncState.JSDialogPrompt.Prompt));
-						break;
-					case SynchronizerState.FrontendJSDialogs.Confirm:
-						RDPVirtualChannel.Write(string.Format(CultureInfo.InvariantCulture,
-							"JSDIALG CONFIRM {0}", m_SyncState.JSDialogPrompt.Prompt));
-						break;
-					case SynchronizerState.FrontendJSDialogs.Prompt:
-						// Strings limited to 32767 because it ought to be enough.
-						// Anything longer will probably cause issues somewhere in
-						// the frontend due to the use of VB6.
-
-						string prompt = m_SyncState.JSDialogPrompt.Prompt;
-						if (prompt.Length >= 32767)
-							prompt = prompt.Substring(0, 32767);
-
-						string default_text = m_SyncState.JSDialogPrompt.DefaultText;
-						if (default_text.Length >= 32767)
-							default_text = default_text.Substring(0, 32767);
-
-						RDPVirtualChannel.Write(string.Format(CultureInfo.InvariantCulture,
-							"JSDIALG PROMPT {0:D8}{1}{2:D8}{3}", prompt.Length, prompt,
-							default_text.Length, default_text));
-
-						break;
-					case SynchronizerState.FrontendJSDialogs.OnBeforeUnload:
-						RDPVirtualChannel.Write(string.Format(CultureInfo.InvariantCulture,
-							"JSDIALG ONBEFOREUNLOAD {0}", m_SyncState.JSDialogPrompt.Prompt));
-						break;
-					default:
-						throw new InvalidOperationException("Unsupported JS dialog type.");
+					if (m_SyncState.Visible)
+						RDPVirtualChannel.Write("VISIBLE TRUE");
+					else
+						RDPVirtualChannel.Write("VISIBLE FALSE");
 				}
-			}
-			#endregion
+				#endregion
 
-			#region DownloadStart
-			if (m_SyncState.IsChanged(SynchronizerState.Change.CertificateData))
-			{
-				RDPVirtualChannel.Write("DWNLOAD " + m_SyncState.DownloadStart);
-			}
-			#endregion
+				#region Toolbar
+				if (m_SyncState.IsChanged(SynchronizerState.Change.Toolbar))
+				{
+					RDPVirtualChannel.Write(string.Format(CultureInfo.InvariantCulture, "TOOLBAR {0} {1}", "BACK",
+						m_SyncState.ToolbarButtons.HasFlag(SynchronizerState.FrontendToolbarButtons.Back) ? "TRUE" : "FALSE"));
 
-			m_SyncState.SyncNone();
+					RDPVirtualChannel.Write(string.Format(CultureInfo.InvariantCulture, "TOOLBAR {0} {1}", "FORWARD",
+						m_SyncState.ToolbarButtons.HasFlag(SynchronizerState.FrontendToolbarButtons.Forward) ? "TRUE" : "FALSE"));
+
+					RDPVirtualChannel.Write(string.Format(CultureInfo.InvariantCulture, "TOOLBAR {0} {1}", "HOME",
+						m_SyncState.ToolbarButtons.HasFlag(SynchronizerState.FrontendToolbarButtons.Home) ? "TRUE" : "FALSE"));
+
+					RDPVirtualChannel.Write(string.Format(CultureInfo.InvariantCulture, "TOOLBAR {0} {1}", "MEDIA",
+						m_SyncState.ToolbarButtons.HasFlag(SynchronizerState.FrontendToolbarButtons.Media) ? "TRUE" : "FALSE"));
+
+					RDPVirtualChannel.Write(string.Format(CultureInfo.InvariantCulture, "TOOLBAR {0} {1}", "REFRESH",
+						m_SyncState.ToolbarButtons.HasFlag(SynchronizerState.FrontendToolbarButtons.Refresh) ? "TRUE" : "FALSE"));
+
+					RDPVirtualChannel.Write(string.Format(CultureInfo.InvariantCulture, "TOOLBAR {0} {1}", "STOP",
+						m_SyncState.ToolbarButtons.HasFlag(SynchronizerState.FrontendToolbarButtons.Stop) ? "TRUE" : "FALSE"));
+				}
+				#endregion
+
+				#region MenuBar
+				if (m_SyncState.IsChanged(SynchronizerState.Change.MenuBar))
+				{
+					RDPVirtualChannel.Write(string.Format(CultureInfo.InvariantCulture, "MENUSET {0} {1}", "STOP",
+						m_SyncState.MenuBarItems.HasFlag(SynchronizerState.FrontendMenuBarItems.Stop) ? "TRUE" : "FALSE"));
+
+					RDPVirtualChannel.Write(string.Format(CultureInfo.InvariantCulture, "MENUSET {0} {1}", "REFRESH",
+						m_SyncState.MenuBarItems.HasFlag(SynchronizerState.FrontendMenuBarItems.Refresh) ? "TRUE" : "FALSE"));
+
+					RDPVirtualChannel.Write(string.Format(CultureInfo.InvariantCulture, "MENUSET {0} {1}", "CUT",
+						m_SyncState.MenuBarItems.HasFlag(SynchronizerState.FrontendMenuBarItems.Cut) ? "TRUE" : "FALSE"));
+
+					RDPVirtualChannel.Write(string.Format(CultureInfo.InvariantCulture, "MENUSET {0} {1}", "COPY",
+						m_SyncState.MenuBarItems.HasFlag(SynchronizerState.FrontendMenuBarItems.Copy) ? "TRUE" : "FALSE"));
+
+					RDPVirtualChannel.Write(string.Format(CultureInfo.InvariantCulture, "MENUSET {0} {1}", "PASTE",
+						m_SyncState.MenuBarItems.HasFlag(SynchronizerState.FrontendMenuBarItems.Paste) ? "TRUE" : "FALSE"));
+				}
+				#endregion
+
+				#region AddHistoryItem
+				if (m_SyncState.IsChanged(SynchronizerState.Change.AddHistoryItem))
+				{
+					if (!string.IsNullOrEmpty(m_SyncState.Address))
+						RDPVirtualChannel.Write("ADDHIST " +
+							m_SyncState.PageTitle + '\x1' + m_SyncState.Address);
+
+					m_SyncState.AddHistoryItem = false;
+				}
+				#endregion
+
+				#region StatusProgress
+				if (m_SyncState.IsChanged(SynchronizerState.Change.StatusProgress))
+				{
+					int progress = m_SyncState.StatusProgress;
+
+					if (progress < 0)
+						progress = 0;
+
+					if (progress > 100)
+						progress = 100;
+
+					RDPVirtualChannel.Write("PROGRES " + progress.ToString(CultureInfo.InvariantCulture));
+				}
+				#endregion
+
+				#region Address
+				if (m_SyncState.IsChanged(SynchronizerState.Change.Address))
+				{
+					RDPVirtualChannel.Write("ADDRESS " + m_SyncState.Address);
+				}
+				#endregion
+
+				#region StatusText
+				if (m_SyncState.IsChanged(SynchronizerState.Change.StatusText))
+				{
+					RDPVirtualChannel.Write("STATUST " + m_SyncState.StatusText);
+				}
+				#endregion
+
+				#region PageTitle
+				if (m_SyncState.IsChanged(SynchronizerState.Change.PageTitle))
+				{
+					RDPVirtualChannel.Write("PGTITLE " + m_SyncState.PageTitle);
+				}
+				#endregion
+
+				#region TravelLog
+				if (m_SyncState.IsChanged(SynchronizerState.Change.TravelLog))
+				{
+					RDPVirtualChannel.Write("TRAVLBK " +
+						m_TravelLog.MakeMenuStringForFrontend(TravelLog.TravelDirection.Back));
+
+					RDPVirtualChannel.Write("TRAVLFW " +
+						m_TravelLog.MakeMenuStringForFrontend(TravelLog.TravelDirection.Forward));
+
+					m_SyncState.TravelLog = false;
+				}
+				#endregion
+
+				#region Cursor
+				if (m_SyncState.IsChanged(SynchronizerState.Change.Cursor))
+				{
+					RDPVirtualChannel.Write("SETCURS " + m_SyncState.Cursor);
+				}
+				#endregion
+
+				#region Tooltip
+				if (m_SyncState.IsChanged(SynchronizerState.Change.Tooltip))
+				{
+					RDPVirtualChannel.Write("TOOLTIP " + m_SyncState.Tooltip);
+				}
+				#endregion
+
+				#region SSLIcon
+				if (m_SyncState.IsChanged(SynchronizerState.Change.SSLIcon))
+				{
+					switch (m_SyncState.SSLIcon)
+					{
+						case SynchronizerState.SSLIconState.None:
+							RDPVirtualChannel.Write("SSLICON OFF");
+							break;
+						case SynchronizerState.SSLIconState.Secure:
+							RDPVirtualChannel.Write("SSLICON OK");
+							break;
+						case SynchronizerState.SSLIconState.SecureBadCert:
+							RDPVirtualChannel.Write("SSLICON BAD");
+							break;
+					}
+				}
+				#endregion
+
+				#region CertificateState
+				if (m_SyncState.IsChanged(SynchronizerState.Change.CertificateState))
+				{
+					RDPVirtualChannel.Write(string.Format("CERSTAT {0}", (int)m_SyncState.CertificateState));
+				}
+				#endregion
+
+				#region CertificateData
+				if (m_SyncState.IsChanged(SynchronizerState.Change.CertificateData))
+				{
+					if (m_SyncState.CertificateData == null)
+						RDPVirtualChannel.Write("CERDATA");
+					else
+						RDPVirtualChannel.Write("CERDATA " + Convert.ToBase64String(m_SyncState.CertificateData));
+				}
+				#endregion
+
+				#region CertificatePrompt
+				if (m_SyncState.IsChanged(SynchronizerState.Change.CertificatePrompt))
+				{
+					RDPVirtualChannel.Write("CERSHOW");
+				}
+				#endregion
+
+				#region JSDialogPrompt
+				if (m_SyncState.IsChanged(SynchronizerState.Change.JSDialogPrompt) && m_SyncState.JSDialogPrompt != null)
+				{
+					switch (m_SyncState.JSDialogPrompt.Type)
+					{
+						case SynchronizerState.FrontendJSDialogs.Alert:
+							RDPVirtualChannel.Write(string.Format(CultureInfo.InvariantCulture,
+								"JSDIALG ALERT {0}", m_SyncState.JSDialogPrompt.Prompt));
+							break;
+						case SynchronizerState.FrontendJSDialogs.Confirm:
+							RDPVirtualChannel.Write(string.Format(CultureInfo.InvariantCulture,
+								"JSDIALG CONFIRM {0}", m_SyncState.JSDialogPrompt.Prompt));
+							break;
+						case SynchronizerState.FrontendJSDialogs.Prompt:
+							// Strings limited to 32767 because it ought to be enough.
+							// Anything longer will probably cause issues somewhere in
+							// the frontend due to the use of VB6.
+
+							string prompt = m_SyncState.JSDialogPrompt.Prompt;
+							if (prompt.Length >= 32767)
+								prompt = prompt.Substring(0, 32767);
+
+							string default_text = m_SyncState.JSDialogPrompt.DefaultText;
+							if (default_text.Length >= 32767)
+								default_text = default_text.Substring(0, 32767);
+
+							RDPVirtualChannel.Write(string.Format(CultureInfo.InvariantCulture,
+								"JSDIALG PROMPT {0:D8}{1}{2:D8}{3}", prompt.Length, prompt,
+								default_text.Length, default_text));
+
+							break;
+						case SynchronizerState.FrontendJSDialogs.OnBeforeUnload:
+							RDPVirtualChannel.Write(string.Format(CultureInfo.InvariantCulture,
+								"JSDIALG ONBEFOREUNLOAD {0}", m_SyncState.JSDialogPrompt.Prompt));
+							break;
+						default:
+							throw new InvalidOperationException("Unsupported JS dialog type.");
+					}
+				}
+				#endregion
+
+				#region DownloadStart
+				if (m_SyncState.IsChanged(SynchronizerState.Change.DownloadStart))
+				{
+					if (!string.IsNullOrEmpty(m_SyncState.DownloadStart))
+						RDPVirtualChannel.Write("DWNLOAD " + m_SyncState.DownloadStart);
+				}
+				#endregion
+
+				m_SyncState.SyncNone();
+			}
 		}
 
 		private void ProcessMessage(string message)
@@ -610,5 +624,9 @@ namespace yomigaeri_backend.Browser
 			#endregion
 		}
 
+		private void BrowserForm_FormClosing(object sender, FormClosingEventArgs e)
+		{
+			Logging.WriteLineToLog("BrowserForm: FormClosing: {0} ", e.CloseReason);
+		}
 	}
 }

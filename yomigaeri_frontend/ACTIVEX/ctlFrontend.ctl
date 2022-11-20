@@ -122,6 +122,7 @@ Attribute m_FindReplace.VB_VarHelpID = -1
 Private m_NewFind As Boolean
 
 Private m_CertCurrentState As CertificateStates
+Private m_CertTempFile As String
 
 Private m_HideRDP As Boolean
 
@@ -129,7 +130,8 @@ Private m_CursorCurrent As Long
 Private m_CursorHCURSOR As Long
 Private m_CursorHCURSORIsCustom As Boolean
 
-Private m_CertTempFile As String
+Private m_DownloadServer As String
+Private m_DownloadPort As String
 
 Private Sub BackendUpdateWindowSize()
 
@@ -257,6 +259,18 @@ Private Sub HandleCERSTAT(ByRef data As String)
     On Error GoTo 0
 
     modLogging.WriteLineToLog "HandleCERSTAT: State becomes: " & m_CertCurrentState
+
+End Sub
+
+Private Sub HandleDWNLOAD(ByRef data As String)
+
+  Dim strUrl As String
+
+    strUrl = "http://" & m_DownloadServer & ":" & m_DownloadPort & "/dl/" & data
+
+    modLogging.WriteLineToLog "HandleDWNLOAD: Download this URL: " & strUrl
+
+    m_IEBrowser.DoFileDownload strUrl
 
 End Sub
 
@@ -834,6 +848,7 @@ Private Sub rdpClient_OnChannelReceivedData(ByVal chanName As String, ByVal data
     ' CERDATA: Retrieve SSL certificate from backend as PEM file
     ' CERSHOW: Show Security Alert prompt
     ' JSDIALG: Show a JavaScript dialog
+    ' DWNLOAD: Trigger a download of the specified ID
 
   Dim strCommand As String
   Dim strData As String
@@ -878,6 +893,8 @@ Private Sub rdpClient_OnChannelReceivedData(ByVal chanName As String, ByVal data
         HandleCERSHOW
       Case "JSDIALG"
         HandleJSDIALG strData
+      Case "DWNLOAD"
+        HandleDWNLOAD strData
       Case Else
         modLogging.WriteLineToLog "OnChannelReceivedData: Unknown command ignored."
     End Select
@@ -1003,16 +1020,27 @@ End Sub
 
 Private Sub UserControl_ReadProperties(PropBag As PropertyBag)
 
+  Dim blnBad As Boolean
+
     modLogging.ENABLE_DEBUG_LOG = CBool(PropBag.ReadProperty("DebugLog", False))
 
     modLogging.WriteLineToLog "--------------------------------------------------"
 
-    rdpClient.Server = CStr(PropBag.ReadProperty("RDP_Server", vbNullString))
-    rdpClient.UserName = CStr(PropBag.ReadProperty("RDP_Username", vbNullString))
+    rdpClient.Server = Trim$(CStr(PropBag.ReadProperty("RDP_Server", vbNullString)))
+    rdpClient.AdvancedSettings3.RDPPort = CLng(PropBag.ReadProperty("RDP_Port", 3389))
+    rdpClient.UserName = Trim$(CStr(PropBag.ReadProperty("RDP_Username", vbNullString)))
     rdpClient.AdvancedSettings3.ClearTextPassword = CStr(PropBag.ReadProperty("RDP_Password", vbNullString))
-    rdpClient.SecuredSettings2.StartProgram = CStr(PropBag.ReadProperty("RDP_Backend", vbNullString))
+    rdpClient.SecuredSettings2.StartProgram = Trim$(CStr(PropBag.ReadProperty("RDP_Shell", vbNullString)))
 
-    If rdpClient.Server = "" Or rdpClient.UserName = "" Or CStr(PropBag.ReadProperty("RDP_Password", vbNullString)) = "" Or rdpClient.SecuredSettings2.StartProgram = "" Then
+    m_DownloadServer = Trim$(CStr(PropBag.ReadProperty("Download_Server", vbNullString)))
+    m_DownloadPort = CLng(PropBag.ReadProperty("Download_Port", -1))
+
+    blnBad = rdpClient.Server = "" Or rdpClient.UserName = "" Or _
+             CStr(PropBag.ReadProperty("RDP_Password", vbNullString)) = "" Or _
+             rdpClient.SecuredSettings2.StartProgram = "" Or _
+             m_DownloadServer = "" Or m_DownloadPort = -1
+
+    If blnBad Then
         Err.Raise -1, "YOMIGAERI", LoadResString(103) ' The parameters for the frontend are incorrect.
         Exit Sub
     End If
@@ -1091,5 +1119,5 @@ Private Sub UserControl_Terminate()
 
 End Sub
 
-':) Ulli's VB Code Formatter V2.24.17 (2022-Nov-18 08:03)  Decl: 32  Code: 963  Total: 995 Lines
-':) CommentOnly: 56 (5.6%)  Commented: 13 (1.3%)  Filled: 714 (71.8%)  Empty: 281 (28.2%)  Max Logic Depth: 3
+':) Ulli's VB Code Formatter V2.24.17 (2022-Nov-21 08:22)  Decl: 34  Code: 989  Total: 1023 Lines
+':) CommentOnly: 57 (5.6%)  Commented: 13 (1.3%)  Filled: 733 (71.7%)  Empty: 290 (28.3%)  Max Logic Depth: 3

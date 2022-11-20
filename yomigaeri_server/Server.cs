@@ -3,7 +3,9 @@ using System.Globalization;
 using System.IO;
 using System.Net;
 using System.Net.Sockets;
+using System.Text;
 using System.Threading;
+using System.Web;
 using yomigaeri_shared;
 
 namespace yomigaeri_server
@@ -15,17 +17,25 @@ namespace yomigaeri_server
 		private const int HTTP_SERVER_MAX_BACKLOG = 25;
 
 		private readonly string m_ContentDir;
+		private readonly string m_JsTemplateFile;
 
 		private readonly CancellationTokenSource m_Cancel;
 
 		private enum ReplyDownloadResult
 		{
-			DownloadSuccess = 0,
-			ReplyWithFailure = 1,
+			Success = 0,
+			Error = 1,
 			Bail = 2
 		}
 
-		public Server(IPAddress listenAddr, int listenPort, string contentDir)
+		private enum ReplyJsTemplateResult
+		{
+			Success = 0,
+			Error = 1,
+			NoMoreUsers = 2
+		}
+
+		public Server(IPAddress listenAddr, int listenPort, string contentDir, string jsTemplateFile)
 		{
 			if (listenAddr == null)
 				throw new ArgumentNullException("listenAddr");
@@ -33,17 +43,20 @@ namespace yomigaeri_server
 			if (contentDir == null)
 				throw new ArgumentNullException("contentDir");
 
-			if (listenPort < 0)
+			if (listenPort < 0 || listenPort > 65535)
 				throw new ArgumentOutOfRangeException("listenPort");
 
 			if (!Directory.Exists(contentDir))
 				throw new FileNotFoundException("Content directory does not exist.", contentDir);
 
+			if (!File.Exists(Path.Combine(contentDir, jsTemplateFile)))
+				throw new FileNotFoundException("JavaScript template file does not exist.", jsTemplateFile);
+
 			m_ContentDir = Path.GetFullPath(contentDir);
+			m_JsTemplateFile = Path.Combine(m_ContentDir, jsTemplateFile);
 
 			m_HttpServer = new TcpListener(listenAddr, listenPort);
 			m_HttpServerThread = new Thread(HttpServerMain);
-
 
 			m_Cancel = new CancellationTokenSource();
 		}
@@ -122,7 +135,6 @@ namespace yomigaeri_server
 				using (StreamWriter sw = new StreamWriter(ns))
 				{
 					string request_uri;
-
 					{
 						string header = sr.ReadLine();
 
@@ -152,15 +164,15 @@ namespace yomigaeri_server
 
 						switch (result)
 						{
-							case ReplyDownloadResult.DownloadSuccess:
+							case ReplyDownloadResult.Success:
 								// Everything went well
 								goto done;
+							case ReplyDownloadResult.Error:
+								// Bad random_id from the client or bad data from the backend
+								goto servererror;
 							case ReplyDownloadResult.Bail:
 								// Socket error during download (client vanished/cancelled download)
 								goto bail;
-							case ReplyDownloadResult.ReplyWithFailure:
-								// Bad random_id from the client or bad data from the backend
-								goto servererror;
 						}
 					}
 
@@ -205,6 +217,24 @@ namespace yomigaeri_server
 						goto notfound;
 					}
 
+					// Special case to replace variables in JS template file
+					if (m_JsTemplateFile.Equals(request_file, StringComparison.OrdinalIgnoreCase))
+					{
+						ReplyJsTemplateResult result = ReplyJsTemplate(sw);
+
+						switch (result)
+						{
+							case ReplyJsTemplateResult.Success:
+								goto done;
+							case ReplyJsTemplateResult.Error:
+								goto servererror;
+							case ReplyJsTemplateResult.NoMoreUsers:
+								goto serviceunavail;
+						}
+					}
+
+					// Just serve a regular file
+					Logging.WriteLineToLog("HttpAnswerConnection: Respond with 200 OK, serving {0} for {1}", request_file, client_addr);
 					ReplyRequest(200, "OK", sw, request_file);
 					goto done;
 
@@ -225,6 +255,12 @@ namespace yomigaeri_server
 					ReplyRequest(500, "Internal Server Error", sw);
 					goto done;
 
+				serviceunavail:
+					Logging.WriteLineToLog("HttpAnswerConnection: Respond with 503 Service Unavailable Error for {0}", client_addr);
+
+					ReplyRequest(503, "Service Unavailable", sw);
+					goto done;
+
 				done:
 					ns.Flush();
 					client.Close();
@@ -240,10 +276,18 @@ namespace yomigaeri_server
 
 			Logging.WriteLineToLog("HttpAnswerConnection: End processing connection for {0}", client_addr);
 		}
-
 		private ReplyDownloadResult ReplyDownload(string url, StreamWriter output)
 		{
 			string random_id = url.Substring(4);
+
+			{
+				// Strip filename at the end that's used to coax IE into
+				// showing it in the title bar of the download window, if any.
+				int idx = random_id.IndexOf('/');
+
+				if (idx != -1)
+					random_id = random_id.Substring(0, idx);
+			}
 
 			Logging.WriteLineToLog("ReplyDownload: Download request for download ID {0}", random_id);
 
@@ -254,7 +298,7 @@ namespace yomigaeri_server
 			if (!File.Exists(download_meta))
 			{
 				Logging.WriteLineToLog("ReplyDownload: Download ID {0}: download meta not found.", random_id);
-				return ReplyDownloadResult.ReplyWithFailure;
+				return ReplyDownloadResult.Error;
 			}
 
 			IniFileReader reader = new IniFileReader(download_meta);
@@ -273,10 +317,30 @@ namespace yomigaeri_server
 
 			string download_file = reader.Get("Download", "LocalFile");
 
-			if (!File.Exists(download_file))
 			{
-				Logging.WriteLineToLog("ReplyDownload: Download ID {0}: download file not found.", random_id);
-				return ReplyDownloadResult.ReplyWithFailure;
+				bool found_download_file = false;
+
+				for (int i = 0; i < 5; i++)
+				{
+					// Sometimes CEF is a little slow to actually create the
+					// file on disk, so give it five seconds to do so before
+					// giving up.
+
+					found_download_file = File.Exists(download_file);
+
+					if (found_download_file)
+						break;
+
+					Logging.WriteLineToLog("ReplyDownload: Download ID {0}: download file not ready yet. Wait a bit.", random_id);
+
+					Thread.Sleep(1000);
+				}
+
+				if (!found_download_file)
+				{
+					Logging.WriteLineToLog("ReplyDownload: Download ID {0}: download file not found.", random_id);
+					return ReplyDownloadResult.Error;
+				}
 			}
 
 			long total_bytes;
@@ -288,7 +352,7 @@ namespace yomigaeri_server
 				if (!flag)
 				{
 					Logging.WriteLineToLog("ReplyDownload: Download ID {0}: Could not get file size of download.", random_id);
-					return ReplyDownloadResult.ReplyWithFailure;
+					return ReplyDownloadResult.Error;
 				}
 			}
 
@@ -324,6 +388,8 @@ namespace yomigaeri_server
 			/*
 			 * Send the actual binary file contents next.
 			 */
+
+			Logging.WriteLineToLog("ReplyDownload: Download ID {0}: Starting to serve download to client.", random_id);
 
 			// If unable to write to the downloading browser for 30 seconds,
 			// will throw an IOException and in the loop below and cause the
@@ -366,6 +432,8 @@ namespace yomigaeri_server
 							// Client probably vanished (download cancelled),
 							// or timeout writing to client (DOS attack?)
 
+							Logging.WriteLineToLog("ReplyDownload: Download ID {0}: Client vanished.", random_id);
+
 							// Deleting download_meta should make the backend
 							// cancel the download and delete download_file.
 
@@ -389,7 +457,7 @@ namespace yomigaeri_server
 							// Something is wrong if there is no data arriving
 							// in download_file within 5 minutes.
 
-							Logging.WriteLineToLog("ReplyDownload: Breaking out of infinite loop.");
+							Logging.WriteLineToLog("ReplyDownload: Download ID {0}: Breaking out of infinite loop.", random_id);
 
 							// Deleting download_meta should make the backend
 							// cancel the download and delete download_file.
@@ -427,7 +495,9 @@ namespace yomigaeri_server
 			File.Delete(download_meta);
 			File.Delete(download_file);
 
-			return ReplyDownloadResult.DownloadSuccess;
+			Logging.WriteLineToLog("ReplyDownload: Download ID {0}: Download served successfully.", random_id);
+
+			return ReplyDownloadResult.Success;
 		}
 
 		private void ReplyRequest(int response_code, string response_name, StreamWriter output)
@@ -463,6 +533,72 @@ namespace yomigaeri_server
 
 				output.BaseStream.Flush();
 			}
+		}
+
+		private ReplyJsTemplateResult ReplyJsTemplate(StreamWriter output)
+		{
+			Logging.WriteLineToLog("ReplyJsTemplate: Processing request for JavaScript template.");
+
+			string js_template = File.ReadAllText(m_JsTemplateFile, Encoding.UTF8);
+
+			{
+				bool debug = Program.Settings.Get("Frontend", "Debug", "0") == "1";
+				js_template = js_template.Replace("%FRONTENDDEBUG%", debug ? "True" : "False");
+			}
+
+			{
+				js_template = js_template.Replace("%RDPSERVER%",
+					HttpUtility.JavaScriptStringEncode(Program.Settings.Get("RDP", "Server", "")));
+
+				js_template = js_template.Replace("%RDPPORT%",
+					HttpUtility.JavaScriptStringEncode(Program.Settings.Get("RDP", "Port", "")));
+
+				js_template = js_template.Replace("%RDPSHELL%",
+					HttpUtility.JavaScriptStringEncode(Program.Settings.Get("RDP", "Shell", "")));
+
+				string username, password;
+
+				try
+				{
+					RDPUsers.GetNextFreeUser(out username, out password);
+				}
+				catch (Exception e)
+				{
+					Logging.WriteLineToLog("ReplzJsTemplate: Error getting next free user: {0}", e);
+					return ReplyJsTemplateResult.Error;
+				}
+
+				if (username == null && password == null)
+					return ReplyJsTemplateResult.NoMoreUsers;
+
+				js_template = js_template.Replace("%RDPUSERNAME%",
+					HttpUtility.JavaScriptStringEncode(username));
+
+				js_template = js_template.Replace("%RDPPASSWORD%",
+					HttpUtility.JavaScriptStringEncode(password));
+			}
+
+			{
+				js_template = js_template.Replace("%DOWNLOADSERVER%",
+					HttpUtility.JavaScriptStringEncode(Program.Settings.Get("Downloads", "Server", "")));
+
+				js_template = js_template.Replace("%DOWNLOADPORT%",
+					HttpUtility.JavaScriptStringEncode(Program.Settings.Get("Downloads", "Port", "")));
+			}
+
+			output.WriteLine("HTTP/1.0 200 OK");
+			output.WriteLine("Content-Type: application/javascript");
+			output.WriteLine(string.Format(CultureInfo.InvariantCulture, "Content-Length: {0}", js_template.Length));
+			output.WriteLine(string.Format(CultureInfo.InvariantCulture, "Date: {0:R}", DateTime.Now));
+			output.WriteLine("Server: IE6YG Minimal HTTP Server");
+			output.WriteLine("Connection: Close");
+			output.WriteLine();
+
+			output.Write(js_template);
+
+			output.Flush();
+
+			return ReplyJsTemplateResult.Success;
 		}
 
 		private string GetMimeType(string fileName)

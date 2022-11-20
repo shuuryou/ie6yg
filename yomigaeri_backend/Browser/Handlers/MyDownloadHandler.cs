@@ -23,7 +23,7 @@ namespace yomigaeri_backend.Browser.Handlers
 			m_ActiveDownloads = new List<int>();
 		}
 
-		public bool DownloadsInProgress {  get { return m_ActiveDownloads.Count > 0; } }
+		public bool DownloadsInProgress { get { return m_ActiveDownloads.Count > 0; } }
 
 		protected override void OnBeforeDownload(IWebBrowser chromiumWebBrowser, IBrowser browser, DownloadItem downloadItem, IBeforeDownloadCallback callback)
 		{
@@ -33,8 +33,8 @@ namespace yomigaeri_backend.Browser.Handlers
 			string random_id;
 			string filename;
 
-			// TODO better error handling
-			// but what can realistically fail other than writer.Save??
+		// TODO better error handling
+		// but what can realistically fail other than writer.Save??
 
 		again:
 			random_id = Path.GetRandomFileName()
@@ -69,10 +69,18 @@ namespace yomigaeri_backend.Browser.Handlers
 
 			// The frontend will attempt to download this path from the backend server.
 
-			m_SyncState.DownloadStart = random_id;
+			string download_start;
+
+			if (!string.IsNullOrEmpty(downloadItem.SuggestedFileName))
+				download_start = random_id + '/' + downloadItem.SuggestedFileName;
+			else
+				download_start = random_id;
+
+			m_SyncState.DownloadStart = download_start;
+			m_SyncState.StatusProgress = 0;
 			m_SyncProc.Invoke();
 
-			Logging.WriteLineToLog("MyDownloadHandler: Notified frontend.");
+			Logging.WriteLineToLog("MyDownloadHandler: Notified frontend ({0}).", random_id);
 		}
 
 		protected override void OnDownloadUpdated(IWebBrowser chromiumWebBrowser, IBrowser browser, DownloadItem downloadItem, IDownloadItemCallback callback)
@@ -82,9 +90,13 @@ namespace yomigaeri_backend.Browser.Handlers
 				// Download not yet confirmed, still floating in space; CEF will
 				// often call OnDownloadUpdated before OnBeforeDownload. No idea
 				// why. The authors of CEF/CEFsharp also don't seem to know.
-				
+
 				return;
 			}
+
+			Logging.WriteLineToLog("MyDownloadHandler: Download ID {0}: Progressing {1:n0}/{2:n0} bytes; {3}% complete. Still going? {4}",
+				downloadItem.Id, downloadItem.ReceivedBytes, downloadItem.TotalBytes, downloadItem.PercentComplete, downloadItem.IsInProgress);
+
 
 			// Doing it this way feels wrong but it saves calling the Path.*
 			// functions, which basically do very similar things internally.
@@ -104,23 +116,14 @@ namespace yomigaeri_backend.Browser.Handlers
 
 				callback.Cancel();
 
-				try
-				{
-					if (File.Exists(downloadItem.FullPath))
-						File.Delete(downloadItem.FullPath);
-				}
-				catch (Exception e)
-				{
-					Logging.WriteLineToLog("MyDownloadHandler: Download ID {0} cancelled, but cannot remove file on disk: {1}",
-						downloadItem.Id, e);
-				}
+				// Chromium deletes the partially downloaded file.
 
 				RemoveDownload(downloadItem.Id);
 
 				return;
 			}
 
-			if (downloadItem.IsComplete || downloadItem.IsCancelled)
+			if (!downloadItem.IsInProgress)
 			{
 				// download_meta is guaranteed to exist due to above.
 
