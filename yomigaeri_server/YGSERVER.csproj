@@ -65,7 +65,7 @@
   <ItemGroup>
     <Compile Include="ApacheMimeTypes.cs" />
     <Compile Include="RDPUsers.cs" />
-    <Compile Include="Server.cs" />
+    <Compile Include="HttpServer.cs" />
     <Compile Include="YGSERVICE.cs">
       <SubType>Component</SubType>
     </Compile>
@@ -114,6 +114,7 @@
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <PropertyGroup>
-    <PostBuildEvent>xcopy /I /E /Y "$(TargetDir)." "D:\VMs\Windows 10 LTSC\shared\server\"</PostBuildEvent>
+    <PostBuildEvent>
+    </PostBuildEvent>
   </PropertyGroup>
 </Project>

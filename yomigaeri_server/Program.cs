@@ -50,7 +50,7 @@ namespace yomigaeri_server
 
 			try
 			{
-				Server server = new Server(server_ip, server_port, server_root, js_template);
+				HttpServer server = new HttpServer(server_ip, server_port, server_root, js_template);
 
 				server.Begin();
 			} catch (Exception e)

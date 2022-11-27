@@ -10,9 +10,11 @@ using yomigaeri_shared;
 
 namespace yomigaeri_server
 {
-	public sealed class Server
+	public sealed class HttpServer
 	{
-		private readonly TcpListener m_HttpServer;
+		private const string SERVER_NAME = "IE6YG Minimal HTTP Server";
+
+		private readonly TcpListener m_HttpListener;
 		private readonly Thread m_HttpServerThread;
 		private const int HTTP_SERVER_MAX_BACKLOG = 25;
 
@@ -35,7 +37,7 @@ namespace yomigaeri_server
 			NoMoreUsers = 2
 		}
 
-		public Server(IPAddress listenAddr, int listenPort, string contentDir, string jsTemplateFile)
+		public HttpServer(IPAddress listenAddr, int listenPort, string contentDir, string jsTemplateFile)
 		{
 			if (listenAddr == null)
 				throw new ArgumentNullException("listenAddr");
@@ -55,7 +57,7 @@ namespace yomigaeri_server
 			m_ContentDir = Path.GetFullPath(contentDir);
 			m_JsTemplateFile = Path.Combine(m_ContentDir, jsTemplateFile);
 
-			m_HttpServer = new TcpListener(listenAddr, listenPort);
+			m_HttpListener = new TcpListener(listenAddr, listenPort);
 			m_HttpServerThread = new Thread(HttpServerMain);
 
 			m_Cancel = new CancellationTokenSource();
@@ -63,7 +65,7 @@ namespace yomigaeri_server
 
 		public void Begin()
 		{
-			m_HttpServer.Start(HTTP_SERVER_MAX_BACKLOG);
+			m_HttpListener.Start(HTTP_SERVER_MAX_BACKLOG);
 			m_HttpServerThread.Start(m_Cancel.Token);
 
 #if DEBUG
@@ -87,7 +89,7 @@ namespace yomigaeri_server
 			try
 			{
 				Logging.WriteLineToLog("HttpServerMain: Waiting for connection.");
-				TcpClient client = m_HttpServer.AcceptTcpClient();
+				TcpClient client = m_HttpListener.AcceptTcpClient();
 
 				Logging.WriteLineToLog("HttpServerMain: Accepted a connection.");
 				ThreadPool.QueueUserWorkItem(HttpAnswerConnection, client);
@@ -218,7 +220,7 @@ namespace yomigaeri_server
 					}
 
 					// Special case to replace variables in JS template file
-					if (m_JsTemplateFile.Equals(request_file, StringComparison.OrdinalIgnoreCase))
+					if (request_file.Equals(m_JsTemplateFile, StringComparison.OrdinalIgnoreCase))
 					{
 						ReplyJsTemplateResult result = ReplyJsTemplate(sw);
 
@@ -381,7 +383,7 @@ namespace yomigaeri_server
 			output.WriteLine(string.Format(CultureInfo.InvariantCulture, "Content-Disposition: {0}", content_disposition));
 			output.WriteLine(string.Format(CultureInfo.InvariantCulture, "Date: {0:R}", DateTime.Now));
 			output.WriteLine("Connection: Close");
-			output.WriteLine("Server: IE6YG Minimal HTTP Server");
+			output.WriteLine(string.Format(CultureInfo.InvariantCulture, "Server: {0}", SERVER_NAME));
 			output.WriteLine();
 			output.Flush();
 
@@ -507,7 +509,7 @@ namespace yomigaeri_server
 			output.WriteLine(string.Format(CultureInfo.InvariantCulture, "Content-Length: {0}", response_name.Length));
 
 			output.WriteLine(string.Format(CultureInfo.InvariantCulture, "Date: {0:R}", DateTime.Now));
-			output.WriteLine("Server: IE6YG Minimal HTTP Server");
+			output.WriteLine(string.Format(CultureInfo.InvariantCulture, "Server: {0}", SERVER_NAME));
 			output.WriteLine("Connection: Close");
 			output.WriteLine();
 
@@ -524,7 +526,7 @@ namespace yomigaeri_server
 				output.WriteLine(string.Format(CultureInfo.InvariantCulture, "Content-Type: {0}", GetMimeType(content_file)));
 				output.WriteLine(string.Format(CultureInfo.InvariantCulture, "Content-Length: {0}", fs.Length));
 				output.WriteLine(string.Format(CultureInfo.InvariantCulture, "Date: {0:R}", DateTime.Now));
-				output.WriteLine("Server: IE6YG Minimal HTTP Server");
+				output.WriteLine(string.Format(CultureInfo.InvariantCulture, "Server: {0}", SERVER_NAME));
 				output.WriteLine("Connection: Close");
 				output.WriteLine();
 				output.Flush();
@@ -590,7 +592,7 @@ namespace yomigaeri_server
 			output.WriteLine("Content-Type: application/javascript");
 			output.WriteLine(string.Format(CultureInfo.InvariantCulture, "Content-Length: {0}", js_template.Length));
 			output.WriteLine(string.Format(CultureInfo.InvariantCulture, "Date: {0:R}", DateTime.Now));
-			output.WriteLine("Server: IE6YG Minimal HTTP Server");
+			output.WriteLine(string.Format(CultureInfo.InvariantCulture, "Server: {0}", SERVER_NAME));
 			output.WriteLine("Connection: Close");
 			output.WriteLine();
 

@@ -5,7 +5,7 @@
 
 // NOTE: This is a special template file read as text in UTF8 format!
 
-document.write('<object classid="clsid:D322D3BD-AF48-4787-ACA6-2D32F2A59A32" id="yomigaeri" width="100%" height="100%">');
+document.write('<object classid="clsid:92E4666C-1BEE-4379-B1B8-14AA72B92407" id="yomigaeri" width="100%" height="100%">');
 document.write('<param name="DebugLog" value="%FRONTENDDEBUG%">');
 document.write('<param name="RDP_Server" value="%RDPSERVER%">');
 document.write('<param name="RDP_Port" value="%RDPPORT%">');

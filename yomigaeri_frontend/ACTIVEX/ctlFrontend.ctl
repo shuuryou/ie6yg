@@ -99,7 +99,7 @@ Option Explicit
 Implements SSubTUP.ISubclass
 
 Private Declare Function SetCursor Lib "USER32.DLL" (ByVal hCursor As Long) As Long
-Private Declare Function LoadCursor Lib "USER32.DLL" Alias "LoadCursorA" (ByVal hInstance As Long, ByVal lpCursorName As String) As Long
+Private Declare Function LoadCursor Lib "USER32.DLL" Alias "LoadCursorA" (ByVal hInstance As Long, ByVal lpCursorName As Long) As Long
 Private Declare Function DestroyCursor Lib "USER32.DLL" (ByVal hCursor As Long) As Long
 
 Private Const GCL_HCURSOR As Long = (-12)
@@ -940,7 +940,7 @@ Private Sub SetFrontendCursor(cursorid As Long)
         hInstance = 0&
     End If
 
-    m_CursorHCURSOR = LoadCursor(hInstance, MAKEINTRESOURCE(cursorid))
+    m_CursorHCURSOR = LoadCursor(hInstance, cursorid) ' MAKEINTRESOURCE(cursorid) doesn't work on Win9x
 
     If m_CursorHCURSOR = 0 Then
         modLogging.WriteLineToLog "SetCursor: Failed loading cursor " & cursorid & ". HRESULT=" & Hex$(Err.LastDllError)
@@ -972,7 +972,6 @@ Private Sub UserControl_EnterFocus()
 End Sub
 
 Private Sub UserControl_Initialize()
-
   Dim lngWidth As Long, lngHeight As Long
 
     lngWidth = GetSystemMetrics(SM_CXSCREEN) * Screen.TwipsPerPixelX
@@ -1019,7 +1018,6 @@ Private Sub UserControl_Initialize()
 End Sub
 
 Private Sub UserControl_ReadProperties(PropBag As PropertyBag)
-
   Dim blnBad As Boolean
 
     modLogging.ENABLE_DEBUG_LOG = CBool(PropBag.ReadProperty("DebugLog", False))

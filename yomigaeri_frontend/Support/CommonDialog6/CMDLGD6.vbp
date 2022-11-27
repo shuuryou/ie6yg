@@ -1,6 +1,6 @@
 Type=OleDll
 Reference=*\G{00020430-0000-0000-C000-000000000046}#2.0#0#C:\WINDOWS\system32\stdole2.tlb#OLE Automation
-Reference=*\G{3FC6EBCC-2010-4666-9C00-DC786E584BB2}#2.0#0#..\SSubTimerUnicode\SSubTUP.dll#Subclassing and Timer Assistant (+ fixed unicode window support)
+Reference=*\G{87C97161-0E95-464D-85F6-DB9ED4290E77}#1.0#0#..\SSubTimerUnicode\SSubTUP.dll#Subclassing and Timer Assistant (+ fixed unicode window support)
 Class=cMemory; cMemory.cls
 Class=GCommonDialog; GCommonDialog.cls
 Class=cCommonDialog; cCommonDialog.cls
@@ -21,7 +21,7 @@ CompatibleEXE32="CMDLGD6.dll"
 VersionCompatible32="1"
 MajorVer=1
 MinorVer=0
-RevisionVer=19
+RevisionVer=23
 AutoIncrementVer=1
 ServerSupportFiles=0
 DllBaseAddress=&H5e100000
