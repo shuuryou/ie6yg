@@ -63,37 +63,45 @@ namespace yomigaeri_backend.Browser
 
 		public string MakeMenuStringForFrontend(TravelDirection button)
 		{
-			NavigationEntry[] entries = m_NavigationEntries.ToArray();
-			string[] slots = new string[5];
-
-			if (entries.Length == 0)
+			try
 			{
-				Logging.WriteLineToLog("TravelLog: Cannot make menu string because there is no history.");
-				return string.Join("\x1", slots);
+				NavigationEntry[] entries = m_NavigationEntries.ToArray();
+				string[] slots = new string[5];
+
+				if (entries.Length == 0)
+				{
+					Logging.WriteLineToLog("TravelLog: Cannot make menu string because there is no history.");
+					return string.Join("\x1", slots);
+				}
+
+				if (m_offsetCurrent == -1)
+				{
+					Logging.WriteLineToLog("TravelLog: Cannot make menu string because offset is -1.");
+					return string.Join("\x1", slots);
+				}
+
+				int j = 0;
+
+				if (button == TravelDirection.Back)
+				{
+					for (int i = m_offsetCurrent - 1; i >= 0; i--)
+						slots[j++] = string.IsNullOrWhiteSpace(entries[i].Title) ? entries[i].DisplayUrl : entries[i].Title;
+
+					return string.Join("\x1", slots);
+				}
+
+				if (button == TravelDirection.Forward)
+				{
+					for (int i = m_offsetCurrent + 1; i < entries.Length; i++)
+						slots[j++] = string.IsNullOrWhiteSpace(entries[i].Title) ? entries[i].DisplayUrl : entries[i].Title;
+
+					return string.Join("\x1", slots);
+				}
 			}
-
-			if (m_offsetCurrent == -1)
+			catch (Exception e)
 			{
-				Logging.WriteLineToLog("TravelLog: Cannot make menu string because offset is -1.");
-				return string.Join("\x1", slots);
-			}
-
-			int j = 0;
-
-			if (button == TravelDirection.Back)
-			{
-				for (int i = m_offsetCurrent - 1; i >= 0; i--)
-					slots[j++] = string.IsNullOrWhiteSpace(entries[i].Title) ? entries[i].DisplayUrl : entries[i].Title;
-
-				return string.Join("\x1", slots);
-			}
-
-			if (button == TravelDirection.Forward)
-			{
-				for (int i = m_offsetCurrent + 1; i < entries.Length; i++)
-					slots[j++] = string.IsNullOrWhiteSpace(entries[i].Title) ? entries[i].DisplayUrl : entries[i].Title;
-
-				return string.Join("\x1", slots);
+				Logging.WriteLineToLog("*** ERROR IN TRAVEL LOG: {0}", e.Message);
+				throw;
 			}
 
 			throw new InvalidOperationException("Not supposed to get here.");

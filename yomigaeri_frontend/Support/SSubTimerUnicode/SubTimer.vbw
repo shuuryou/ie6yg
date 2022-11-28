@@ -1,5 +1,5 @@
-GSubclass = 132, 132, 1115, 625, C
-ISubclass = 110, 110, 1093, 603, C
+GSubclass = 132, 132, 1115, 625, 
+ISubclass = 110, 110, 1093, 603, 
 MTimer = 0, 0, 0, 0, C
-MSubclass = 154, 154, 1137, 647, C
+MSubclass = 154, 154, 1137, 647, Z
 CTimer = 0, 0, 0, 0, C

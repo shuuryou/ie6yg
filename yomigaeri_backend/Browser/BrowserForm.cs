@@ -63,9 +63,6 @@ namespace yomigaeri_backend.Browser
 			Program.WebBrowser.DownloadHandler = new MyDownloadHandler(m_SyncState, SynchronizeWithFrontend);
 
 			((MyDownloadHandler)Program.WebBrowser.DownloadHandler).AllDownloadsCompleted += DownloadHandler_AllDownloadsCompleted;
-
-			// This is important! See Handlers/DisplayHandler.cs, OnCursorChange method
-			Cursor.Hide();
 		}
 
 		private void WebBrowser_StatusMessage(object sender, StatusMessageEventArgs e)
@@ -325,13 +322,6 @@ namespace yomigaeri_backend.Browser
 						m_TravelLog.MakeMenuStringForFrontend(TravelLog.TravelDirection.Forward));
 
 					m_SyncState.TravelLog = false;
-				}
-				#endregion
-
-				#region Cursor
-				if (m_SyncState.IsChanged(SynchronizerState.Change.Cursor))
-				{
-					RDPVirtualChannel.Write("SETCURS " + m_SyncState.Cursor);
 				}
 				#endregion
 

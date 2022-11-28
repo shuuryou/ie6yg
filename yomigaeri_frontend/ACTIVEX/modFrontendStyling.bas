@@ -95,6 +95,77 @@ Public Function GetAcceptLanguage() As String
 
 End Function
 
+Public Function GetCursors() As String
+
+  Dim Registry As New CRegistry
+
+  ' What's a Dictionary<string, string>?
+  ' Yes, yes, I know scrrun.dll has one, but I'm not going to drag in
+  ' another dependency for this one function.
+  Dim strAppStarting As String, strArrow As String, strCrosshair As String
+  Dim strIBeam As String, strNo As String, strSizeAll As String
+  Dim strSizeNESW As String, strSizeNS As String, strSizeNWSE As String
+  Dim strSizeWE As String, strWait As String
+
+    With Registry
+        .ClassKey = HKEY_CURRENT_USER
+        .SectionKey = "Control Panel\Cursors"
+        .ValueType = REG_SZ
+
+        .ValueKey = "AppStarting"
+        strAppStarting = .value
+
+        .ValueKey = "Arrow"
+        strArrow = .value
+
+        .ValueKey = "Crosshair"
+        strCrosshair = .value
+
+        .ValueKey = "Arrow"
+        strArrow = .value
+
+        .ValueKey = "IBeam"
+        strIBeam = .value
+
+        .ValueKey = "No"
+        strNo = .value
+
+        .ValueKey = "SizeAll"
+        strSizeAll = .value
+
+        .ValueKey = "SizeNESW"
+        strSizeNESW = .value
+
+        .ValueKey = "SizeNS"
+        strSizeNS = .value
+
+        .ValueKey = "SizeNWSE"
+        strSizeNWSE = .value
+
+        .ValueKey = "SizeWE"
+        strSizeWE = .value
+
+        .ValueKey = "Wait"
+        strWait = .value
+    End With
+
+    Set Registry = Nothing
+
+    GetCursors = _
+                 "AppStarting=" & TrimNull(strAppStarting) & vbTab & _
+                 "Arrow=" & TrimNull(strArrow) & vbTab & _
+                 "Crosshair=" & TrimNull(strCrosshair) & vbTab & _
+                 "IBeam=" & TrimNull(strIBeam) & vbTab & _
+                 "No=" & TrimNull(strNo) & vbTab & _
+                 "SizeAll=" & TrimNull(strSizeAll) & vbTab & _
+                 "SizeNESW=" & TrimNull(strSizeNESW) & vbTab & _
+                 "SizeNS=" & TrimNull(strSizeNS) & vbTab & _
+                 "SizeNWSE=" & TrimNull(strSizeNWSE) & vbTab & _
+                 "SizeWE=" & TrimNull(strSizeWE) & vbTab & _
+                 "Wait=" & TrimNull(strWait)
+
+End Function
+
 Private Function LongToRGBHex(ByVal lLong As Long) As String
 
   ' by Donald, donald@xbeat.net, 20010910
@@ -175,5 +246,5 @@ Public Function MakeStyling(ByRef hDC As Long) As String
 
 End Function
 
-':) Ulli's VB Code Formatter V2.24.17 (2022-Nov-21 08:22)  Decl: 70  Code: 108  Total: 178 Lines
-':) CommentOnly: 12 (6.7%)  Commented: 0 (0%)  Filled: 147 (82.6%)  Empty: 31 (17.4%)  Max Logic Depth: 2
+':) Ulli's VB Code Formatter V2.24.17 (2022-Nov-29 07:43)  Decl: 70  Code: 179  Total: 249 Lines
+':) CommentOnly: 15 (6%)  Commented: 0 (0%)  Filled: 199 (79.9%)  Empty: 50 (20.1%)  Max Logic Depth: 2

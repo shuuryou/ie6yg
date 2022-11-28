@@ -98,13 +98,6 @@ Option Explicit
 
 Implements SSubTUP.ISubclass
 
-Private Declare Function SetCursor Lib "USER32.DLL" (ByVal hCursor As Long) As Long
-Private Declare Function LoadCursor Lib "USER32.DLL" Alias "LoadCursorA" (ByVal hInstance As Long, ByVal lpCursorName As Long) As Long
-Private Declare Function DestroyCursor Lib "USER32.DLL" (ByVal hCursor As Long) As Long
-
-Private Const GCL_HCURSOR As Long = (-12)
-Private Const IDC_ARROW As Long = &H7F00
-
 Private Const VIRTUAL_CHANNEL_NAME As String = "BEFECOM"
 
 Private m_IEAddressBar As IEAddressBar
@@ -125,10 +118,6 @@ Private m_CertCurrentState As CertificateStates
 Private m_CertTempFile As String
 
 Private m_HideRDP As Boolean
-
-Private m_CursorCurrent As Long
-Private m_CursorHCURSOR As Long
-Private m_CursorHCURSORIsCustom As Boolean
 
 Private m_DownloadServer As String
 Private m_DownloadPort As String
@@ -259,6 +248,12 @@ Private Sub HandleCERSTAT(ByRef data As String)
     On Error GoTo 0
 
     modLogging.WriteLineToLog "HandleCERSTAT: State becomes: " & m_CertCurrentState
+
+End Sub
+
+Private Sub HandleCURSORS()
+
+    rdpClient.SendOnVirtualChannel VIRTUAL_CHANNEL_NAME, modFrontendStyling.GetCursors()
 
 End Sub
 
@@ -439,30 +434,6 @@ Private Sub HandlePROGRES(ByRef data As String)
 
 End Sub
 
-Private Sub HandleSETCURS(ByRef data As String)
-
-  Dim cursorid As Long
-
-    If Len(data) = 0 Then
-        modLogging.WriteLineToLog "HandleSETCURS: Refuse because data is too short."
-        Exit Sub
-    End If
-
-    cursorid = -1
-
-    On Error Resume Next
-        cursorid = CLng(data)
-    On Error GoTo 0
-
-    If cursorid = -1 Then
-        modLogging.WriteLineToLog "HandleSETCURS: SETCURS: Refuse because data is invalid."
-        Exit Sub
-    End If
-
-    SetFrontendCursor cursorid
-
-End Sub
-
 Private Sub HandleSSLICON(ByRef data As String)
 
     Select Case UCase$(data)
@@ -615,34 +586,21 @@ Private Sub HandleVISIBLE(ByRef data As String)
 
 End Sub
 
+Private Property Let ISubclass_MsgResponse(ByVal RHS As SSubTUP.EMsgResponse)
+
+  'Ignore
+
+End Property
+
 Private Property Get ISubclass_MsgResponse() As SSubTUP.EMsgResponse
 
     ISubclass_MsgResponse = emrConsume
 
 End Property
 
-Private Property Let ISubclass_MsgResponse(ByVal RHS As SSubTUP.EMsgResponse)
-
-  ' Unused
-
-End Property
-
 Private Function ISubclass_WindowProc(ByVal hWnd As Long, ByVal iMsg As Long, ByVal wParam As Long, ByVal lParam As Long) As Long
 
-  ' https://devblogs.microsoft.com/oldnewthing/20050525-27/?p=35543
-
-    If iMsg = WM_SETCURSOR Then
-        If m_CursorHCURSOR = 0 Then
-            ' Don't have one yet, so just forward to VBRUN.
-            ISubclass_WindowProc = SSubTUP.CallOldWindowProc(hWnd, iMsg, wParam, lParam)
-            Exit Function
-        End If
-
-        SetCursor m_CursorHCURSOR
-        Exit Function
-    End If
-
-    ISubclass_WindowProc = SSubTUP.CallOldWindowProc(hWnd, iMsg, wParam, lParam)
+    ISubclass_WindowProc = 1&
 
 End Function
 
@@ -842,7 +800,6 @@ Private Sub rdpClient_OnChannelReceivedData(ByVal chanName As String, ByVal data
     ' MENUSET: Turn menu items on or off
     ' TRAVLBK: Modify the travel log of the Back button
     ' TRAVLFW: Modify the travel log of the Forward button
-    ' SETCURS: Set cursor based on ID number in the argument
     ' TOOLTIP: Show a Win32 tooltip at mouse position with text in argument
     ' CERSTAT: Update SSL certificate status flags based on argument
     ' CERDATA: Retrieve SSL certificate from backend as PEM file
@@ -881,8 +838,6 @@ Private Sub rdpClient_OnChannelReceivedData(ByVal chanName As String, ByVal data
         HandleTRAVELLOG True, strData
       Case "TRAVLFW"
         HandleTRAVELLOG False, strData
-      Case "SETCURS"
-        HandleSETCURS strData
       Case "TOOLTIP"
         HandleTOOLTIP strData
       Case "CERDATA"
@@ -895,6 +850,8 @@ Private Sub rdpClient_OnChannelReceivedData(ByVal chanName As String, ByVal data
         HandleJSDIALG strData
       Case "DWNLOAD"
         HandleDWNLOAD strData
+      Case "CURSORS"
+        HandleCURSORS
       Case Else
         modLogging.WriteLineToLog "OnChannelReceivedData: Unknown command ignored."
     End Select
@@ -918,45 +875,6 @@ Private Sub rdpClient_OnDisconnected(ByVal discReason As Long)
 
 End Sub
 
-Private Sub SetFrontendCursor(cursorid As Long)
-
-  Dim hInstance As Long
-  Dim hCursorToDestroy As Long
-
-    If m_CursorCurrent = cursorid Then
-        Exit Sub
-    End If
-
-    If m_CursorHCURSORIsCustom Then
-        hCursorToDestroy = m_CursorHCURSOR
-      Else
-        hCursorToDestroy = -1
-    End If
-
-    If cursorid < 32000 Then
-        ' Custom cursor in ACTIVEX.RES
-        hInstance = App.hInstance
-      Else
-        hInstance = 0&
-    End If
-
-    m_CursorHCURSOR = LoadCursor(hInstance, cursorid) ' MAKEINTRESOURCE(cursorid) doesn't work on Win9x
-
-    If m_CursorHCURSOR = 0 Then
-        modLogging.WriteLineToLog "SetCursor: Failed loading cursor " & cursorid & ". HRESULT=" & Hex$(Err.LastDllError)
-        Exit Sub
-    End If
-
-    SetCursor m_CursorHCURSOR
-
-    If hCursorToDestroy <> -1 Then
-        DestroyCursor hCursorToDestroy
-    End If
-
-    modLogging.WriteLineToLog "SetCursor: Set cursor to " & cursorid & "; HCURSOR=" & Hex$(m_CursorHCURSOR)
-
-End Sub
-
 Private Sub tmrResize_Timer()
 
     tmrResize.Enabled = False
@@ -972,6 +890,7 @@ Private Sub UserControl_EnterFocus()
 End Sub
 
 Private Sub UserControl_Initialize()
+
   Dim lngWidth As Long, lngHeight As Long
 
     lngWidth = GetSystemMetrics(SM_CXSCREEN) * Screen.TwipsPerPixelX
@@ -1018,6 +937,7 @@ Private Sub UserControl_Initialize()
 End Sub
 
 Private Sub UserControl_ReadProperties(PropBag As PropertyBag)
+
   Dim blnBad As Boolean
 
     modLogging.ENABLE_DEBUG_LOG = CBool(PropBag.ReadProperty("DebugLog", False))
@@ -1090,11 +1010,6 @@ End Sub
 
 Private Sub UserControl_Terminate()
 
-    If m_CursorHCURSORIsCustom Then
-        ' This will free any custom cursor
-        SetCursor IDC_ARROW
-    End If
-
     SSubTUP.DetachMessage Me, UserControl.hWnd, WM_SETCURSOR
 
     m_IEFrame.Destroy
@@ -1117,5 +1032,5 @@ Private Sub UserControl_Terminate()
 
 End Sub
 
-':) Ulli's VB Code Formatter V2.24.17 (2022-Nov-21 08:22)  Decl: 34  Code: 989  Total: 1023 Lines
-':) CommentOnly: 57 (5.6%)  Commented: 13 (1.3%)  Filled: 733 (71.7%)  Empty: 290 (28.3%)  Max Logic Depth: 3
+':) Ulli's VB Code Formatter V2.24.17 (2022-Nov-29 07:43)  Decl: 23  Code: 911  Total: 934 Lines
+':) CommentOnly: 52 (5.6%)  Commented: 13 (1.4%)  Filled: 672 (71.9%)  Empty: 262 (28.1%)  Max Logic Depth: 3

@@ -5,7 +5,7 @@ namespace yomigaeri_backend.Browser
 {
 	internal class SynchronizerState
 	{
-		private const int CHANGE_ITEMS = 17;
+		private const int CHANGE_ITEMS = 16;
 
 		private readonly BitArray m_Changes = new BitArray(CHANGE_ITEMS);
 
@@ -24,14 +24,13 @@ namespace yomigaeri_backend.Browser
 			AddHistoryItem = 6,
 			MenuBar = 7,
 			TravelLog = 8,
-			Cursor = 9,
-			Tooltip = 10,
-			SSLIcon = 11,
-			CertificateState = 12,
-			CertificateData = 13,
-			CertificatePrompt = 14,
-			JSDialogPrompt = 15,
-			DownloadStart = 16,
+			Tooltip = 9,
+			SSLIcon = 10,
+			CertificateState = 11,
+			CertificateData = 12,
+			CertificatePrompt = 13,
+			JSDialogPrompt = 14,
+			DownloadStart = 15,
 		} // Remember to adjust the CHANGE_ITEMS constant!
 
 		public enum SSLIconState : short
@@ -255,19 +254,6 @@ namespace yomigaeri_backend.Browser
 					return;
 				m_TravelLog = value;
 				m_Changes[(int)Change.TravelLog] = true;
-			}
-		}
-
-		private int m_Cursor;
-		public int Cursor
-		{
-			get { return m_Cursor; }
-			set
-			{
-				if (m_Cursor == value)
-					return;
-				m_Cursor = value;
-				m_Changes[(int)Change.Cursor] = true;
 			}
 		}
 
