@@ -423,6 +423,16 @@ namespace yomigaeri_backend.Browser
 				}
 				#endregion
 
+				#region Authentication
+				if (m_SyncState.IsChanged(SynchronizerState.Change.Authentication))
+				{
+					if (!string.IsNullOrEmpty(m_SyncState.Authentication))
+						RDPVirtualChannel.Write("WWWAUTH " + m_SyncState.Authentication);
+
+					m_SyncState.Authentication = null; // Browser might want to retry if invalid
+				}
+				#endregion
+
 				m_SyncState.SyncNone();
 			}
 		}
@@ -519,6 +529,22 @@ namespace yomigaeri_backend.Browser
 			}
 			#endregion
 
+			#region BTNSTOP, BTNREFR -- Stop and Refresh
+			if (message == "BTNSTOP")
+			{
+				Program.WebBrowser.Stop();
+
+				return;
+			}
+
+			if (message == "BTNREFR")
+			{
+				Program.WebBrowser.Reload();
+
+				return;
+			}
+			#endregion
+
 			#region CERTCALLBACK -- Response to OnCertificateError
 			if (message.StartsWith("CERTCALLBACK ", StringComparison.Ordinal))
 			{
@@ -571,6 +597,32 @@ namespace yomigaeri_backend.Browser
 				bool success = (response.ToUpperInvariant() == "OK");
 
 				cb.Continue(success, userInput);
+			}
+			#endregion
+
+			#region AUTHCALLBACK - Response to an authentication prompt
+			if (message.StartsWith("AUTHCALLBACK ", StringComparison.Ordinal))
+			{
+
+				IAuthCallback cb = ((MyRequestHandler)Program.WebBrowser.RequestHandler).Authentication_CurrentAuthCallback;
+
+				if (cb == null || cb.IsDisposed)
+					return;
+
+				if (message.Length < 17 || message[13] != 'O' || message[14] != 'K' )
+				{
+					cb.Cancel();
+					return;
+				}
+				string[] response = message.Substring(16).Split(new char[] { '\x1' }, 2);
+
+				if (response.Length != 2)
+				{ 
+					Logging.WriteLineToLog("BrowserForm: ProcessMessage: Illegal AUTHCALLBACK message receievd: \"{0}\"", message);
+					return;
+				}
+
+				cb.Continue(response[0], response[1]);
 			}
 			#endregion
 

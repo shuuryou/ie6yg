@@ -1,5 +1,6 @@
 ﻿using CefSharp;
 using CefSharp.WinForms;
+using Microsoft.Win32;
 using System;
 using System.ComponentModel;
 using System.Drawing;
@@ -98,8 +99,7 @@ namespace yomigaeri_backend
 				catch (Win32Exception e)
 				{
 					string err = string.Format(CultureInfo.CurrentUICulture,
-						Resources.E_InitErrorCouldNotOpenRDPVC,
-						 e.Message);
+						Resources.E_InitErrorCouldNotOpenRDPVC, e.Message);
 
 					Logging.WriteLineToLog("Main: Error opening virtual channel: {0}", e);
 
@@ -109,6 +109,37 @@ namespace yomigaeri_backend
 							return 1;
 #endif
 				}
+			}
+			#endregion
+
+			#region Transmit Server HostID to Frontend
+			try
+			{
+				string hostid = null;
+
+				// TODO: Setup must create HKLM\Software\IE6YG\HostID REG_SZ with some GUID value
+				using (RegistryKey key = Registry.LocalMachine.CreateSubKey(@"SOFTWARE\IE6YG", true))
+				{
+					hostid = key.GetValue("HostID", null, RegistryValueOptions.DoNotExpandEnvironmentNames) as string;
+
+					if (string.IsNullOrEmpty(hostid))
+						RDPVirtualChannel.Write("SHOSTID " + hostid);
+					else
+						Logging.WriteLineToLog("WARNING: HostID is missing or empty. Frontend will refuse saving network passwords.");
+				}
+			}
+			catch (Exception e)
+			{
+				string err = string.Format(CultureInfo.CurrentUICulture,
+					Resources.E_InitErrorCouldNotGetHostID, e.Message);
+
+				Logging.WriteLineToLog("Main: Error reading host ID from registry and transmitting to frontend: {0}", e);
+
+				MessageBox.Show(err, Resources.E_InitErrorTitle,
+					MessageBoxButtons.OK, MessageBoxIcon.Error);
+#if !DEBUG
+				return 1;
+#endif
 			}
 			#endregion
 

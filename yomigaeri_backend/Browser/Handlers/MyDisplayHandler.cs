@@ -1,8 +1,5 @@
 ﻿using CefSharp;
-using CefSharp.Enums;
-using CefSharp.Structs;
 using System;
-using yomigaeri_shared;
 
 namespace yomigaeri_backend.Browser.Handlers
 {

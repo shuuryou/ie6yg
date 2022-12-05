@@ -140,6 +140,10 @@
     <value>Could not initialize the Chromium engine:
 {0}</value>
   </data>
+  <data name="E_InitErrorCouldNotGetHostID" xml:space="preserve">
+    <value>Could not read the host ID from the registry and transmit it to the frontend:
+{0}</value>
+  </data>
   <data name="E_InitErrorCouldNotLoadSettings" xml:space="preserve">
     <value>Could not open the settings file "{0}":
 {1}</value>

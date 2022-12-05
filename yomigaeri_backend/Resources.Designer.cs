@@ -162,6 +162,16 @@ namespace yomigaeri_backend {
         }
         
         /// <summary>
+        ///   Looks up a localized string similar to Could not read the host ID from the registry and transmit it to the frontend:
+        ///{0}.
+        /// </summary>
+        internal static string E_InitErrorCouldNotGetHostID {
+            get {
+                return ResourceManager.GetString("E_InitErrorCouldNotGetHostID", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Looks up a localized string similar to Could not open the settings file &quot;{0}&quot;:
         ///{1}.
         /// </summary>

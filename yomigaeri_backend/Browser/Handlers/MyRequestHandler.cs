@@ -1,7 +1,9 @@
 ﻿using CefSharp;
 using System;
+using System.Globalization;
 using System.Security.Cryptography.X509Certificates;
 using System.Text;
+using yomigaeri_shared;
 using static yomigaeri_backend.Browser.SynchronizerState;
 
 namespace yomigaeri_backend.Browser.Handlers
@@ -13,12 +15,29 @@ namespace yomigaeri_backend.Browser.Handlers
 
 		public IRequestCallback SSLCertificate_CurrentErrorCallback { get; private set; }
 
+		public IAuthCallback Authentication_CurrentAuthCallback { get; private set; }
+
 		public MyRequestHandler(SynchronizerState syncState, Action syncProc)
 		{
 			m_SyncState = syncState ?? throw new ArgumentNullException("syncState");
 			m_SyncProc = syncProc ?? throw new ArgumentNullException("syncProc");
 
 			SSLCertificate_CurrentErrorCallback = null;
+		}
+
+		protected override bool GetAuthCredentials(IWebBrowser chromiumWebBrowser, IBrowser browser, string originUrl, bool isProxy, string host, int port, string realm, string scheme, IAuthCallback callback)
+		{
+			Logging.WriteLineToLog("GetAuthCredentials: yes");
+
+			Authentication_CurrentAuthCallback = callback;
+
+			m_SyncState.Authentication = string.Format(CultureInfo.InvariantCulture, "{0}\x1{1}\x1{2}", host, realm, originUrl);
+
+			Logging.WriteLineToLog("GetAuthCredentials: {0}", m_SyncState.Authentication);
+
+			m_SyncProc.Invoke();
+
+			return true;
 		}
 
 		protected override bool OnCertificateError(IWebBrowser chromiumWebBrowser, IBrowser browser, CefErrorCode errorCode, string requestUrl, ISslInfo sslInfo, IRequestCallback callback)

@@ -39,6 +39,9 @@ Private Declare Function GetTempFileName Lib "KERNEL32.DLL" Alias "GetTempFileNa
 
 Private Const MAX_PATH As Long = 260
 
+' For forms
+Public Declare Function SetParent Lib "USER32.DLL" (ByVal hWndChild As Long, ByVal hWndNewParent As Long) As Long
+
 ' For IEStatusBar; these are here because IEFrame needs them too.
 Public Enum StatusBarPanes
     Navigation = 0

@@ -122,6 +122,9 @@ Private m_HideRDP As Boolean
 Private m_DownloadServer As String
 Private m_DownloadPort As String
 
+Private m_ServerHostID As String
+Private m_ClientHostID As String
+
 Private Sub BackendUpdateWindowSize()
 
     If rdpClient.Connected <> 1 Then
@@ -207,7 +210,7 @@ Private Sub HandleCERDATA(ByRef data As String)
 Exit Sub
 
 EH:
-    modLogging.WriteLineToLog "HandleCERDATA: Internal error: " & Err.Number & " (" & Err.DESCRIPTION & ")"
+    modLogging.WriteLineToLog "HandleCERDATA: Internal error: " & Err.Number & " (" & Err.Description & ")"
 
     On Error Resume Next
         Kill m_CertTempFile
@@ -226,7 +229,7 @@ Private Sub HandleCERSHOW()
     frmErrDlg.ParentWindowHandle = m_IEFrame.hWndIEFrame
     frmErrDlg.Show vbModal
 
-    If frmErrDlg.result = vbYes Then
+    If frmErrDlg.DialogResult = vbYes Then
         rdpClient.SendOnVirtualChannel VIRTUAL_CHANNEL_NAME, "CERTCALLBACK CONTINUE"
       Else
         rdpClient.SendOnVirtualChannel VIRTUAL_CHANNEL_NAME, "CERTCALLBACK CANCEL"
@@ -300,7 +303,7 @@ Private Sub HandleJSDIALG(ByRef data As String)
   Dim strDefault As String
   Dim strResponse As String
 
-  Dim result As VbMsgBoxResult
+  Dim Result As VbMsgBoxResult
 
     If Len(data) < 7 Then
         ' Shortest possible would be "ALERT "
@@ -320,9 +323,9 @@ Private Sub HandleJSDIALG(ByRef data As String)
 
     Select Case UCase$(strType)
       Case "ALERT"
-        result = MsgBox(strPrompt, vbOKOnly Or vbExclamation, LoadResString(300))
+        Result = MsgBox(strPrompt, vbOKOnly Or vbExclamation, LoadResString(300))
       Case "CONFIRM"
-        result = MsgBox(strPrompt, vbOKCancel Or vbQuestion, LoadResString(300))
+        Result = MsgBox(strPrompt, vbOKCancel Or vbQuestion, LoadResString(300))
       Case "PROMPT"
         ' strPrompt has more data here. It looks like this:
         ' "00000005hello00000006world!"
@@ -349,16 +352,16 @@ Private Sub HandleJSDIALG(ByRef data As String)
         ' indicate Cancel was pressed; you can press OK with an empty response.
         ' But to fix it a custom InputBox has to be created. VB6 InputBox can't
         ' differentiate between OK and Cancel if the response is empty.
-        result = vbCancel
+        Result = vbCancel
       Case "ONBEFOREUNLOAD"
         strPrompt = LoadResString(301) & vbCrLf & vbCrLf & strPrompt & vbCrLf & vbCrLf & LoadResString(302)
 
-        result = MsgBox(strPrompt, vbOKCancel Or vbExclamation, LoadResString(300))
+        Result = MsgBox(strPrompt, vbOKCancel Or vbExclamation, LoadResString(300))
       Case Else
         modLogging.WriteLineToLog "HandleJSDIALG: Refuse because type is invalid: " & strType
     End Select
 
-    If result = vbOK Then
+    If Result = vbOK Then
         rdpClient.SendOnVirtualChannel VIRTUAL_CHANNEL_NAME, "JSCALLBACK OK"
       Else
         rdpClient.SendOnVirtualChannel VIRTUAL_CHANNEL_NAME, "JSCALLBACK CANCEL"
@@ -367,7 +370,7 @@ Private Sub HandleJSDIALG(ByRef data As String)
 Exit Sub
 
 EH:
-    modLogging.WriteLineToLog "HandleJSDIALG: Protocol error. " & Err.Number & " " & Err.DESCRIPTION
+    modLogging.WriteLineToLog "HandleJSDIALG: Protocol error. " & Err.Number & " " & Err.Description
     rdpClient.SendOnVirtualChannel VIRTUAL_CHANNEL_NAME, "JSCALLBACK FAIL"
 
 End Sub
@@ -431,6 +434,12 @@ Private Sub HandlePROGRES(ByRef data As String)
         intProgress = CInt(data)
         m_IEStatusBar.ProgressBarValue = intProgress
     On Error GoTo 0
+
+End Sub
+
+Private Sub HandleSHOSTID(ByRef data As String)
+
+    m_ServerHostID = data
 
 End Sub
 
@@ -536,7 +545,7 @@ Private Sub HandleTRAVELLOG(back As Boolean, data As String)
         ' UBound is the maximum index of an array that is valid/accessible.
         ' It's technically not the item count, just always abused as such.
 
-        modLogging.WriteLineToLog "Cannot set back menu because data is bad: " & UBound(items)
+        modLogging.WriteLineToLog "HandleTRAVELLOG: Cannot set travel log because data is bad: " & UBound(items)
         Exit Sub
     End If
 
@@ -586,15 +595,53 @@ Private Sub HandleVISIBLE(ByRef data As String)
 
 End Sub
 
-Private Property Let ISubclass_MsgResponse(ByVal RHS As SSubTUP.EMsgResponse)
+Private Sub HandleWWWAUTH(ByRef data As String)
 
-  'Ignore
+  Dim frmPassDlg As frmNetworkPassword
+  Dim items() As String
 
-End Property
+    If Len(data) = 0 Then
+        modLogging.WriteLineToLog "HandleWWWAUTH: Refuse because data is too short."
+        Exit Sub
+    End If
+
+    items = Split(data, Chr$(1), , vbBinaryCompare)
+
+    If UBound(items) <> 2 Then
+        modLogging.WriteLineToLog "HandleWWWAUTH: Refuse because element count is wrong: " & UBound(items)
+        Exit Sub
+    End If
+
+    Set frmPassDlg = New frmNetworkPassword
+
+    frmPassDlg.SetHostID m_ServerHostID, m_ClientHostID
+    frmPassDlg.Site = items(0)
+    frmPassDlg.Realm = items(1)
+    frmPassDlg.URL = items(2)
+    frmPassDlg.GetCredentialsFromRegistry
+    frmPassDlg.ParentWindowHandle = m_IEFrame.hWndIEFrame
+    frmPassDlg.Show vbModal
+
+    If frmPassDlg.DialogResult = vbOK Then
+        rdpClient.SendOnVirtualChannel VIRTUAL_CHANNEL_NAME, "AUTHCALLBACK OK " & _
+                                       frmPassDlg.Username & Chr$(1) & frmPassDlg.Password
+      Else
+        rdpClient.SendOnVirtualChannel VIRTUAL_CHANNEL_NAME, "AUTHCALLBACK CANCEL"
+    End If
+
+    Set frmPassDlg = Nothing
+
+End Sub
 
 Private Property Get ISubclass_MsgResponse() As SSubTUP.EMsgResponse
 
     ISubclass_MsgResponse = emrConsume
+
+End Property
+
+Private Property Let ISubclass_MsgResponse(ByVal RHS As SSubTUP.EMsgResponse)
+
+  'Ignore
 
 End Property
 
@@ -806,6 +853,9 @@ Private Sub rdpClient_OnChannelReceivedData(ByVal chanName As String, ByVal data
     ' CERSHOW: Show Security Alert prompt
     ' JSDIALG: Show a JavaScript dialog
     ' DWNLOAD: Trigger a download of the specified ID
+    ' CURSORS: Send custom cursor settings from registry to backend
+    ' SHOSTID: Sets the server Host ID for password saving
+    ' WWWAUTH: Show password dialog for HTTP auth and send credentials to backend
 
   Dim strCommand As String
   Dim strData As String
@@ -852,6 +902,10 @@ Private Sub rdpClient_OnChannelReceivedData(ByVal chanName As String, ByVal data
         HandleDWNLOAD strData
       Case "CURSORS"
         HandleCURSORS
+      Case "SHOSTID"
+        HandleSHOSTID strData
+      Case "WWWAUTH"
+        HandleWWWAUTH strData
       Case Else
         modLogging.WriteLineToLog "OnChannelReceivedData: Unknown command ignored."
     End Select
@@ -892,6 +946,7 @@ End Sub
 Private Sub UserControl_Initialize()
 
   Dim lngWidth As Long, lngHeight As Long
+  Dim objRegistry As CRegistry
 
     lngWidth = GetSystemMetrics(SM_CXSCREEN) * Screen.TwipsPerPixelX
     lngHeight = GetSystemMetrics(SM_CYSCREEN) * Screen.TwipsPerPixelY
@@ -934,6 +989,33 @@ Private Sub UserControl_Initialize()
     On Error GoTo 0
     m_CertTempFile = Replace$(UCase$(m_CertTempFile), ".TMP", ".CER")
 
+    Set objRegistry = New CRegistry
+
+    With objRegistry
+        .ClassKey = HKEY_CURRENT_USER
+        .SectionKey = "Software\IE6YG"
+
+        If Not .KeyExists Then
+            .CreateKey
+        End If
+
+        .Default = -1
+        .ValueType = REG_SZ
+        .ValueKey = "HostID"
+
+        If VarType(.value) = vbString Then
+            m_ClientHostID = .value
+          Else
+            m_ClientHostID = GetGUID_Plain
+            .value = m_ClientHostID
+
+            .ValueKey = "HostID_Warning"
+            .value = "Do not change or delete HostID. Your saved passwords will be lost."
+        End If
+    End With
+
+    Set objRegistry = Nothing
+
 End Sub
 
 Private Sub UserControl_ReadProperties(PropBag As PropertyBag)
@@ -946,14 +1028,14 @@ Private Sub UserControl_ReadProperties(PropBag As PropertyBag)
 
     rdpClient.Server = Trim$(CStr(PropBag.ReadProperty("RDP_Server", vbNullString)))
     rdpClient.AdvancedSettings3.RDPPort = CLng(PropBag.ReadProperty("RDP_Port", 3389))
-    rdpClient.UserName = Trim$(CStr(PropBag.ReadProperty("RDP_Username", vbNullString)))
+    rdpClient.Username = Trim$(CStr(PropBag.ReadProperty("RDP_Username", vbNullString)))
     rdpClient.AdvancedSettings3.ClearTextPassword = CStr(PropBag.ReadProperty("RDP_Password", vbNullString))
     rdpClient.SecuredSettings2.StartProgram = Trim$(CStr(PropBag.ReadProperty("RDP_Shell", vbNullString)))
 
     m_DownloadServer = Trim$(CStr(PropBag.ReadProperty("Download_Server", vbNullString)))
     m_DownloadPort = CLng(PropBag.ReadProperty("Download_Port", -1))
 
-    blnBad = rdpClient.Server = "" Or rdpClient.UserName = "" Or _
+    blnBad = rdpClient.Server = "" Or rdpClient.Username = "" Or _
              CStr(PropBag.ReadProperty("RDP_Password", vbNullString)) = "" Or _
              rdpClient.SecuredSettings2.StartProgram = "" Or _
              m_DownloadServer = "" Or m_DownloadPort = -1
@@ -1032,5 +1114,5 @@ Private Sub UserControl_Terminate()
 
 End Sub
 
-':) Ulli's VB Code Formatter V2.24.17 (2022-Nov-29 07:43)  Decl: 23  Code: 911  Total: 934 Lines
-':) CommentOnly: 52 (5.6%)  Commented: 13 (1.4%)  Filled: 672 (71.9%)  Empty: 262 (28.1%)  Max Logic Depth: 3
+':) Ulli's VB Code Formatter V2.24.17 (2022-Dec-06 07:14)  Decl: 26  Code: 992  Total: 1018 Lines
+':) CommentOnly: 55 (5.4%)  Commented: 13 (1.3%)  Filled: 730 (71.7%)  Empty: 288 (28.3%)  Max Logic Depth: 3

@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
 using System.Net;
@@ -134,8 +135,9 @@ namespace yomigaeri_server
 			{
 				using (NetworkStream ns = client.GetStream())
 				using (StreamReader sr = new StreamReader(ns))
-				using (StreamWriter sw = new StreamWriter(ns))
 				{
+					Dictionary<string, string> client_headers = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+
 					string request_uri;
 					{
 						string header = sr.ReadLine();
@@ -155,14 +157,34 @@ namespace yomigaeri_server
 
 						while (!string.IsNullOrEmpty(header))
 						{
-							// Skip any other headers that the browser sends
+							// Store any other headers that the browser sends.
+
 							header = sr.ReadLine();
+
+							idx = header.IndexOf(": ");
+
+							if (idx != -1)
+							{
+								string key = header.Substring(0, idx);
+								string value = header.Substring(idx + 2);
+
+								if (client_headers.ContainsKey(key))
+									client_headers[key] = value;
+								else
+									client_headers.Add(key, value);
+
+								if (client_headers.Count > 32)
+									goto servererror; // Denial of service attack
+							}
+
 						}
 					}
 
+					// Download proxy
+
 					if (request_uri.StartsWith("/dl/", StringComparison.Ordinal))
 					{
-						ReplyDownloadResult result = ReplyDownload(request_uri, sw);
+						ReplyDownloadResult result = ReplyDownload(request_uri, ns);
 
 						switch (result)
 						{
@@ -222,7 +244,7 @@ namespace yomigaeri_server
 					// Special case to replace variables in JS template file
 					if (request_file.Equals(m_JsTemplateFile, StringComparison.OrdinalIgnoreCase))
 					{
-						ReplyJsTemplateResult result = ReplyJsTemplate(sw);
+						ReplyJsTemplateResult result = ReplyJsTemplate(ns);
 
 						switch (result)
 						{
@@ -237,34 +259,33 @@ namespace yomigaeri_server
 
 					// Just serve a regular file
 					Logging.WriteLineToLog("HttpAnswerConnection: Respond with 200 OK, serving {0} for {1}", request_file, client_addr);
-					ReplyRequest(200, "OK", sw, request_file);
+					ReplyRequest(200, "OK", ns, request_file);
 					goto done;
 
 				badrequest:
 					Logging.WriteLineToLog("HttpAnswerConnection: Respond with 401 Bad Request for {0}", client_addr);
-					ReplyRequest(401, "Bad Request", sw);
+					ReplyRequest(401, "Bad Request", ns);
 					goto done;
 
 				notfound:
 					Logging.WriteLineToLog("HttpAnswerConnection: Respond with 404 Not Found for {0}", client_addr);
 
-					ReplyRequest(404, "Not Found", sw);
+					ReplyRequest(404, "Not Found", ns);
 					goto done;
 
 				servererror:
 					Logging.WriteLineToLog("HttpAnswerConnection: Respond with 500 Internal Server Error for {0}", client_addr);
 
-					ReplyRequest(500, "Internal Server Error", sw);
+					ReplyRequest(500, "Internal Server Error", ns);
 					goto done;
 
 				serviceunavail:
 					Logging.WriteLineToLog("HttpAnswerConnection: Respond with 503 Service Unavailable Error for {0}", client_addr);
 
-					ReplyRequest(503, "Service Unavailable", sw);
+					ReplyRequest(503, "Service Unavailable", ns);
 					goto done;
 
 				done:
-					ns.Flush();
 					client.Close();
 
 				bail:
@@ -278,8 +299,12 @@ namespace yomigaeri_server
 
 			Logging.WriteLineToLog("HttpAnswerConnection: End processing connection for {0}", client_addr);
 		}
-		private ReplyDownloadResult ReplyDownload(string url, StreamWriter output)
+
+		private ReplyDownloadResult ReplyDownload(string url, Stream output)
 		{
+			if (!output.CanWrite)
+				throw new ArgumentException("Output stream must be writable.", "output");
+
 			string random_id = url.Substring(4);
 
 			{
@@ -295,11 +320,11 @@ namespace yomigaeri_server
 
 			string download_meta = Path.GetFullPath(Path.Combine(Program.Settings.Get("Downloads", "DownloadTempDir"), random_id)) + ".ini";
 
-			Logging.WriteLineToLog("ReplyDownload: Download {0} meta: {1}", random_id, download_meta);
+			Logging.WriteLineToLog("ReplyDownload: Download ID {0} meta: {1}", random_id, download_meta);
 
 			if (!File.Exists(download_meta))
 			{
-				Logging.WriteLineToLog("ReplyDownload: Download ID {0}: download meta not found.", random_id);
+				Logging.WriteLineToLog("ReplyDownload: Download ID {0}: meta not found.", random_id);
 				return ReplyDownloadResult.Error;
 			}
 
@@ -374,17 +399,17 @@ namespace yomigaeri_server
 			 * Finished with all of the preparations, so send headers.
 			 */
 
-			output.WriteLine("HTTP/1.0 200 OK");
-			output.WriteLine(string.Format(CultureInfo.InvariantCulture, "Content-Type: {0}", mime_type));
+			WriteASCIIString(output, "HTTP/1.0 200 OK\r\n");
+			WriteASCIIString(output, "Content-Type: {0}", mime_type);
 
 			if (total_bytes != 0)
-				output.WriteLine(string.Format(CultureInfo.InvariantCulture, "Content-Length: {0}", total_bytes));
+				WriteASCIIString(output, "Content-Length: {0}\r\n", total_bytes);
 
-			output.WriteLine(string.Format(CultureInfo.InvariantCulture, "Content-Disposition: {0}", content_disposition));
-			output.WriteLine(string.Format(CultureInfo.InvariantCulture, "Date: {0:R}", DateTime.Now));
-			output.WriteLine("Connection: Close");
-			output.WriteLine(string.Format(CultureInfo.InvariantCulture, "Server: {0}", SERVER_NAME));
-			output.WriteLine();
+			WriteASCIIString(output, "Content-Disposition: {0}\r\n", content_disposition);
+			WriteASCIIString(output, "Date: {0:R}\r\n", DateTime.Now);
+			WriteASCIIString(output, "Server: {0}\r\n", SERVER_NAME);
+			WriteASCIIString(output, "Connection: Close\r\n\r\n");
+
 			output.Flush();
 
 			/*
@@ -396,7 +421,7 @@ namespace yomigaeri_server
 			// If unable to write to the downloading browser for 30 seconds,
 			// will throw an IOException and in the loop below and cause the
 			// method to bail.
-			output.BaseStream.WriteTimeout = 30000;
+			output.WriteTimeout = 30000;
 
 			short bail = 0;
 
@@ -427,7 +452,7 @@ namespace yomigaeri_server
 					{
 						try
 						{
-							output.BaseStream.Write(buf, 0, read);
+							output.Write(buf, 0, read);
 						}
 						catch (IOException)
 						{
@@ -492,7 +517,7 @@ namespace yomigaeri_server
 			 * Getting here means the download completed successfully.
 			 */
 
-			output.BaseStream.Flush();
+			output.Flush();
 
 			File.Delete(download_meta);
 			File.Delete(download_file);
@@ -502,46 +527,59 @@ namespace yomigaeri_server
 			return ReplyDownloadResult.Success;
 		}
 
-		private void ReplyRequest(int response_code, string response_name, StreamWriter output)
+		private void ReplyRequest(int response_code, string response_name, Stream output)
 		{
-			output.WriteLine(string.Format(CultureInfo.InvariantCulture, "HTTP/1.0 {0} {1}", response_code, response_name));
-			output.WriteLine("Content-Type: text/html");
-			output.WriteLine(string.Format(CultureInfo.InvariantCulture, "Content-Length: {0}", response_name.Length));
+			Encoding __response_encoding = Encoding.ASCII;
 
-			output.WriteLine(string.Format(CultureInfo.InvariantCulture, "Date: {0:R}", DateTime.Now));
-			output.WriteLine(string.Format(CultureInfo.InvariantCulture, "Server: {0}", SERVER_NAME));
-			output.WriteLine("Connection: Close");
-			output.WriteLine();
+			if (!output.CanWrite)
+				throw new ArgumentException("Output stream must be writable.", "output");
 
-			output.Write(response_name);
+			byte[] response_bytes = __response_encoding.GetBytes(response_name);
+
+			WriteASCIIString(output, "HTTP/1.0 {0} {1}\r\n", response_code, response_name);
+			WriteASCIIString(output, "Content-Type: text/html; charset={0}\r\n", __response_encoding.BodyName);
+			WriteASCIIString(output, "Content-Length: {0}\r\n", response_name.Length);
+			WriteASCIIString(output, "Date: {0:R}\r\n", DateTime.Now);
+			WriteASCIIString(output, "Server: {0}\r\n", SERVER_NAME);
+			WriteASCIIString(output, "Connection: Close\r\n\r\n");
+
+			output.Write(response_bytes, 0, response_bytes.Length);
 
 			output.Flush();
 		}
 
-		private void ReplyRequest(int response_code, string response_name, StreamWriter output, string content_file)
+		private void ReplyRequest(int response_code, string response_name, Stream output, string content_file)
 		{
+			if (!output.CanWrite)
+				throw new ArgumentException("Output stream must be writable.", "output");
+
 			using (FileStream fs = File.OpenRead(content_file))
 			{
-				output.WriteLine(string.Format(CultureInfo.InvariantCulture, "HTTP/1.0 {0} {1}", response_code, response_name));
-				output.WriteLine(string.Format(CultureInfo.InvariantCulture, "Content-Type: {0}", GetMimeType(content_file)));
-				output.WriteLine(string.Format(CultureInfo.InvariantCulture, "Content-Length: {0}", fs.Length));
-				output.WriteLine(string.Format(CultureInfo.InvariantCulture, "Date: {0:R}", DateTime.Now));
-				output.WriteLine(string.Format(CultureInfo.InvariantCulture, "Server: {0}", SERVER_NAME));
-				output.WriteLine("Connection: Close");
-				output.WriteLine();
+				WriteASCIIString(output, "HTTP/1.0 {0} {1}\r\n", response_code, response_name);
+				WriteASCIIString(output, "Content-Type: {0}\r\n", GetMimeType(content_file));
+				WriteASCIIString(output, "Content-Length: {0}\r\n", fs.Length);
+				WriteASCIIString(output, "Date: {0:R}\r\n", DateTime.Now);
+				WriteASCIIString(output, "Server: {0}\r\n", SERVER_NAME);
+				WriteASCIIString(output, "Connection: Close\r\n\r\n");
+
 				output.Flush();
 
-				fs.CopyTo(output.BaseStream);
+				fs.CopyTo(output);
 
-				output.BaseStream.Flush();
+				output.Flush();
 			}
 		}
 
-		private ReplyJsTemplateResult ReplyJsTemplate(StreamWriter output)
+		private ReplyJsTemplateResult ReplyJsTemplate(Stream output)
 		{
+			Encoding __response_encoding = Encoding.UTF8;
+
+			if (!output.CanWrite)
+				throw new ArgumentException("Output stream must be writable.", "output");
+
 			Logging.WriteLineToLog("ReplyJsTemplate: Processing request for JavaScript template.");
 
-			string js_template = File.ReadAllText(m_JsTemplateFile, Encoding.UTF8);
+			string js_template = File.ReadAllText(m_JsTemplateFile, __response_encoding);
 
 			{
 				bool debug = Program.Settings.Get("Frontend", "Debug", "0") == "1";
@@ -588,19 +626,37 @@ namespace yomigaeri_server
 					HttpUtility.JavaScriptStringEncode(Program.Settings.Get("Downloads", "Port", "")));
 			}
 
-			output.WriteLine("HTTP/1.0 200 OK");
-			output.WriteLine("Content-Type: application/javascript");
-			output.WriteLine(string.Format(CultureInfo.InvariantCulture, "Content-Length: {0}", js_template.Length));
-			output.WriteLine(string.Format(CultureInfo.InvariantCulture, "Date: {0:R}", DateTime.Now));
-			output.WriteLine(string.Format(CultureInfo.InvariantCulture, "Server: {0}", SERVER_NAME));
-			output.WriteLine("Connection: Close");
-			output.WriteLine();
+			byte[] template_bytes = __response_encoding.GetBytes(js_template);
 
-			output.Write(js_template);
+			WriteASCIIString(output, "HTTP/1.0 200 OK\r\n");
+			WriteASCIIString(output, "Content-Type: application/javascript; charset=utf-8\r\n");
+			WriteASCIIString(output, "Content-Length: {0}\r\n", js_template.Length);
+			WriteASCIIString(output, "Date: {0:R}\r\n", DateTime.Now);
+			WriteASCIIString(output, "Server: {0}\r\n", SERVER_NAME);
+			WriteASCIIString(output, "Connection: Close\r\n\r\n");
+
+			output.Write(template_bytes, 0, template_bytes.Length);
 
 			output.Flush();
 
 			return ReplyJsTemplateResult.Success;
+		}
+
+		private void WriteASCIIString(Stream output, string what)
+		{
+			// Used for response headers and such. Avoid using for anything else.
+
+			if (!output.CanWrite)
+				throw new ArgumentException("Output stream must be writable.", "output");
+
+			byte[] bytes = Encoding.ASCII.GetBytes(what);
+
+			output.Write(bytes, 0, bytes.Length);
+		}
+
+		private void WriteASCIIString(Stream output, string format, params object[] args)
+		{
+			WriteASCIIString(output, string.Format(CultureInfo.InvariantCulture, format, args));
 		}
 
 		private string GetMimeType(string fileName)

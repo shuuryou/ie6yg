@@ -133,8 +133,6 @@ Attribute VB_PredeclaredId = True
 Attribute VB_Exposed = False
 Option Explicit
 
-Private Declare Function SetParent Lib "USER32.DLL" (ByVal hWndChild As Long, ByVal hWndNewParent As Long) As Long
-
 ' It would be nice not to have to do all of this work and just
 ' rely on InternetErrorDlg(), but hRequest requires a HINTERNET
 ' handle that was passed to HttpSendRequest() before. Since all
@@ -256,7 +254,7 @@ Private Sub cmdViewCert_Click()
 Exit Sub
 
 EH:
-    modLogging.WriteLineToLog "cmdViewCert: Error: " & Err.Number & " (" & Err.DESCRIPTION & ")"
+    modLogging.WriteLineToLog "cmdViewCert: Error: " & Err.Number & " (" & Err.Description & ")"
     MsgBox LoadResString(218), vbCritical Or vbOKOnly, Me.Caption ' The certificate could not be opened.
 
 End Sub
@@ -302,35 +300,6 @@ Private Sub Form_Unload(Cancel As Integer)
 
 End Sub
 
-Private Function HandleToPicture(ByVal hImage As Long, ByVal ImageType As PictureTypeConstants) As StdPicture
-
-  Static iid_IPicture As UUID
-
-  Dim pdesc As PICTDESC
-  Dim lngRet As Long
-
-    If hImage = 0 Then
-        Exit Function
-    End If
-
-    If iid_IPicture.Data1 = 0 Then
-        lngRet = IIDFromString(StrPtr(IIDSTR_IPicture), iid_IPicture)
-      Else
-        lngRet = S_OK
-    End If
-
-    If lngRet = S_OK Then
-        With pdesc
-            .cbSizeofstruct = Len(pdesc)
-            .PICTYPE = ImageType
-            .hbitmap = hImage
-        End With
-
-        Set HandleToPicture = OleCreatePictureIndirect(pdesc, iid_IPicture, 1)
-    End If
-
-End Function
-
 Public Property Let NoPromptMode(enable As Boolean)
 
   ' IE6 just shows the certificate details screen (that is lazily
@@ -370,9 +339,9 @@ Public Property Let ParentWindowHandle(hWnd As Long)
 
 End Property
 
-Public Property Get result() As VbMsgBoxResult
+Public Property Get DialogResult() As VbMsgBoxResult
 
-    result = m_Result
+    DialogResult = m_Result
 
 End Property
 

@@ -5,7 +5,7 @@ namespace yomigaeri_backend.Browser
 {
 	internal class SynchronizerState
 	{
-		private const int CHANGE_ITEMS = 16;
+		private const int CHANGE_ITEMS = 17;
 
 		private readonly BitArray m_Changes = new BitArray(CHANGE_ITEMS);
 
@@ -31,6 +31,7 @@ namespace yomigaeri_backend.Browser
 			CertificatePrompt = 13,
 			JSDialogPrompt = 14,
 			DownloadStart = 15,
+			Authentication = 16
 		} // Remember to adjust the CHANGE_ITEMS constant!
 
 		public enum SSLIconState : short
@@ -351,6 +352,22 @@ namespace yomigaeri_backend.Browser
 				m_DownloadStart = value;
 
 				m_Changes[(int)Change.DownloadStart] = true;
+			}
+		}
+
+		private string m_Authentication;
+
+		public string Authentication
+		{
+			get { return m_Authentication; }
+			set
+			{
+				if (m_Authentication == value)
+					return;
+
+				m_Authentication = value;
+
+				m_Changes[(int)Change.Authentication] = true;
 			}
 		}
 		#endregion
