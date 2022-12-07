@@ -84,7 +84,12 @@ Public Property Let Address(newAddress As String)
 
     modLogging.WriteLineToLog "IEAddressBar: Successfully set text to: " & strAddress
 
-    ComboBoxInsertURL strAddress, 15
+    ' Do not pass "strAddress" since it was already converted to
+    ' an ANSI string by StrConv above. ComboBoxInsertURL also
+    ' wants to do that, and if you StrConv a StrConv'ed string,
+    ' it turns into question marks.
+
+    ComboBoxInsertURL newAddress, 15
 
 End Property
 
@@ -362,5 +367,5 @@ Private Function MoveAddressToTopOfList(iSel As Long) As Boolean
 
 End Function
 
-':) Ulli's VB Code Formatter V2.24.17 (2022-Nov-18 08:03)  Decl: 37  Code: 316  Total: 353 Lines
-':) CommentOnly: 53 (15%)  Commented: 4 (1.1%)  Filled: 240 (68%)  Empty: 113 (32%)  Max Logic Depth: 3
+':) Ulli's VB Code Formatter V2.24.17 (2022-Dec-07 09:09)  Decl: 37  Code: 321  Total: 358 Lines
+':) CommentOnly: 57 (15.9%)  Commented: 4 (1.1%)  Filled: 244 (68.2%)  Empty: 114 (31.8%)  Max Logic Depth: 3
