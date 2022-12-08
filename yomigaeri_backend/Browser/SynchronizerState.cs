@@ -5,7 +5,7 @@ namespace yomigaeri_backend.Browser
 {
 	internal class SynchronizerState
 	{
-		private const int CHANGE_ITEMS = 17;
+		private const int CHANGE_ITEMS = 18;
 
 		private readonly BitArray m_Changes = new BitArray(CHANGE_ITEMS);
 
@@ -31,7 +31,8 @@ namespace yomigaeri_backend.Browser
 			CertificatePrompt = 13,
 			JSDialogPrompt = 14,
 			DownloadStart = 15,
-			Authentication = 16
+			AuthenticationPrompt = 16,
+			FileUploadPrompt = 17
 		} // Remember to adjust the CHANGE_ITEMS constant!
 
 		public enum SSLIconState : short
@@ -355,25 +356,40 @@ namespace yomigaeri_backend.Browser
 			}
 		}
 
-		private string m_Authentication;
+		private string m_AuthenticationPrompt;
 
-		public string Authentication
+		public string AuthenticationPrompt
 		{
-			get { return m_Authentication; }
+			get { return m_AuthenticationPrompt; }
 			set
 			{
-				if (m_Authentication == value)
+				if (m_AuthenticationPrompt == value)
 					return;
 
-				m_Authentication = value;
+				m_AuthenticationPrompt = value;
 
-				m_Changes[(int)Change.Authentication] = true;
+				m_Changes[(int)Change.AuthenticationPrompt] = true;
 			}
 		}
-		#endregion
+		private bool m_FileUploadPrompt;
 
-		#region Helper Methods
-		public void SyncAll()
+		public bool FileUploadPrompt
+		{
+			get { return m_FileUploadPrompt; }
+			set
+			{
+				if (m_FileUploadPrompt == value)
+					return;
+
+				m_FileUploadPrompt = value;
+
+				m_Changes[(int)Change.FileUploadPrompt] = true;
+			}
+		}
+	#endregion
+
+	#region Helper Methods
+	public void SyncAll()
 		{
 			m_Changes.SetAll(true);
 		}

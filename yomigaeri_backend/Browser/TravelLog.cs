@@ -84,23 +84,29 @@ namespace yomigaeri_backend.Browser
 
 				if (button == TravelDirection.Back)
 				{
-					for (int i = m_offsetCurrent - 1; i >= 0; i--)
+					for (int i = m_offsetCurrent - 1; i >= 0 && j < slots.Length; i--)
+					{
+						Logging.WriteLineToLog("TravelLog: Debug Back: Index is {0:n0}, Offset: {1:n0}", i, m_offsetCurrent);
 						slots[j++] = string.IsNullOrWhiteSpace(entries[i].Title) ? entries[i].DisplayUrl : entries[i].Title;
+					}
 
 					return string.Join("\x1", slots);
 				}
 
 				if (button == TravelDirection.Forward)
 				{
-					for (int i = m_offsetCurrent + 1; i < entries.Length; i++)
+					for (int i = m_offsetCurrent + 1; i < entries.Length && j < slots.Length; i++)
+					{
+						Logging.WriteLineToLog("TravelLog: Debug Forward: Index is {0:n0}, Offset: {1:n0}", i, m_offsetCurrent);
 						slots[j++] = string.IsNullOrWhiteSpace(entries[i].Title) ? entries[i].DisplayUrl : entries[i].Title;
+					}
 
 					return string.Join("\x1", slots);
 				}
 			}
 			catch (Exception e)
 			{
-				Logging.WriteLineToLog("*** ERROR IN TRAVEL LOG: {0}", e.Message);
+				Logging.WriteLineToLog("*** ERROR IN TRAVEL LOG: {0}", e);
 				throw;
 			}
 

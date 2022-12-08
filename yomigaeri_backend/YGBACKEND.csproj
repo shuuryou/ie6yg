@@ -140,6 +140,7 @@
     <Reference Include="System.Windows.Forms" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Browser\Handlers\MyDialogHandler.cs" />
     <Compile Include="Browser\Handlers\MyDownloadHandler.cs" />
     <Compile Include="Browser\Handlers\MyJsDialogHandler.cs" />
     <Compile Include="Browser\SynchronizerState.cs" />

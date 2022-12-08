@@ -400,7 +400,7 @@ namespace yomigaeri_server
 			 */
 
 			WriteASCIIString(output, "HTTP/1.0 200 OK\r\n");
-			WriteASCIIString(output, "Content-Type: {0}", mime_type);
+			WriteASCIIString(output, "Content-Type: {0}\r\n", mime_type);
 
 			if (total_bytes != 0)
 				WriteASCIIString(output, "Content-Length: {0}\r\n", total_bytes);
@@ -652,6 +652,8 @@ namespace yomigaeri_server
 			byte[] bytes = Encoding.ASCII.GetBytes(what);
 
 			output.Write(bytes, 0, bytes.Length);
+
+			Logging.WriteLineToLog("WriteASCIIString: \"{0}\"", what);
 		}
 
 		private void WriteASCIIString(Stream output, string format, params object[] args)

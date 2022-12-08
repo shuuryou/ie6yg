@@ -78,11 +78,11 @@ Public Property Let Address(newAddress As String)
     End With
 
     If SendMessage(m_hWndComboBoxEx, CBEM_SETITEMA, 0, item) = 0 Then
-        modLogging.WriteLineToLog "IEAddressBar: Failed to set text to: " & strAddress
+        modLogging.WriteLineToLog "IEAddressBar: Failed to set text to: " & newAddress
         Exit Property
     End If
 
-    modLogging.WriteLineToLog "IEAddressBar: Successfully set text to: " & strAddress
+    modLogging.WriteLineToLog "IEAddressBar: Successfully set text to: " & newAddress
 
     ' Do not pass "strAddress" since it was already converted to
     ' an ANSI string by StrConv above. ComboBoxInsertURL also

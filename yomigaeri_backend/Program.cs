@@ -118,11 +118,12 @@ namespace yomigaeri_backend
 				string hostid = null;
 
 				// TODO: Setup must create HKLM\Software\IE6YG\HostID REG_SZ with some GUID value
-				using (RegistryKey key = Registry.LocalMachine.CreateSubKey(@"SOFTWARE\IE6YG", true))
+				using (RegistryKey key = Registry.LocalMachine.OpenSubKey(@"SOFTWARE\IE6YG", false))
 				{
-					hostid = key.GetValue("HostID", null, RegistryValueOptions.DoNotExpandEnvironmentNames) as string;
+					if (key != null)
+						hostid = key.GetValue("HostID", null, RegistryValueOptions.DoNotExpandEnvironmentNames) as string;
 
-					if (string.IsNullOrEmpty(hostid))
+					if (!string.IsNullOrEmpty(hostid))
 						RDPVirtualChannel.Write("SHOSTID " + hostid);
 					else
 						Logging.WriteLineToLog("WARNING: HostID is missing or empty. Frontend will refuse saving network passwords.");

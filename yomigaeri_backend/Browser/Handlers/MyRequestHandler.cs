@@ -31,9 +31,9 @@ namespace yomigaeri_backend.Browser.Handlers
 
 			Authentication_CurrentAuthCallback = callback;
 
-			m_SyncState.Authentication = string.Format(CultureInfo.InvariantCulture, "{0}\x1{1}\x1{2}", host, realm, originUrl);
+			m_SyncState.AuthenticationPrompt = string.Format(CultureInfo.InvariantCulture, "{0}\x1{1}\x1{2}", host, realm, originUrl);
 
-			Logging.WriteLineToLog("GetAuthCredentials: {0}", m_SyncState.Authentication);
+			Logging.WriteLineToLog("GetAuthCredentials: {0}", m_SyncState.AuthenticationPrompt);
 
 			m_SyncProc.Invoke();
 

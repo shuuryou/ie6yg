@@ -35,19 +35,19 @@ Private m_History As IUrlHistoryStg
 
 Public Event NavigationIntercepted(destinationURL As String)
 
-Public Sub AddToFavorites(hWndParent As Long, url As String, title As String)
+Public Sub AddToFavorites(hWndParent As Long, URL As String, title As String)
 
-    AddUrlToFavorites hWndParent, StrPtr(url), StrPtr(title), False
+    AddUrlToFavorites hWndParent, StrPtr(URL), StrPtr(title), False
 
 End Sub
 
-Public Sub AddToHistory(ByVal url As String, ByVal title As String)
+Public Sub AddToHistory(ByVal URL As String, ByVal title As String)
 
     If m_History Is Nothing Then
         Set m_History = New UrlHistory
     End If
 
-    If url = "" Then
+    If URL = "" Then
         modLogging.WriteLineToLog "IEBrowser: Refuse to add history with empty URL."
         Exit Sub
     End If
@@ -70,17 +70,17 @@ Public Sub AddToHistory(ByVal url As String, ByVal title As String)
 
     ' Workaround: Fool IE6 into thinking the HTTPS website is already cached.
 
-    If InStr(1, UCase$(url), "HTTPS://", vbBinaryCompare) = 1 Then
+    If InStr(1, UCase$(URL), "HTTPS://", vbBinaryCompare) = 1 Then
   Dim lngBufSize As Long
 
   Dim strHost As String
         strHost = Space$(INTERNET_MAX_URL_LENGTH)
         lngBufSize = Len(strHost)
 
-        UrlGetPartA url, strHost, lngBufSize, URL_PART_HOSTNAME, 0&
+        UrlGetPartA URL, strHost, lngBufSize, URL_PART_HOSTNAME, 0&
 
         If lngBufSize = INTERNET_MAX_PATH_LENGTH Or lngBufSize = 0 Then
-            modLogging.WriteLineToLog "IEBrowse: Can't add history because UrlGetPartA failed (1)."
+            modLogging.WriteLineToLog "IEBrowser: Can't add history because UrlGetPartA failed (1)."
             Exit Sub
         End If
 
@@ -95,7 +95,7 @@ Public Sub AddToHistory(ByVal url As String, ByVal title As String)
         CreateUrlCacheEntry strTempURL, 0, "html", strFileName, 0&
 
         If Err.LastDllError <> 0 Then
-            modLogging.WriteLineToLog "IEBrowse: Can't add history because CreateUrlCacheEntry failed. HRESULT: " & Hex$(Err.LastDllError)
+            modLogging.WriteLineToLog "IEBrowser: Can't add history because CreateUrlCacheEntry failed. HRESULT: " & Hex$(Err.LastDllError)
             Exit Sub
         End If
 
@@ -116,18 +116,18 @@ Public Sub AddToHistory(ByVal url As String, ByVal title As String)
 
   Dim lngRet As Long
 
-        lngRet = CommitUrlCacheEntry(url, strFileName, ftExpireTime, _
+        lngRet = CommitUrlCacheEntry(URL, strFileName, ftExpireTime, _
                  ftModifiedTime, NORMAL_CACHE_ENTRY, 0&, 0&, 0&, 0&)
 
         If lngRet <> 1 Then ' False
             ' Sometimes HRESULT is 0x20, but it still works?!?!?
-            modLogging.WriteLineToLog "IEBrowse: CommitUrlCacheEntry failed, but continue anway. HRESULT: " & Hex$(Err.LastDllError)
+            modLogging.WriteLineToLog "IEBrowser: CommitUrlCacheEntry failed, but continue anway. HRESULT: " & Hex$(Err.LastDllError)
             'Exit Sub
         End If
     End If
 
-    m_History.ADDURL url, title, 0&
-    modLogging.WriteLineToLog "IEBrowse: Add to history URL=" & url & "; Title=" & title
+    m_History.ADDURL URL, title, 0&
+    modLogging.WriteLineToLog "IEBrowser: Add to history URL=" & URL & "; Title=" & title
 
 End Sub
 
@@ -188,18 +188,18 @@ Public Sub Destroy()
 
 End Sub
 
-Public Sub DoFileDownload(url As String)
+Public Sub DoFileDownload(URL As String)
 
-    DoFileDownloadEx StrPtr(url), False
+    DoFileDownloadEx StrPtr(URL), False
 
 End Sub
 
-Private Sub m_Browser_BeforeNavigate2(ByVal pDisp As Object, url As Variant, flags As Variant, TargetFrameName As Variant, PostData As Variant, Headers As Variant, Cancel As Boolean)
+Private Sub m_Browser_BeforeNavigate2(ByVal pDisp As Object, URL As Variant, flags As Variant, TargetFrameName As Variant, PostData As Variant, Headers As Variant, Cancel As Boolean)
 
     Cancel = True
-    modLogging.WriteLineToLog "IEBrowser: Catch and redirect navigating to: " & CStr(url)
+    modLogging.WriteLineToLog "IEBrowser: Catch and redirect navigating to: " & CStr(URL)
 
-    RaiseEvent NavigationIntercepted(CStr(url))
+    RaiseEvent NavigationIntercepted(CStr(URL))
 
 End Sub
 

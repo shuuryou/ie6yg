@@ -272,6 +272,34 @@ Private Sub HandleDWNLOAD(ByRef data As String)
 
 End Sub
 
+Private Sub HandleFILEUPL()
+
+  Dim objDialog As New cCommonDialog
+
+    With objDialog
+        .CancelError = False
+        .DialogTitle = LoadResString(500) ' Open
+        .Filter = LoadResString(501)
+        .hWnd = m_IEFrame.hWndIEFrame
+        .flags = OFN_HIDEREADONLY Or OFN_FILEMUSTEXIST
+
+        .ShowOpen
+
+        If .FileName = "" Then
+            Exit Sub
+        End If
+
+        modLogging.WriteLineToLog "HandleFILEUPL: Selected file is:" & .FileName
+
+        rdpClient.SetFocus
+
+        rdpClient.SendOnVirtualChannel VIRTUAL_CHANNEL_NAME, "FILEUPLCALLBACK " & .FileName
+    End With
+
+    Set objDialog = Nothing
+
+End Sub
+
 Private Sub HandleGETINFO(ByRef data As String)
 
     Select Case UCase$(data)
@@ -633,15 +661,15 @@ Private Sub HandleWWWAUTH(ByRef data As String)
 
 End Sub
 
-Private Property Get ISubclass_MsgResponse() As SSubTUP.EMsgResponse
-
-    ISubclass_MsgResponse = emrConsume
-
-End Property
-
 Private Property Let ISubclass_MsgResponse(ByVal RHS As SSubTUP.EMsgResponse)
 
   'Ignore
+
+End Property
+
+Private Property Get ISubclass_MsgResponse() As SSubTUP.EMsgResponse
+
+    ISubclass_MsgResponse = emrConsume
 
 End Property
 
@@ -856,6 +884,7 @@ Private Sub rdpClient_OnChannelReceivedData(ByVal chanName As String, ByVal data
     ' CURSORS: Send custom cursor settings from registry to backend
     ' SHOSTID: Sets the server Host ID for password saving
     ' WWWAUTH: Show password dialog for HTTP auth and send credentials to backend
+    ' FILEUPL: Show an "Open" common dialog and relay path back to backend
 
   Dim strCommand As String
   Dim strData As String
@@ -906,6 +935,8 @@ Private Sub rdpClient_OnChannelReceivedData(ByVal chanName As String, ByVal data
         HandleSHOSTID strData
       Case "WWWAUTH"
         HandleWWWAUTH strData
+      Case "FILEUPL"
+        HandleFILEUPL
       Case Else
         modLogging.WriteLineToLog "OnChannelReceivedData: Unknown command ignored."
     End Select
@@ -1114,5 +1145,5 @@ Private Sub UserControl_Terminate()
 
 End Sub
 
-':) Ulli's VB Code Formatter V2.24.17 (2022-Dec-06 07:14)  Decl: 26  Code: 992  Total: 1018 Lines
-':) CommentOnly: 55 (5.4%)  Commented: 13 (1.3%)  Filled: 730 (71.7%)  Empty: 288 (28.3%)  Max Logic Depth: 3
+':) Ulli's VB Code Formatter V2.24.17 (2022-Dec-09 06:43)  Decl: 26  Code: 1023  Total: 1049 Lines
+':) CommentOnly: 56 (5.3%)  Commented: 14 (1.3%)  Filled: 752 (71.7%)  Empty: 297 (28.3%)  Max Logic Depth: 3

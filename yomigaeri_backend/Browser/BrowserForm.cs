@@ -2,6 +2,7 @@
 using CefSharp.WinForms;
 using Microsoft.Win32;
 using System;
+using System.Collections.Generic;
 using System.Globalization;
 using System.Web;
 using System.Windows.Forms;
@@ -61,6 +62,7 @@ namespace yomigaeri_backend.Browser
 			Program.WebBrowser.RequestHandler = new MyRequestHandler(m_SyncState, SynchronizeWithFrontend);
 			Program.WebBrowser.JsDialogHandler = new MyJsDialogHandler(m_SyncState, SynchronizeWithFrontend);
 			Program.WebBrowser.DownloadHandler = new MyDownloadHandler(m_SyncState, SynchronizeWithFrontend);
+			Program.WebBrowser.DialogHandler = new MyDialogHandler(m_SyncState, SynchronizeWithFrontend);
 
 			((MyDownloadHandler)Program.WebBrowser.DownloadHandler).AllDownloadsCompleted += DownloadHandler_AllDownloadsCompleted;
 		}
@@ -423,13 +425,22 @@ namespace yomigaeri_backend.Browser
 				}
 				#endregion
 
-				#region Authentication
-				if (m_SyncState.IsChanged(SynchronizerState.Change.Authentication))
+				#region AuthenticationPrompt
+				if (m_SyncState.IsChanged(SynchronizerState.Change.AuthenticationPrompt))
 				{
-					if (!string.IsNullOrEmpty(m_SyncState.Authentication))
-						RDPVirtualChannel.Write("WWWAUTH " + m_SyncState.Authentication);
+					if (!string.IsNullOrEmpty(m_SyncState.AuthenticationPrompt))
+						RDPVirtualChannel.Write("WWWAUTH " + m_SyncState.AuthenticationPrompt);
 
-					m_SyncState.Authentication = null; // Browser might want to retry if invalid
+					m_SyncState.AuthenticationPrompt = null; // Browser might want to retry if invalid
+				}
+				#endregion
+
+				#region FileUploadPrompt
+				if (m_SyncState.IsChanged(SynchronizerState.Change.FileUploadPrompt))
+				{
+					RDPVirtualChannel.Write("FILEUPL");
+
+					m_SyncState.FileUploadPrompt = false; // Browser will probably want to open another one later
 				}
 				#endregion
 
@@ -545,6 +556,45 @@ namespace yomigaeri_backend.Browser
 			}
 			#endregion
 
+			#region FIND -- Find in page
+			if (message.StartsWith("FIND ", StringComparison.Ordinal))
+			{
+				// FIND [NewFind=1 or 0] [Flags=00000000] [Text]
+				// NewFind: Whether to start a new search or continue an old one
+				// Flags:   See Win32FindReplaceFlags
+				// Text:    Text to find
+				// Sample:
+				// FIND 1 00000000 abcdef...
+
+				if (message == "FIND END")
+				{
+					Program.WebBrowser.StopFinding(true);
+					return;
+				}
+
+				if (message.Length < 17)
+				{
+					Logging.WriteLineToLog("BrowserForm: ProcessMessage: FIND command has bad format.");
+					return;
+				}
+
+				bool new_find = (message[5] == '1');
+
+				if (!int.TryParse(message.Substring(7, 8), NumberStyles.None, CultureInfo.InvariantCulture, out int flags_int))
+				{
+					Logging.WriteLineToLog("BrowserForm: ProcessMessage: FIND command has bad flags format.");
+					return;
+				}
+
+				Win32FindReplaceFlags flags = (Win32FindReplaceFlags)flags_int;
+
+				Program.WebBrowser.Find(message.Substring(16),
+					flags.HasFlag(Win32FindReplaceFlags.FR_DOWN),
+					flags.HasFlag(Win32FindReplaceFlags.FR_MATCHCASE),
+					!new_find);
+			}
+			#endregion
+			
 			#region CERTCALLBACK -- Response to OnCertificateError
 			if (message.StartsWith("CERTCALLBACK ", StringComparison.Ordinal))
 			{
@@ -626,42 +676,39 @@ namespace yomigaeri_backend.Browser
 			}
 			#endregion
 
-			#region FIND -- Find in page
-			if (message.StartsWith("FIND ", StringComparison.Ordinal))
+			#region FILEUPLCALLBACK - Response to a file chooser prompt
+			if (message.StartsWith("FILEUPLCALLBACK ", StringComparison.Ordinal))
 			{
-				// FIND [NewFind=1 or 0] [Flags=00000000] [Text]
-				// NewFind: Whether to start a new search or continue an old one
-				// Flags:   See Win32FindReplaceFlags
-				// Text:    Text to find
-				// Sample:
-				// FIND 1 00000000 abcdef...
+				IFileDialogCallback cb = ((MyDialogHandler)Program.WebBrowser.DialogHandler).FileDialog_Callback;
 
-				if (message == "FIND END")
+				if (cb == null || cb.IsDisposed)
+					return;
+
+				string response = message.Substring(16);
+
+				if (response.Equals("CANCEL", StringComparison.OrdinalIgnoreCase))
 				{
-					Program.WebBrowser.StopFinding(true);
+					cb.Cancel();
 					return;
 				}
 
-				if (message.Length < 17)
+				Logging.WriteLineToLog("BrowserForm: ProcessMessage: Original path in FILEUPLCALLBACK: {0}", response);
+
+				// If the second and third characters are :\, then assume the
+				// first character is a drive letter and use the magic of RDP
+				// to access the file via drive sharing.
+				if (response[1] == ':' && response[2] == '\\')
+					response = string.Format(CultureInfo.InvariantCulture, "\\\\TSCLIENT\\{0}\\{1}",
+						response[0], response.Substring(3));
+
+				Logging.WriteLineToLog("BrowserForm: ProcessMessage: Translated path in FILEUPLCALLBACK: {0}", response);
+
+				List<string> cef_wants_a_list_for_this = new List<string>(1)
 				{
-					Logging.WriteLineToLog("BrowserForm: ProcessMessage: FIND command has bad format.");
-					return;
-				}
+					response
+				};
 
-				bool new_find = (message[5] == '1');
-
-				if (!int.TryParse(message.Substring(7, 8), NumberStyles.None, CultureInfo.InvariantCulture, out int flags_int))
-				{
-					Logging.WriteLineToLog("BrowserForm: ProcessMessage: FIND command has bad flags format.");
-					return;
-				}
-
-				Win32FindReplaceFlags flags = (Win32FindReplaceFlags)flags_int;
-
-				Program.WebBrowser.Find(message.Substring(16),
-					flags.HasFlag(Win32FindReplaceFlags.FR_DOWN),
-					flags.HasFlag(Win32FindReplaceFlags.FR_MATCHCASE),
-					!new_find);
+				cb.Continue(cef_wants_a_list_for_this);
 			}
 			#endregion
 		}
