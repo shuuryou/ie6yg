@@ -51,6 +51,11 @@ Public Sub AddToHistory(ByVal URL As String, ByVal title As String)
         modLogging.WriteLineToLog "IEBrowser: Refuse to add history with empty URL."
         Exit Sub
     End If
+    
+    If UCase$(Left$(URL, 6)) = "ABOUT:" Then
+        modLogging.WriteLineToLog "IEBrowser: Refuse to add about: URL """ & URL & """ to history."
+        Exit Sub
+    End If
 
     ' IUrlHistoryStg.AddUrl does not work with HTTPS URLs, but without access
     ' to the Windows source code you'll *never* learn the real reason for it.

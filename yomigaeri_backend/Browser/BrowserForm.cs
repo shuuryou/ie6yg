@@ -63,6 +63,7 @@ namespace yomigaeri_backend.Browser
 			Program.WebBrowser.JsDialogHandler = new MyJsDialogHandler(m_SyncState, SynchronizeWithFrontend);
 			Program.WebBrowser.DownloadHandler = new MyDownloadHandler(m_SyncState, SynchronizeWithFrontend);
 			Program.WebBrowser.DialogHandler = new MyDialogHandler(m_SyncState, SynchronizeWithFrontend);
+			Program.WebBrowser.MenuHandler = new MyContextMenuHandler(m_SyncState, SynchronizeWithFrontend);
 
 			((MyDownloadHandler)Program.WebBrowser.DownloadHandler).AllDownloadsCompleted += DownloadHandler_AllDownloadsCompleted;
 		}
@@ -441,6 +442,15 @@ namespace yomigaeri_backend.Browser
 					RDPVirtualChannel.Write("FILEUPL");
 
 					m_SyncState.FileUploadPrompt = false; // Browser will probably want to open another one later
+				}
+				#endregion
+
+				#region ContextMenu
+				if (m_SyncState.IsChanged(SynchronizerState.Change.ContextMenu))
+				{
+					RDPVirtualChannel.Write("CTXMENU " + m_SyncState.ContextMenu);
+
+					m_SyncState.ContextMenu = null; // User will probably want to open another one later
 				}
 				#endregion
 

@@ -150,7 +150,7 @@ Option Explicit
 ' writing to it. Hence rolling my own password saving feature.
 
 ' I don't consider it secure; it uses SHA1 to derive a key and
-' RC4 to encrypt, both of which have known attacks, and yet here
+' RC4 to encrypt, both of which have known problems, and yet here
 ' we are, because Win9x doesn't support any modern cryptographic
 ' algorithms.
 

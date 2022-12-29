@@ -440,8 +440,8 @@ namespace yomigaeri_server
 				// actively writing to. The file is still growing while being
 				// read from here!
 
-				// It gets even worse when total_bytes is 0, because that means
-				// the server Chromium is dowloading from doesn't know the size
+				// It gets even worse when total_bytes is 0, because it means
+				// the server Chromium is reading from doesn't know the size
 				// of the download (e.g. it's being generated on the fly).
 
 				for (; ; )

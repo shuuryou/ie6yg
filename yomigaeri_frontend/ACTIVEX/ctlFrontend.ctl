@@ -88,6 +88,198 @@ Begin VB.UserControl ctlFrontend
          Index           =   99
       End
    End
+   Begin VB.Menu mnuContextSelection 
+      Caption         =   "Selection Context Menu"
+      Begin VB.Menu mnuContextSelectionItem 
+         Caption         =   "Cut"
+         Index           =   0
+      End
+      Begin VB.Menu mnuContextSelectionItem 
+         Caption         =   "&Copy"
+         Index           =   1
+      End
+      Begin VB.Menu mnuContextSelectionItem 
+         Caption         =   "&Paste"
+         Index           =   2
+      End
+      Begin VB.Menu mnuContextSelectionItem 
+         Caption         =   "Select &All"
+         Index           =   3
+      End
+      Begin VB.Menu mnuContextSelectionItem 
+         Caption         =   "Pr&int"
+         Index           =   4
+      End
+   End
+   Begin VB.Menu mnuContextDefault 
+      Caption         =   "Default Context Menu"
+      Begin VB.Menu mnuContextDefaultItem 
+         Caption         =   "&Back"
+         Index           =   0
+      End
+      Begin VB.Menu mnuContextDefaultItem 
+         Caption         =   "F&orward"
+         Index           =   1
+      End
+      Begin VB.Menu mnuContextDefaultItem 
+         Caption         =   "-"
+         Index           =   2
+      End
+      Begin VB.Menu mnuContextDefaultItem 
+         Caption         =   "Select &All"
+         Index           =   3
+      End
+      Begin VB.Menu mnuContextDefaultItem 
+         Caption         =   "-"
+         Index           =   4
+      End
+      Begin VB.Menu mnuContextDefaultItem 
+         Caption         =   "Create Shor&tcut"
+         Index           =   5
+      End
+      Begin VB.Menu mnuContextDefaultItem 
+         Caption         =   "Add to &Favorites..."
+         Index           =   6
+      End
+      Begin VB.Menu mnuContextDefaultItem 
+         Caption         =   "&View Source"
+         Index           =   7
+      End
+      Begin VB.Menu mnuContextDefaultItem 
+         Caption         =   "-"
+         Index           =   8
+      End
+      Begin VB.Menu mnuContextDefaultItem 
+         Caption         =   "Pr&int"
+         Index           =   9
+      End
+      Begin VB.Menu mnuContextDefaultItem 
+         Caption         =   "&Refresh"
+         Index           =   10
+      End
+      Begin VB.Menu mnuContextDefaultItem 
+         Caption         =   "-"
+         Index           =   11
+      End
+      Begin VB.Menu mnuContextDefaultItem 
+         Caption         =   "&Properties"
+         Index           =   12
+      End
+   End
+   Begin VB.Menu mnuContextImage 
+      Caption         =   "Image Context Menu"
+      Begin VB.Menu mnuContextImageItem 
+         Caption         =   "&Open Link"
+         Index           =   0
+      End
+      Begin VB.Menu mnuContextImageItem 
+         Caption         =   "Open Link in &New Window"
+         Index           =   1
+      End
+      Begin VB.Menu mnuContextImageItem 
+         Caption         =   "-"
+         Index           =   2
+      End
+      Begin VB.Menu mnuContextImageItem 
+         Caption         =   "S&how Picture"
+         Index           =   3
+      End
+      Begin VB.Menu mnuContextImageItem 
+         Caption         =   "S&how Video"
+         Index           =   4
+      End
+      Begin VB.Menu mnuContextImageItem 
+         Caption         =   "S&how Audio"
+         Index           =   5
+      End
+      Begin VB.Menu mnuContextImageItem 
+         Caption         =   "&Save Picture As..."
+         Index           =   6
+      End
+      Begin VB.Menu mnuContextImageItem 
+         Caption         =   "&Save Video As..."
+         Index           =   7
+      End
+      Begin VB.Menu mnuContextImageItem 
+         Caption         =   "&Save Audio As..."
+         Index           =   8
+      End
+      Begin VB.Menu mnuContextImageItem 
+         Caption         =   "Set as Back&ground"
+         Index           =   9
+      End
+      Begin VB.Menu mnuContextImageItem 
+         Caption         =   "-"
+         Index           =   10
+      End
+      Begin VB.Menu mnuContextImageItem 
+         Caption         =   "&Copy"
+         Index           =   11
+      End
+      Begin VB.Menu mnuContextImageItem 
+         Caption         =   "Copy Shor&tcut"
+         Index           =   12
+      End
+      Begin VB.Menu mnuContextImageItem 
+         Caption         =   "-"
+         Index           =   13
+      End
+      Begin VB.Menu mnuContextImageItem 
+         Caption         =   "Add to &Favorites..."
+         Index           =   14
+      End
+      Begin VB.Menu mnuContextImageItem 
+         Caption         =   "-"
+         Index           =   15
+      End
+      Begin VB.Menu mnuContextImageItem 
+         Caption         =   "P&roperties"
+         Index           =   16
+      End
+   End
+   Begin VB.Menu mnuContextAnchor 
+      Caption         =   "Anchor Context Menu"
+      Begin VB.Menu mnuContextAnchorItem 
+         Caption         =   "&Open"
+         Index           =   0
+      End
+      Begin VB.Menu mnuContextAnchorItem 
+         Caption         =   "Open in &New Window"
+         Index           =   1
+      End
+      Begin VB.Menu mnuContextAnchorItem 
+         Caption         =   "Save Target &As..."
+         Index           =   2
+      End
+      Begin VB.Menu mnuContextAnchorItem 
+         Caption         =   "-"
+         Index           =   3
+      End
+      Begin VB.Menu mnuContextAnchorItem 
+         Caption         =   "&Copy"
+         Index           =   4
+      End
+      Begin VB.Menu mnuContextAnchorItem 
+         Caption         =   "Copy Shor&tcut"
+         Index           =   5
+      End
+      Begin VB.Menu mnuContextAnchorItem 
+         Caption         =   "-"
+         Index           =   6
+      End
+      Begin VB.Menu mnuContextAnchorItem 
+         Caption         =   "Add to &Favorites..."
+         Index           =   7
+      End
+      Begin VB.Menu mnuContextAnchorItem 
+         Caption         =   "-"
+         Index           =   8
+      End
+      Begin VB.Menu mnuContextAnchorItem 
+         Caption         =   "P&roperties"
+         Index           =   9
+      End
+   End
 End
 Attribute VB_Name = "ctlFrontend"
 Attribute VB_GlobalNameSpace = False
@@ -126,7 +318,7 @@ Private m_ServerHostID As String
 Private m_ClientHostID As String
 
 Private Sub BackendUpdateWindowSize()
-
+   
     If rdpClient.Connected <> 1 Then
         Exit Sub
     End If
@@ -937,10 +1129,105 @@ Private Sub rdpClient_OnChannelReceivedData(ByVal chanName As String, ByVal data
         HandleWWWAUTH strData
       Case "FILEUPL"
         HandleFILEUPL
+      Case "CTXMENU"
+        HandleCTXMENU strData
       Case Else
         modLogging.WriteLineToLog "OnChannelReceivedData: Unknown command ignored."
     End Select
 
+End Sub
+
+Private Sub HandleCTXMENU(ByRef data As String)
+
+  Dim items() As String
+
+    If Len(data) = 0 Then
+        modLogging.WriteLineToLog "HandleCTXMENU: Refuse because data is too short."
+        Exit Sub
+    End If
+
+    items = Split(data, " ", , vbBinaryCompare)
+
+    ' For example: 263 159 DEFAULT 0VD 1VD 3VE 5VE 6VE 7VE 9VE 10VE 12VE
+    ' Must always have the first three.
+
+    If UBound(items) < 2 Then
+        modLogging.WriteLineToLog "HandleCTXMENU: Refuse because element count is wrong: " & UBound(items)
+        Exit Sub
+    End If
+    
+    Dim intX As Integer
+    Dim intY As Integer
+    Dim strMenu As String
+    
+    On Error GoTo EH ' *sigh*
+    intX = CInt(items(0))
+    intY = CInt(items(1))
+    On Error GoTo 0
+    
+    strMenu = UCase$(items(2))
+    
+    modLogging.WriteLineToLog "HandleCTXMENU: Request to open " & strMenu & " menu at coordinates X: " & intX & ", Y: " & intY
+    
+    ' I can't believe this works...
+    Dim objMenu As Variant
+    Dim objMenuItems As Variant
+    
+    Select Case strMenu
+        Case "SELECTION"
+            Set objMenu = mnuContextSelection
+            Set objMenuItems = mnuContextSelectionItem
+        Case "DEFAULT"
+            Set objMenu = mnuContextDefault
+            Set objMenuItems = mnuContextDefaultItem
+        Case "IMAGE"
+            Set objMenu = mnuContextImage
+            Set objMenuItems = mnuContextImageItem
+        Case "ANCHOR"
+            Set objMenu = mnuContextAnchor
+            Set objMenuItems = mnuContextAnchorItem
+    End Select
+    
+    ' To get to the index we remove two flags and convert the final
+    ' string to an integer. Not the most beautiful way, but it works.
+     
+    Dim intIndex As Integer
+    Dim strItemData As String
+    Dim blnVisible As Boolean
+    Dim blnEnabled As Boolean
+     
+    Dim i As Integer
+ 
+    For i = 3 To UBound(items) Step 1
+        strItemData = items(i)
+        
+        blnEnabled = (Mid$(strItemData, Len(strItemData), 1) = "E")
+        strItemData = Left$(strItemData, Len(strItemData) - 1)
+        
+        blnVisible = (Mid$(strItemData, Len(strItemData), 1) = "V")
+        strItemData = Left$(strItemData, Len(strItemData) - 1)
+        
+        On Error GoTo EH
+        intIndex = CInt(strItemData)
+        On Error GoTo 0
+        
+        objMenuItems(intIndex).Enabled = blnEnabled
+        objMenuItems(intIndex).Visible = blnVisible
+        
+        modLogging.WriteLineToLog "HandleCTXMENU: Interpreted """ & strItemData & """ as Index: " & intIndex & ", Enabled? " & blnEnabled & ", Visible? " & blnVisible
+    Next i
+    
+    ' TODO: Convert X and Y to twips and actually use them? Not
+    ' specifying X and Y makes VBRUN use the current mouse pos.
+    PopupMenu objMenu
+    
+    Set objMenu = Nothing
+    Set objMenuItems = Nothing
+    
+Exit Sub
+
+EH:
+    modLogging.WriteLineToLog "HandleCTXMENU: Parsing or conversion error: (" & Err.Number & ") " & Err.Description
 End Sub
 
 Private Sub rdpClient_OnConnected()
